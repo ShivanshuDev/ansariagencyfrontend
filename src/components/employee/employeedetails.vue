@@ -155,9 +155,9 @@ export default {
 }
 
 h4 {
-  border-bottom: 2px solid #1976d2;
+  border-bottom: 2px solid #040891;
   padding-bottom: 4px;
   margin-bottom: 12px;
-  color: #1976d2;
+  color: #040891;
 }
 </style>

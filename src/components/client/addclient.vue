@@ -89,7 +89,7 @@
           <a href="#" @click.prevent="copyBilling">Copy From Billing</a>
         </div>
         <label>
-          Name
+          Address Name
           <input type="text" v-model="customer.shipping.name" />
         </label>
         <label>
@@ -132,40 +132,56 @@
     </section>
 
     <section class="banking-details-section">
-      <h3>Banking Details</h3>
-      <div class="banking-fields-row">
-        <label>
-          Bank Name
-          <input type="text" v-model="customer.bank.bankName" />
-        </label>
-        <label>
-          Branch
-          <input type="text" v-model="customer.bank.branch" />
-        </label>
-        <label>
-          Account Holder
-          <input type="text" v-model="customer.bank.accountHolder" />
-        </label>
-      </div>
-      <div class="banking-fields-row">
-        <label>
-          Account Number
-          <input type="text" v-model="customer.bank.accountNumber" />
-        </label>
-        <label>
-          Confirm Account Number
-          <input type="text" v-model="customer.bank.confirmAccountNumber" />
-        </label>
-        <label>
-          IFSC
-          <input type="text" v-model="customer.bank.ifsc" />
-        </label>
-        <span class="empty-col"></span>
+      <div>
+        <!-- Banking Details Header -->
+        <div
+          style="display: flex; align-items: center; cursor: pointer;"
+          @click="showBankDetails = !showBankDetails"
+        >
+          <h3 style="margin: 0;">Banking Details</h3> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <v-icon style="width:30px; height:30px; border:1px solid green; border-radius:50%; background-color:green; color:white;">
+            {{ showBankDetails ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
+          </v-icon>
+        </div>
+
+        <!-- Banking Details Fields (collapsible section) -->
+        <div v-show="showBankDetails" style="margin-top: 10px;">
+          <div class="banking-fields-row">
+            <label>
+              Bank Name
+              <input type="text" v-model="customer.bank.bankName" />
+            </label>
+            <label>
+              Branch
+              <input type="text" v-model="customer.bank.branch" />
+            </label>
+            <label>
+              Account Holder
+              <input type="text" v-model="customer.bank.accountHolder" />
+            </label>
+          </div>
+
+          <div class="banking-fields-row">
+            <label>
+              Account Number
+              <input type="text" v-model="customer.bank.accountNumber" />
+            </label>
+            <label>
+              Confirm Account Number
+              <input type="text" v-model="customer.bank.confirmAccountNumber" />
+            </label>
+            <label>
+              IFSC
+              <input type="text" v-model="customer.bank.ifsc" />
+            </label>
+            <span class="empty-col"></span>
+          </div>
+        </div>
       </div>
     </section>
 
-    <div class="banking-actions">
-      <button type="button" class="cancel-btn" @click="onCancel">Cancel</button>
+    <div style="display:flex; flex-direction:row; justify-content:right; align-items:right; width:100%;" class="banking-actions">
+      <button type="button" class="cancel-btn" @click="onCancel">Cancel</button> &nbsp; &nbsp; &nbsp; &nbsp;
       <!-- openDialog will validate then open the confirm dialog -->
       <button type="button" class="create-btn" @click="openDialog" :disabled="loading">
         <span v-if="loading">Processing…</span>
@@ -219,6 +235,7 @@ import axios from 'axios';
 export default {
   data() {
     return {
+      showBankDetails: false,
       loading: false,         // general page-level loading (create button)
       confirmLoading: false,  // confirm button loading in dialog
       dialog: false,

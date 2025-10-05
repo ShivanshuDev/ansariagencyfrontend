@@ -67,7 +67,7 @@ export default {
       try {
         // NOTE: you're sending credentials via query params as requested.
         // Prefer POST / HTTPS in production.
-        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL+'/employeeLogin', {
+        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL+'employeeLogin', {
           params: {
             userId: this.username,
             password: this.password

@@ -76,9 +76,10 @@
 <script>
 import DownloadPdf from '@/views/DownloadPdf.vue';
 import DownloadXlsx from '@/views/DownloadXlsx.vue';
+import DownloadPdfInventory from '@/views/DownloadInvoiveInventory.vue';
 export default {
   name: 'InvoiceDetailDialog',
-  components: { DownloadPdf, DownloadXlsx },
+  components: { DownloadPdf, DownloadXlsx, DownloadPdfInventory },
   props: {
     open: { type: Boolean, default: false },
     invoice: { type: Object, default: null },
@@ -131,7 +132,7 @@ export default {
 
 <style scoped>
 ::v-deep .v-data-table-header {
-  background-color: #1976d2; /* Set to your desired color */
+  background-color: #040891; /* Set to your desired color */
   color: #ffffff; /* For the text */
 }
 </style>

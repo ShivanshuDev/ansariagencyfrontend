@@ -38,15 +38,11 @@
       <v-col cols="auto" class="pl-2" style="display:flex; align-items:center; gap:8px;">
         <v-btn outlined color="primary" @click="$emit('open-filter')">Filter</v-btn>
 
-        <DownloadPdf :items="selectedItemsData" :headers="invoiceDetailHeaders" />
+        <DownloadPdfInventory :items="selectedItemsData" :headers="invoiceDetailHeaders" />
 
-        <DownloadXlsx
-          style="padding:5px;"
+        <DownloadInvoiceXlsx
           :items="selectedItemsData"
-          :headers="invoiceDetailHeaders"
-          filename="selected_invoices_inventory"
-          @downloaded="$emit('downloaded')"
-          :disabled="loadingSelectedInvoices"
+          filename="Inventory_ALL"
         />
 
         <v-progress-circular v-if="loadingSelectedInvoices" indeterminate size="24" />
@@ -54,7 +50,7 @@
     </v-row>
 
     <!-- Dialog shown only by this component when chassis search returns (or while loading) -->
-    <v-dialog v-model="dialogOpen" max-width="1100px" persistent>
+    <v-dialog v-model="dialogOpen" max-width="1800px" persistent>
       <v-card>
         <v-card-title class="d-flex align-center justify-space-between">
           <div>
@@ -81,8 +77,8 @@
           <v-skeleton-loader v-if="loadingChassis" type="table" />
           <div v-else>
             <v-simple-table dense>
-              <thead>
-                <tr>
+              <thead style="background-color:#0581f5; color:white;">
+                <tr style="color:white;">
                   <!-- checkbox header -->
                   <th style="width:48px; text-align:center;">
                     <v-checkbox
@@ -94,7 +90,7 @@
                   </th>
 
                   <!-- other headers (inventoryHoldDays filtered out) -->
-                  <th v-for="h in dialogHeaders" :key="h.value">{{ h.text }}</th>
+                  <th  v-for="h in dialogHeaders" :key="h.value">{{ h.text }}</th>
 
                   <!-- Actions column -->
                   <th style="width:110px; text-align:center;">Actions</th>
@@ -169,13 +165,14 @@
 
 <script>
 import axios from 'axios';
-import DownloadPdf from '@/views/DownloadPdf.vue';
+import DownloadPdfInventory from '@/views/DownloadInvoiveInventory.vue';
 import DownloadXlsx from '@/views/DownloadXlsx.vue';
+import DownloadInvoiceXlsx from '@/views/DownloadInvoiceXlsx.vue';
 import EditInventory from './EditInventory.vue'; // adjust path if needed
 
 export default {
   name: 'TopBar',
-  components: { DownloadPdf, DownloadXlsx, EditInventory },
+  components: { DownloadPdfInventory, DownloadXlsx, EditInventory, DownloadInvoiceXlsx },
   props: {
     invoiceSearch: String, // unchanged
     selectedItemsData: { type: Array, default: () => [] },

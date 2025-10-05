@@ -134,7 +134,34 @@
       <template v-slot:item.price="{ item }">{{ item.price != null ? item.price : '-' }}</template>
       <template v-slot:item.rakNumber="{ item }">{{ item.rakNumber || '-' }}</template>
       <template v-slot:item.addedBy="{ item }">{{ item.addedBy || '-' }}</template>
+
+      <!-- Actions column with Show button -->
+      <template v-slot:item.actions="{ item }">
+        <v-btn
+          small
+          text
+          @click.stop="showDetails(item)"
+        >
+          Show
+        </v-btn>
+      </template>
     </v-data-table>
+
+    <!-- Dialog fallback: if router not available or you prefer inline details -->
+    <v-dialog v-model="showDialog" max-width="900px">
+      <template v-slot:activator="{ on }"></template>
+      <v-card>
+        <v-card-title>
+          Details
+          <v-spacer />
+          <v-btn icon @click="showDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-card-title>
+        <v-card-text>
+          <!-- SparesDetails component should accept prop `item` and optionally emit `close` -->
+          <SparesDetailspage :item="detailItem" @close="showDialog = false" />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
 
   </v-card>
 </template>
@@ -142,9 +169,11 @@
 <script>
 import axios from 'axios';
 import DownloadPdf from '../../views/DownloadPdf.vue';
+// Import your details component - change path if needed
+import SparesDetailspage from './sparesDetailspage.vue';
 
 export default {
-    components: { DownloadPdf },
+  components: { DownloadPdf, SparesDetailspage },
   data() {
     return {
       sparesParts: [],
@@ -156,10 +185,12 @@ export default {
         partNumber: '',
         invoiceNumber: '',
       },
-        invoiceDateFrom: null,
-        invoiceDateTo: null,
+      invoiceDateFrom: null,
+      invoiceDateTo: null,
       menuFrom: false,
       menuTo: false,
+      showDialog: false,      // dialog toggle for inline details
+      detailItem: null,       // item passed to details component
       headers: [
         { text: 'Part Number', value: 'partNumber' },
         { text: 'Part Name', value: 'partName' },
@@ -169,90 +200,75 @@ export default {
         { text: 'Invoice Number', value: 'invoiceNumber' },
         { text: 'Invoice Date', value: 'invoiceDate' },
         { text: 'Added By', value: 'addedBy' },
+        { text: 'Actions', value: 'actions', sortable: false },
       ],
     };
   },
   methods: {
 
     async filterByDate(){
-        this.searchPartNumber = '';
-        try {
-            
-                let url = '';
-                // Case 1: Search by partNumber (hit /parts/:partNumber)
-                url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}partsRangeFilter/${this.invoiceDateFrom}/${this.invoiceDateTo}`;
-                // Call API
-                console.log('url', url)
-                const res = await axios.get(url);
-                // Normalize: backend /parts/:partNumber returns object, but /Spares returns array
-                this.sparesParts = Array.isArray(res.data.items) ? res.data.items : [res.data.items];
-                console.log('this.sparesParts', this.sparesParts);
-            
-        } catch (error) {
-            console.error('Failed to fetch inventory:', error);
-            this.sparesParts = [];
-        }
+      this.searchPartNumber = '';
+      try {
+        let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}partsRangeFilter/${this.invoiceDateFrom}/${this.invoiceDateTo}`;
+        console.log('url', url)
+        const res = await axios.get(url);
+        this.sparesParts = Array.isArray(res.data.items) ? res.data.items : [res.data.items];
+        console.log('this.sparesParts', this.sparesParts);
+      } catch (error) {
+        console.error('Failed to fetch inventory:', error);
+        this.sparesParts = [];
+      }
     },
     async getByPartNumber() {
-        this.searchInvoiceNumber = '';
-        try {
-            if(!this.searchPartNumber){
-                this.fetchSparesPart()
-            } else {
-                let url = '';
-                // Case 1: Search by partNumber (hit /parts/:partNumber)
-                url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}parts/${this.searchPartNumber}`;
-                // Call API
-                const res = await axios.get(url);
-                // Normalize: backend /parts/:partNumber returns object, but /Spares returns array
-                this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
-                console.log('this.sparesParts', this.sparesParts);
-            }
-        } catch (error) {
-            console.error('Failed to fetch inventory:', error);
-            this.sparesParts = [];
+      this.searchInvoiceNumber = '';
+      try {
+        if(!this.searchPartNumber){
+          this.fetchSparesPart()
+        } else {
+          let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}parts/${this.searchPartNumber}`;
+          const res = await axios.get(url);
+          this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
+          console.log('this.sparesParts', this.sparesParts);
         }
+      } catch (error) {
+        console.error('Failed to fetch inventory:', error);
+        this.sparesParts = [];
+      }
     },
 
     async getByInvoiceNumber() {
-        this.searchPartNumber = '';
-        try {
-             if(!this.searchInvoiceNumber){
-                this.fetchSparesPart()
-            } else {
-                let url = '';
-                // Case 1: Search by partNumber (hit /parts/:partNumber)
-                url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}invoice/${this.searchInvoiceNumber}`;
-                // Call API
-                const res = await axios.get(url);
-                // Normalize: backend /parts/:partNumber returns object, but /Spares returns array
-                this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
-                console.log('this.sparesParts', this.sparesParts);
-            }
-        } catch (error) {
-            console.error('Failed to fetch inventory:', error);
-            this.sparesParts = [];
+      this.searchPartNumber = '';
+      try {
+        if(!this.searchInvoiceNumber){
+          this.fetchSparesPart()
+        } else {
+          let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}invoice/${this.searchInvoiceNumber}`;
+          const res = await axios.get(url);
+          this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
+          console.log('this.sparesParts', this.sparesParts);
         }
+      } catch (error) {
+        console.error('Failed to fetch inventory:', error);
+        this.sparesParts = [];
+      }
     },
 
     async fetchSparesPart() {
-        this.searchPartNumber = '';
-        this.searchInvoiceNumber = '';
-        this.invoiceDateFrom = null,
-        this.invoiceDateTo = null,
-        console.log('getch ghjhkl')
+      this.searchPartNumber = '';
+      this.searchInvoiceNumber = '';
+      this.invoiceDateFrom = null;
+      this.invoiceDateTo = null;
       try {
-          const params = {};
+        const params = {};
         if (this.filters.partNumber) params.partNumber = this.filters.partNumber;
         if (this.filters.invoiceNumber) params.invoiceNumber = this.filters.invoiceNumber;
         if (this.filters.invoiceDateFrom) params.invoiceDateFrom = this.filters.invoiceDateFrom;
         if (this.filters.invoiceDateTo) params.invoiceDateTo = this.filters.invoiceDateTo;
 
-        // Backend should support query param filtering for these params
         const queryString = new URLSearchParams(params).toString();
-        const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}Spares`;
+        const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}Spares${queryString ? '?' + queryString : ''}`;
 
-          console.log('url', url)
+        console.log('url', url)
         const res = await axios.get(url);
 
         this.sparesParts = Array.isArray(res.data) ? res.data : [];
@@ -262,19 +278,15 @@ export default {
       }
     },
     async fetchSparesParts(){
-         try {
-            let url = '';
-            // Case 1: Search by partNumber (hit /parts/:partNumber)
-            url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}Spares`;
-            // Call API
-            const res = await axios.get(url);
-            // Normalize: backend /parts/:partNumber returns object, but /Spares returns array
-            this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
-            console.log('this.sparesParts', this.sparesParts);
-        } catch (error) {
-            console.error('Failed to fetch inventory:', error);
-            this.sparesParts = [];
-        }
+      try {
+        let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}Spares`;
+        const res = await axios.get(url);
+        this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
+        console.log('this.sparesParts', this.sparesParts);
+      } catch (error) {
+        console.error('Failed to fetch inventory:', error);
+        this.sparesParts = [];
+      }
     },
 
     onRowClick(item) {
@@ -289,6 +301,31 @@ export default {
       this.filters.invoiceDateTo = null;
       this.fetchSparesPart();
     },
+
+    /**
+     * Called when user clicks "Show".
+     * Behavior:
+     *  - If Vue Router is available and you have a route named 'SparesDetails', it navigates to it.
+     *  - Otherwise it opens an inline dialog and renders the SparesDetails component.
+     */
+    showDetails(item) {
+      console.log('item', item)
+      this.detailItem = item || null;
+
+      // If you prefer navigation to a details route — ensure you have a route named 'SparesDetails'
+      // Example route: { name: 'SparesDetails', path: '/spares/:partNumber', component: SparesDetails }
+      if (this.$router && this.$router.options && this.$router.options.routes) {
+        const routeExists = this.$router.options.routes.some(r => r.name === 'SparesDetails');
+        if (routeExists) {
+          // navigate with param (adjust to your route's param name)
+          this.$router.push({ name: 'SparesDetails', params: { partNumber: item.partNumber }});
+          return;
+        }
+      }
+
+      // Fallback: use dialog with inline component
+      this.showDialog = true;
+    }
   },
   watch: {
     'filters.partNumber': 'fetchSparesPart',
@@ -306,9 +343,6 @@ export default {
   font-size: 14px;
   color: #222;
 }
-</style>
-
-<style scoped>
 .tableData {
   margin: 9px;
 }

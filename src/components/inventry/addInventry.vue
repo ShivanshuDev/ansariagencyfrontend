@@ -31,6 +31,7 @@
         <button type="button" class="add-btn" @click="onReset">Reset Form</button>
       </div>
     </div>
+
     <!-- SINGLE-BIKE FORM (one bike at a time) -->
     <div class="row">
       <div class="form-fields" style="width:100%; padding:0px 10px; margin:10px 0px 20px 0px;">
@@ -46,7 +47,7 @@
               dense
               hide-details
             />
-            <div v-if="singleBikeErrors.modelName" class="error-msg">{{ singleBikeErrors.modelName }}</div>
+            <div v-if="singleBikeErrors.categoryName" class="error-msg">{{ singleBikeErrors.categoryName }}</div>
           </div>
 
           <div class="field-detail" :class="{'field-error': singleBikeErrors.modelName}">
@@ -101,11 +102,11 @@
             <div v-if="singleBikeErrors.warehouse" class="error-msg">{{ singleBikeErrors.warehouse }}</div>
           </div>
 
-          <!-- <div class="field-detail" :class="{'field-error': singleBikeErrors.addedBy}">
-            <label>Added By *</label>
-            <input type="text" v-model="bikeForm.addedBy" placeholder="Added By *" />
-            <div v-if="singleBikeErrors.addedBy" class="error-msg">{{ singleBikeErrors.addedBy }}</div>
-          </div> -->
+          <div class="field-detail" :class="{'field-error': singleBikeErrors.source}">
+            <label>Source *</label>
+            <input type="text" v-model="bikeForm.source" placeholder="Source *" />
+            <div v-if="singleBikeErrors.source" class="error-msg">{{ singleBikeErrors.source }}</div>
+          </div>
 
           <div style="flex:1; display:flex; align-items:flex-end; justify-content:flex-end; padding-top:9px;">
             <button class="create-btn" @click="saveBikeToTable" :disabled="isSavingBike">
@@ -119,54 +120,10 @@
     <hr />
 
     <!-- TABLE OF ADDED BIKES -->
-    <!-- <section>
-      <h3>Added Bikes</h3>
-      <div v-if="addedBikes.length === 0" style="color:#666; margin-bottom:12px;">
-        No bikes added yet. Fill the form above and click <strong>Save Bike</strong>.
-      </div>
-
-      <div v-else class="table-responsive">
-        <table class="bikes-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Invoice No</th>
-              <th>Invoice Date</th>
-              <th>Model</th>
-              <th>Color</th>
-              <th>Chassis</th>
-              <th>Engine</th>
-              <th>Warehouse</th>
-              <th>Added By</th>
-              <th>Notes</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(b, idx) in addedBikes" :key="b._localId">
-              <td>{{ idx + 1 }}</td>
-              <td>{{ b.invoiceNumber }}</td>
-              <td>{{ formatDate(b.invoiceDate) }}</td>
-              <td>{{ b.modelName }}</td>
-              <td>{{ b.color }}</td>
-              <td>{{ b.chassisNumber }}</td>
-              <td>{{ b.engineNumber }}</td>
-              <td>{{ b.warehouse }}</td>
-              <td>{{ b.addedBy }}</td>
-              <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis;">{{ b.notes }}</td>
-              <td>
-                <button class="remove-btn" @click="removeFromTable(idx)">Delete</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section> -->
-
     <section>
       <h3>Added Bikes</h3>
       <div v-if="addedBikes.length === 0" style="color:#666; margin-bottom:12px;">
-        No bikes added yet. Fill the form above and click <strong>Save Bike</strong>.
+        No bikes added yet. Fill the form above and click <strong>Add More</strong>.
       </div>
 
       <div v-else class="table-wrapper">
@@ -176,12 +133,13 @@
               <th>#</th>
               <th>Invoice No</th>
               <th>Invoice Date</th>
-              <th>category</th>
+              <th>Category</th>
               <th>Model</th>
               <th>Color</th>
               <th>Chassis</th>
               <th>Engine</th>
               <th>Warehouse</th>
+              <th>Source</th>
               <th>Added By</th>
               <th>Action</th>
             </tr>
@@ -197,6 +155,7 @@
               <td>{{ b.chassisNumber }}</td>
               <td>{{ b.engineNumber }}</td>
               <td>{{ b.warehouse }}</td>
+              <td>{{ b.source }}</td>
               <td>{{ b.addedBy }}</td>
               <td>
                 <button class="remove-btn" @click="removeFromTable(idx)">Delete</button>
@@ -262,32 +221,27 @@
 
 <script>
 import axios from "axios";
-import { v4 as uuidv4 } from "uuid"; // If uuid is not available in your project remove and use Date.now()
 
 export default {
   name: "AddBikeSingleForm",
   data() {
     return {
       userName: "",
-      // common invoice fields
       commonInvoiceNumber: "",
       commonInvoiceDate: "",
-      // form for a single bike
       bikeForm: this.getEmptyBikeForm(),
-      // collection of added bikes (table)
       addedBikes: [],
-      // models and warehouses
       models: [],
       categories: [],
       warehouses: [
-        { text: "Warehouse 1", value: "Warehouse 1" },
-        { text: "Warehouse 2", value: "Warehouse 2" },
-        { text: "Warehouse 3", value: "Warehouse 3" },
+        { text: "BADI KAMHARIYA", value: "BADI KAMHARIYA" },
+        { text: "OLD-JAHNGIRABAD", value: "OLD-JAHNGIRABAD" },
+        { text: "NEW-JAHNGIRABAD", value: "NEW-JAHNGIRABAD" },
+        { text: "SHOWROOM", value: "SHOWROOM" },
+        { text: "Other", value: "Other" },
       ],
-      // errors for single bike
       singleBikeErrors: {},
       commonErrors: {},
-      // UI state
       isSavingBike: false,
       isSubmitting: false,
       showConfirmation: false,
@@ -300,14 +254,12 @@ export default {
     };
   },
   mounted() {
-    // load user from localStorage if exists
     const storedStr = localStorage.getItem("auth_user");
     if (storedStr) {
       try {
         const stored = JSON.parse(storedStr);
         if (stored && stored.userId) {
           this.userName = stored.userId;
-          // put default addedBy in bike form
           this.bikeForm.addedBy = this.userName;
         }
       } catch (e) {
@@ -316,35 +268,31 @@ export default {
     }
 
     this.fetchCategory();
-    // this.fetchModels();
   },
   watch: {
-    // keep the invoice fields for form in sync with common ones
     commonInvoiceNumber(newVal) {
       this.bikeForm.invoiceNumber = newVal;
     },
     commonInvoiceDate(newVal) {
       this.bikeForm.invoiceDate = newVal;
     },
-    // keep addedBy defaulted to userName if it changes
     userName(newVal) {
       if (!this.bikeForm.addedBy) this.bikeForm.addedBy = newVal;
     },
     'bikeForm.categoryName': function (newVal) {
-        // clear previously selected model and colors
-        this.bikeForm.modelName = "";
-        this.bikeForm.color = "";
-        if (newVal) {
-          this.fetchModels(newVal);
-        } else {
-          this.models = [];
-        }
+      this.bikeForm.modelName = "";
+      this.bikeForm.color = "";
+      if (newVal) {
+        this.fetchModels(newVal);
+      } else {
+        this.models = [];
+      }
     },
   },
   methods: {
     getEmptyBikeForm() {
       return {
-        _localId: Date.now() + Math.floor(Math.random() * 1000), // local id for v-for key
+        _localId: Date.now() + Math.floor(Math.random() * 1000),
         invoiceNumber: this.commonInvoiceNumber || "",
         invoiceDate: this.commonInvoiceDate || "",
         chassisNumber: "",
@@ -355,25 +303,28 @@ export default {
         addedBy: this.userName || "",
         notes: "",
         statusType: "DRAFT",
+        source: ""
       };
     },
 
     formatDate(d) {
       if (!d) return "";
-      // keep original input format (yyyy-mm-dd) - or format as needed
       return d;
     },
 
     ensureModelFieldsDefaults() {
-      // make sure bikeForm reflects common invoice if changed externally
       if (this.commonInvoiceNumber) this.bikeForm.invoiceNumber = this.commonInvoiceNumber;
       if (this.commonInvoiceDate) this.bikeForm.invoiceDate = this.commonInvoiceDate;
       if (this.userName) this.bikeForm.addedBy = this.userName;
     },
 
-    async fetchModels() {
+    async fetchModels(categoryName) {
+      if (!categoryName) {
+        this.models = [];
+        return;
+      }
       try {
-        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + "getCategoryModel/" + this.bikeForm.categoryName);
+        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + "getCategoryModel/" + categoryName);
         if (res.data && Array.isArray(res.data.models)) {
           this.models = res.data.models;
         } else {
@@ -385,6 +336,7 @@ export default {
         this.models = [];
       }
     },
+
     async fetchCategory() {
       try {
         const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + "getCategory");
@@ -416,52 +368,54 @@ export default {
       return Object.keys(this.commonErrors).length === 0;
     },
 
-    validateSingleBike() {
-      this.singleBikeErrors = {};
-      const b = this.bikeForm;
-      if (!b.categoryName || !b.categoryName.toString().trim()) this.singleBikeErrors.modelName = "Category is required";
-      if (!b.modelName || !b.modelName.toString().trim()) this.singleBikeErrors.modelName = "Model is required";
-      if (!b.color || !b.color.toString().trim()) this.singleBikeErrors.color = "Color is required";
-      if (!b.chassisNumber || !b.chassisNumber.toString().trim()) this.singleBikeErrors.chassisNumber = "Chassis Number is required";
-      if (!b.engineNumber || !b.engineNumber.toString().trim()) this.singleBikeErrors.engineNumber = "Engine Number is required";
-      if (!b.warehouse || !b.warehouse.toString().trim()) this.singleBikeErrors.warehouse = "Warehouse is required";
-      if (!b.addedBy || !b.addedBy.toString().trim()) this.singleBikeErrors.addedBy = "Added By is required";
-      if (!b.invoiceNumber || !b.invoiceNumber.toString().trim()) this.singleBikeErrors.invoiceNumber = "Invoice Number is required";
-      if (!b.invoiceDate) this.singleBikeErrors.invoiceDate = "Invoice Date is required";
-
-      return Object.keys(this.singleBikeErrors).length === 0;
+    validateSingleBike(single = null) {
+      const b = single || this.bikeForm;
+      const errors = {};
+      if (!b.categoryName || !b.categoryName.toString().trim()) errors.categoryName = "Category is required";
+      if (!b.modelName || !b.modelName.toString().trim()) errors.modelName = "Model is required";
+      if (!b.color || !b.color.toString().trim()) errors.color = "Color is required";
+      if (!b.chassisNumber || !b.chassisNumber.toString().trim()) errors.chassisNumber = "Chassis Number is required";
+      if (!b.engineNumber || !b.engineNumber.toString().trim()) errors.engineNumber = "Engine Number is required";
+      if (!b.warehouse || !b.warehouse.toString().trim()) errors.warehouse = "Warehouse is required";
+      if (!b.addedBy || !b.addedBy.toString().trim()) errors.addedBy = "Added By is required";
+      if (!b.invoiceNumber || !b.invoiceNumber.toString().trim()) errors.invoiceNumber = "Invoice Number is required";
+      if (!b.invoiceDate) errors.invoiceDate = "Invoice Date is required";
+      if (!b.source || !b.source.toString().trim()) errors.source = "Source is required";
+      return errors;
     },
 
-    // Save a single bike to the local table (addedBikes)
     saveBikeToTable() {
-      // sync default fields
       this.ensureModelFieldsDefaults();
 
       const commonValid = this.validateCommon();
-      const bikeValid = this.validateSingleBike();
-      if (!commonValid || !bikeValid) {
+      if (!commonValid) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      const singleErrors = this.validateSingleBike();
+      if (Object.keys(singleErrors).length) {
+        this.singleBikeErrors = singleErrors;
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
 
       this.isSavingBike = true;
       try {
-        // create a shallow copy, give a stable local id
         const payloadBike = { ...this.bikeForm, _localId: Date.now() + Math.floor(Math.random() * 1000) };
         this.addedBikes.push(payloadBike);
 
-        // clear the bike form (but keep common invoice fields as-is)
+        // reset single form but keep common invoice
         this.bikeForm = this.getEmptyBikeForm();
         this.bikeForm.addedBy = this.userName || "";
         this.bikeForm.invoiceNumber = this.commonInvoiceNumber || "";
         this.bikeForm.invoiceDate = this.commonInvoiceDate || "";
         this.singleBikeErrors = {};
 
-        // show success snackbar
         this.showSnackbar("success", "Bike added to list.");
       } catch (err) {
         console.error("Error adding bike to table:", err);
-        alert("Failed to add bike locally. See console.");
+        this.showSnackbar("error", "Failed to add bike locally. See console.");
       } finally {
         this.isSavingBike = false;
       }
@@ -473,7 +427,6 @@ export default {
     },
 
     onResetEverything() {
-      // Reset everything to initial state
       this.commonInvoiceNumber = "";
       this.commonInvoiceDate = "";
       this.bikeForm = this.getEmptyBikeForm();
@@ -483,7 +436,6 @@ export default {
     },
 
     onReset() {
-      // reset only the single-bike form (not the addedBikes)
       this.bikeForm = this.getEmptyBikeForm();
       this.bikeForm.addedBy = this.userName || "";
       this.bikeForm.invoiceNumber = this.commonInvoiceNumber;
@@ -492,7 +444,6 @@ export default {
     },
 
     onClickSubmitAll() {
-      // open confirmation dialog before final submit
       if (this.addedBikes.length === 0) {
         this.showSnackbar("Alert", "No bikes to submit.");
         return;
@@ -509,19 +460,17 @@ export default {
       this.isSubmitting = true;
 
       try {
-        console.log('this.bikeForm', this.bikeForm)
         const payload = {
-          "invoiceDate" : this.bikeForm.invoiceDate,
-          "invoiceNumber": this.bikeForm.invoiceNumber,
-          'warehouse': this.bikeForm.warehouse,
+          invoiceDate: this.commonInvoiceDate || this.bikeForm.invoiceDate,
+          invoiceNumber: this.commonInvoiceNumber || this.bikeForm.invoiceNumber,
+          warehouse: this.bikeForm.warehouse,
           bikes: this.addedBikes.map((b) => {
-            // remove local-only props (like _localId)
             const copy = { ...b };
             delete copy._localId;
             return copy;
           }),
         };
-        console.log('payload', payload)
+
         const response = await axios.post(process.env.VUE_APP_AGENCY_BACKEND_URL + "addInventry", payload);
         console.log("✅ Bike details submitted:", response.data);
 
@@ -531,10 +480,8 @@ export default {
         this.showSnackbar("success", "Bikes submitted successfully.");
       } catch (error) {
         console.error("❌ Error saving bikes:", error);
-        // more graceful error handling
         const msg = (error && error.response && error.response.data && error.response.data.message) || "Failed to save bikes. Check console.";
         this.showSnackbar("error", msg);
-        // keep addedBikes intact so user can retry or examine
       } finally {
         this.isSubmitting = false;
       }

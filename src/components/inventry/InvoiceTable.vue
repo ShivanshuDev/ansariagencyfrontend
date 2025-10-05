@@ -71,16 +71,17 @@ export default {
 </script>
 
 <style scoped>
-
-
-::v-deep .v-data-table-header {
-  background-color: #1976d2; /* Set to your desired color */
-  color: #ffffff; /* For the text */
+/* ✅ Custom table header styles */
+::v-deep(.v-data-table-header) {
+  background-color: #040891; /* deep blue header background */
 }
 
-::v-deep .v-data-table-header th {
-  font-size: 18px; /* Adjust as needed */
+::v-deep(.v-data-table-header th) {
+  color: white !important;      /* white text */
+  font-size: 1rem !important;   /* larger header font */
+  font-weight: 600;             /* bold look */
+  text-transform: uppercase;    /* optional for professional style */
+  letter-spacing: 0.5px;
+  padding: 16px 12px;           /* slightly more spacing */
 }
-
-
 </style>

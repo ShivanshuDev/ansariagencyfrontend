@@ -137,11 +137,12 @@ export default {
         { text: 'Invoice Number', value: 'invoiceNumber' },
         { text: 'Invoice Date', value: 'invoiceDate' },
         { text: 'Model Name', value: 'modelName' },
+        { text: 'Category Name', value: 'categoryName' },
         { text: 'Color', value: 'color' },
         { text: 'Chassis Number', value: 'chassisNumber' },
         { text: 'Engine Number', value: 'engineNumber' },
         { text: 'Warehouse', value: 'warehouse' },
-        { text: 'Added By', value: 'addedBy' },
+        { text: 'Source', value: 'source' },
         { text: 'Status', value: 'status' },
       ],
 
@@ -441,6 +442,7 @@ export default {
 
     async fetchInvoice() {
       this.loadingInvoices = true;
+      console.log('process.env.VUE_APP_AGENCY_BACKEND_URL', )
       try {
         const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInvoice');
         let rows = [];

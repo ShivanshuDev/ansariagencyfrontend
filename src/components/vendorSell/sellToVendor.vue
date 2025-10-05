@@ -50,19 +50,18 @@
                 </v-col>
               </v-row>
             </v-col>
-
-            <!-- Inventory select -->
+            <!-- Model select -->
             <v-col cols="12" class="mt-3">
               <v-select
-                :items="availableInventories"
+                :items="availableModel"
                 item-text="label"
                 item-value="__key"
                 label="Search / select inventory"
-                v-model="selectedInventoryKey"
+                v-model="selectedModelKey"
                 dense
                 outlined
                 clearable
-                :loading="loadingInventories"
+                :loading="loadingModel"
               />
             </v-col>
 
@@ -151,86 +150,50 @@
                   <th class="text-right">Actions</th>
                 </tr>
               </thead>
+              <tbody>
+                <template v-for="it in selectedItems">
+                  <!-- main row -->
+                  <tr :key="it.id">
+                    <td>
+                      <div>
+                        <div class="font-weight-medium">{{ it.label }}</div>
+                      </div>
+                    </td>
 
-              <!-- <tbody>
-                <tr v-for="it in selectedItems" :key="it.id">
-                  <td>
-                    <div>
-                      <div class="font-weight-medium">{{ it.label }}</div>
-                      <div class="text--secondary caption" style="margin-top:4px;">
-                        <div>Chassis: {{ it.chassisNumber || '—' }}</div>
-                        <div>Engine: {{ it.engineNumber || '—' }}</div>
+                    <td>
+                      <div class="text-left">{{ it.hsn || '—' }}</div>
+                    </td>
+
+                    <td class="text-center">{{ it.kitGiven ? 'Yes' : 'No' }}</td>
+
+                    <td class="text-right">{{ it.quantity }} × ₹{{ formatMoney(it.price) }}</td>
+
+                    <td class="text-right">{{ formatMoney(it.discount) }}</td>
+
+                    <td class="text-right">{{ (it.cgst || 0) }}%</td>
+
+                    <td class="text-right">{{ (it.sgst || 0) }}%</td>
+
+                    <td class="text-right font-weight-medium">₹{{ formatMoney(it.totalWithTax) }}</td>
+
+                    <td class="text-right">
+                      <v-btn icon small color="primary" @click="editItem(it)"><v-icon small>mdi-pencil</v-icon></v-btn>
+                      <v-btn icon small color="red" @click="removeItemAndRestore(it)"><v-icon small>mdi-delete</v-icon></v-btn>
+                    </td>
+                  </tr>
+
+                  <!-- details full-width row -->
+                  <tr :key="`${it.id}-details`">
+                    <td colspan="9" style="padding:6px 12px 12px 12px; background: #fafafa;">
+                      <div style="width:100%; display:flex; flex-direction:row; font-size:12px; color:rgba(0,0,0,0.6);">
+                        <div style="margin-bottom:4px;">Chassis: {{ it.chassisNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
+                        <div style="margin-bottom:4px;">Engine: {{ it.engineNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
                         <div>Color: {{ it.color || '—' }}</div>
                       </div>
-                    </div>
-                  </td>
-
-                  <td>
-                    <div class="text-left">{{ it.hsn || '—' }}</div>
-                  </td>
-
-                  <td class="text-center">{{ it.kitGiven ? 'Yes' : 'No' }}</td>
-
-                  <td class="text-right">{{ it.quantity }} × ₹{{ formatMoney(it.price) }}</td>
-
-                  <td class="text-right">{{ formatMoney(it.discount) }}</td>
-
-                  <td class="text-right">{{ (it.cgst || 0) }}%</td>
-
-                  <td class="text-right">{{ (it.sgst || 0) }}%</td>
-
-                  <td class="text-right font-weight-medium">₹{{ formatMoney(it.totalWithTax) }}</td>
-
-                  <td class="text-right">
-                    <v-btn icon small color="primary" @click="editItem(it)"><v-icon small>mdi-pencil</v-icon></v-btn>
-                    <v-btn icon small color="red" @click="removeItemAndRestore(it)"><v-icon small>mdi-delete</v-icon></v-btn>
-                  </td>
-                </tr>
-              </tbody> -->
-              <tbody>
-  <template v-for="it in selectedItems">
-    <!-- main row -->
-    <tr :key="it.id">
-      <td>
-        <div>
-          <div class="font-weight-medium">{{ it.label }}</div>
-        </div>
-      </td>
-
-      <td>
-        <div class="text-left">{{ it.hsn || '—' }}</div>
-      </td>
-
-      <td class="text-center">{{ it.kitGiven ? 'Yes' : 'No' }}</td>
-
-      <td class="text-right">{{ it.quantity }} × ₹{{ formatMoney(it.price) }}</td>
-
-      <td class="text-right">{{ formatMoney(it.discount) }}</td>
-
-      <td class="text-right">{{ (it.cgst || 0) }}%</td>
-
-      <td class="text-right">{{ (it.sgst || 0) }}%</td>
-
-      <td class="text-right font-weight-medium">₹{{ formatMoney(it.totalWithTax) }}</td>
-
-      <td class="text-right">
-        <v-btn icon small color="primary" @click="editItem(it)"><v-icon small>mdi-pencil</v-icon></v-btn>
-        <v-btn icon small color="red" @click="removeItemAndRestore(it)"><v-icon small>mdi-delete</v-icon></v-btn>
-      </td>
-    </tr>
-
-    <!-- details full-width row -->
-    <tr :key="`${it.id}-details`">
-      <td colspan="9" style="padding:6px 12px 12px 12px; background: #fafafa;">
-        <div style="width:100%; display:flex; flex-direction:row; font-size:12px; color:rgba(0,0,0,0.6);">
-          <div style="margin-bottom:4px;">Chassis: {{ it.chassisNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
-          <div style="margin-bottom:4px;">Engine: {{ it.engineNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
-          <div>Color: {{ it.color || '—' }}</div>
-        </div>
-      </td>
-    </tr>
-  </template>
-</tbody>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
 
             </v-simple-table>
           </div>
@@ -363,52 +326,35 @@
                   </tr>
                 </thead>
 
-                <!-- <tbody>
-                  <tr v-for="it in selectedItems" :key="it.id" style="height:50px; line-height:50px; font-size:14px;">
-                    <td style="padding:0 12px;">
-                      <div>{{ it.label }}</div>
-                      <div class="text--secondary caption" style="margin-top:4px;">
-                        Chassis: {{ it.chassisNumber || '—' }} | Engine: {{ it.engineNumber || '—' }} | Color: {{ it.color || '—' }}
-                      </div>
-                    </td>
-                    <td style="padding:0 12px;">{{ it.hsn }}</td>
-                    <td style="padding:0 12px; text-align:center;">{{ it.kitGiven ? 'Yes' : 'No' }}</td>
-                    <td style="padding:0 12px; text-align:right;">{{ it.quantity }}</td>
-                    <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.price) }}</td>
-                    <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.discount) }}</td>
-                    <td style="padding:0 12px; text-align:right;">{{ it.cgst }}% + {{ it.sgst }}%</td>
-                    <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.totalWithTax) }}</td>
-                  </tr>
-                </tbody> -->
                 <tbody>
-  <template v-for="it in selectedItems">
-    <!-- main row (keeps your inline styles) -->
-    <tr :key="it.id" style="height:50px; line-height:50px; font-size:14px;">
-      <td style="padding:0 12px;">
-        <div>{{ it.label }}</div>
-      </td>
-      <td style="padding:0 12px;">{{ it.hsn }}</td>
-      <td style="padding:0 12px; text-align:center;">{{ it.kitGiven ? 'Yes' : 'No' }}</td>
-      <td style="padding:0 12px; text-align:right;">{{ it.quantity }}</td>
-      <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.price) }}</td>
-      <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.discount) }}</td>
-      <td style="padding:0 12px; text-align:right;">{{ it.cgst }}%</td>
-      <td style="padding:0 12px; text-align:right;">{{ it.sgst }}%</td>
-      <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.totalWithTax) }}</td>
-    </tr>
+                  <template v-for="it in selectedItems">
+                    <!-- main row (keeps your inline styles) -->
+                    <tr :key="it.id" style="height:50px; line-height:50px; font-size:14px;">
+                      <td style="padding:0 12px;">
+                        <div>{{ it.label }}</div>
+                      </td>
+                      <td style="padding:0 12px;">{{ it.hsn }}</td>
+                      <td style="padding:0 12px; text-align:center;">{{ it.kitGiven ? 'Yes' : 'No' }}</td>
+                      <td style="padding:0 12px; text-align:right;">{{ it.quantity }}</td>
+                      <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.price) }}</td>
+                      <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.discount) }}</td>
+                      <td style="padding:0 12px; text-align:right;">{{ it.cgst }}%</td>
+                      <td style="padding:0 12px; text-align:right;">{{ it.sgst }}%</td>
+                      <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.totalWithTax) }}</td>
+                    </tr>
 
-    <!-- details full-width row -->
-    <tr :key="`${it.id}-details`">
-      <td colspan="9" style="padding:6px 12px 12px 12px; background:#fafafa;">
-        <div style="width:100%; display:flex; font-size:13px; color:rgba(0,0,0,0.65);">
-          <div style="margin-bottom:4px;">Chassis: {{ it.chassisNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
-          <div style="margin-bottom:4px;">Engine: {{ it.engineNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
-          <div>Color: {{ it.color || '—' }}</div>
-        </div>
-      </td>
-    </tr>
-  </template>
-</tbody>
+                    <!-- details full-width row -->
+                    <tr :key="`${it.id}-details`">
+                      <td colspan="9" style="padding:6px 12px 12px 12px; background:#fafafa;">
+                        <div style="width:100%; display:flex; font-size:13px; color:rgba(0,0,0,0.65);">
+                          <div style="margin-bottom:4px;">Chassis: {{ it.chassisNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
+                          <div style="margin-bottom:4px;">Engine: {{ it.engineNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
+                          <div>Color: {{ it.color || '—' }}</div>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
 
               </v-simple-table>
             </div>
@@ -449,11 +395,11 @@ export default {
   data() {
     return {
       vendors: [],
-      availableInventories: [],
+      availableModel: [],
       inventoriesMap: {},                // key -> original inventory object
       inventoryKeyField: 'id',
       selectedVendorKey: null,
-      selectedInventoryKey: null,
+      selectedModelKey: null,
 
       // item form (hsn and kitGiven included)
       itemForm: { price: 0, quantity: 1, discount: 0, cgst: 0, sgst: 0, hsn: '', kitGiven: false },
@@ -476,7 +422,7 @@ export default {
       invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(Math.random()*9000+1000)}`,
       invoiceDate: new Date().toLocaleDateString('en-GB'),
       loadingVendors: false,
-      loadingInventories: false
+      loadingModel: false
     }
   },
 
@@ -528,7 +474,7 @@ export default {
     },
 
     canAddItem() {
-      return Boolean(this.selectedInventoryKey) && Number(this.itemForm.price) > 0 && Number(this.itemForm.quantity) > 0
+      return Boolean(this.selectedModelKey) && Number(this.itemForm.price) > 0 && Number(this.itemForm.quantity) > 0
     }
   },
 
@@ -552,7 +498,7 @@ export default {
     },
 
     async fetchInventories() {
-      this.loadingInventories = true
+      this.loadingModel = true
       try {
         const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry')
         const items = (res.data?.items || []).map(i => ({ ...i }))
@@ -565,18 +511,18 @@ export default {
 
         // build map and assign __key for selects
         this.inventoriesMap = {}
-        this.availableInventories = items.map(it => {
+        this.availableModel = items.map(it => {
           const key = it[this.inventoryKeyField] ?? it.id ?? it._id ?? it.pk ?? `g_${Math.random().toString(36).slice(2,8)}`
           this.inventoriesMap[key] = it
           return { ...it, __key: key, label: it.label || it.modelName || it.name || it.modelName || 'Item' }
         })
 
         // sort for convenience
-        this.availableInventories.sort((a,b) => (a.label||'').localeCompare(b.label||''))
+        this.availableModel.sort((a,b) => (a.label||'').localeCompare(b.label||''))
       } catch (e) {
         console.warn('Failed to fetch inventories', e)
       } finally {
-        this.loadingInventories = false
+        this.loadingModel = false
       }
     },
 
@@ -585,22 +531,22 @@ export default {
     // ---------- helpers for inventory availability ----------
     ensureInventoryInAvailable(key) {
       if (!key) return
-      if (!this.availableInventories.some(a => a.__key === key) && this.inventoriesMap[key]) {
+      if (!this.availableModel.some(a => a.__key === key) && this.inventoriesMap[key]) {
         const orig = this.inventoriesMap[key]
-        this.availableInventories.push({ ...orig, __key: key, label: orig.label || orig.modelName || orig.name || 'Item' })
-        this.availableInventories.sort((a,b) => (a.label||'').localeCompare(b.label||''))
+        this.availableModel.push({ ...orig, __key: key, label: orig.label || orig.modelName || orig.name || 'Item' })
+        this.availableModel.sort((a,b) => (a.label||'').localeCompare(b.label||''))
       }
     },
 
     removeInventoryFromAvailable(key) {
       if (!key) return
-      this.availableInventories = this.availableInventories.filter(a => a.__key !== key)
+      this.availableModel = this.availableModel.filter(a => a.__key !== key)
     },
 
     // ---------- form & item computations ----------
     resolveSelectedInventory() {
-      if (!this.selectedInventoryKey) return null
-      return this.inventoriesMap[this.selectedInventoryKey] || this.availableInventories.find(it => it.__key === this.selectedInventoryKey) || null
+      if (!this.selectedModelKey) return null
+      return this.inventoriesMap[this.selectedModelKey] || this.availableModel.find(it => it.__key === this.selectedModelKey) || null
     },
 
     computeRowTotals(row) {
@@ -636,8 +582,8 @@ export default {
       if (!inv) return null
       const hsnVal = (this.itemForm.hsn && String(this.itemForm.hsn).trim()) ? String(this.itemForm.hsn).trim() : (inv.hsn || '')
       return {
-        id: `${inv[this.inventoryKeyField] ?? this.selectedInventoryKey}-${Date.now()}`,
-        inventoryId: inv[this.inventoryKeyField] ?? this.selectedInventoryKey,
+        id: `${inv[this.inventoryKeyField] ?? this.selectedModelKey}-${Date.now()}`,
+        inventoryId: inv[this.inventoryKeyField] ?? this.selectedModelKey,
         label: inv.label || inv.modelName || inv.name || inv.modelName || 'Item',
         hsn: hsnVal,
         unit: inv.unit || '',
@@ -665,7 +611,7 @@ export default {
         // create updated object preserving id; prefer inventory fields for chassis/engine/color
         const updated = {
           ...this.editingBackup,
-          inventoryId: inv[this.inventoryKeyField] ?? this.selectedInventoryKey,
+          inventoryId: inv[this.inventoryKeyField] ?? this.selectedModelKey,
           label: inv.label || inv.modelName || inv.name || this.editingBackup.label,
           hsn: (this.itemForm.hsn && String(this.itemForm.hsn).trim()) ? String(this.itemForm.hsn).trim() : (inv.hsn || ''),
           chassisNumber: inv.chassisNumber || inv.gsisk3 || inv.chassisNo || inv.chassis || this.editingBackup.chassisNumber || '',
@@ -732,7 +678,7 @@ export default {
       this.editingBackup = { ...row }
 
       // populate form with row data
-      this.selectedInventoryKey = row.inventoryId
+      this.selectedModelKey = row.inventoryId
       this.itemForm.price = Number(row.price || 0)
       this.itemForm.quantity = Number(row.quantity || 1)
       this.itemForm.discount = Number(row.discount || 0)
@@ -748,14 +694,14 @@ export default {
       // if there is a backup, restore it to selectedItems
       if (this.editingBackup) {
         this.selectedItems.push({ ...this.editingBackup })
-        // remove the inventory entry we added to availableInventories while editing (so inventory remains removed)
+        // remove the inventory entry we added to availableModel while editing (so inventory remains removed)
         this.removeInventoryFromAvailable(this.editingBackup.inventoryId)
       }
       this.clearFormAndEditing()
     },
 
     clearFormAndEditing() {
-      this.selectedInventoryKey = null
+      this.selectedModelKey = null
       this.itemForm = { price: 0, quantity: 1, discount: 0, cgst: 0, sgst: 0, hsn: '', kitGiven: false }
       this.isEditing = false
       this.editingBackup = null

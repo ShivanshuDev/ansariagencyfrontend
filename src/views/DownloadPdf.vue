@@ -26,7 +26,7 @@ export default {
   methods: {
     downloadPdf() {
       if (!this.items || !this.items.length) return;
-
+      console.log('items', JSON.stringify(this.items, null, 2))
       const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',

@@ -341,7 +341,7 @@ export default {
 /* Drawer styling */
 .app-drawer {
   width: 100%; /* fixed width */
-  background: linear-gradient(to bottom, #0581f5 0%, #2578d6 100%);
+  background: linear-gradient(to bottom, #040891 0%, #02356f 100%);
   border-right: 1px solid rgba(0,0,0,0.06);
   color: #1f2d3d;
 }
@@ -375,7 +375,7 @@ export default {
 
 /* Icon in header */
 .header-icon {
-  color: #1976d2;
+  color: #040891;
   margin-right: 8px;
 }
 

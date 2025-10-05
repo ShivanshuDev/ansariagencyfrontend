@@ -329,7 +329,7 @@ export default {
   flex: 1 1 0;
 }
 .avatar {
-  background: linear-gradient(135deg, #1976d2, #4fc3f7);
+  background: linear-gradient(135deg, #040891, #4fc3f7);
   color: white;
   border-radius: 10px;
   box-shadow: 0 6px 18px rgba(25, 118, 210, 0.16);
@@ -345,7 +345,7 @@ export default {
   font-weight: 600;
 }
 .invoice-number {
-  color: #1976d2;
+  color: #040891;
   margin-left: 8px;
   font-weight: 700;
 }
