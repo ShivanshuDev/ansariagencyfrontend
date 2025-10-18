@@ -52,13 +52,13 @@
 
                 <v-list-item @click="$emit('tab-selected', 'InventryTable')">
                   <v-list-item-content>
-                    <v-list-item-title>Inventory Table</v-list-item-title>
+                    <v-list-item-title>Inventory Details</v-list-item-title>
                   </v-list-item-content>
                 </v-list-item>
 
                 <v-list-item @click="$emit('tab-selected', 'MODELNAME')">
                   <v-list-item-content>
-                    <v-list-item-title>Model Name</v-list-item-title>
+                    <v-list-item-title>Bike Model</v-list-item-title>
                   </v-list-item-content>
                 </v-list-item>
 

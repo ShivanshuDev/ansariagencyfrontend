@@ -29,7 +29,6 @@
           />
         </v-col>
       </v-row>
-
       <v-data-table
         :headers="headers"
         :items="filteredEmployees"
@@ -38,11 +37,14 @@
         hide-default-footer="false"
         @click:row="onRowClick"
       >
+      <template v-slot:item.sn="{ index }">
+        {{ index + 1 }}
+      </template>
         <!-- Data rows -->
+        <template v-slot:item.employeeId="{ item }">{{ item.employeeId || '-' }}</template>
         <template v-slot:item.employeeRole="{ item }">{{ item.employeeRole || '-' }}</template>
         <template v-slot:item.employeeName="{ item }">{{ item.employeeName || '-' }}</template>
         <template v-slot:item.email="{ item }">{{ item.email || '-' }}</template>
-        <template v-slot:item.venderId="{ item }">{{ item.venderId || '-' }}</template>
         <template v-slot:item.department="{ item }">{{ item.department || '-' }}</template>
         <template v-slot:item.phone="{ item }">{{ item.phone || '-' }}</template>
         <template v-slot:item.userName="{ item }">{{ item.userName || '-' }}</template>
@@ -137,7 +139,7 @@ export default {
             emp.employeeRole || '',
             emp.employeeName || '',
             emp.email || '',
-            emp.venderId || '',
+            emp.employeeId || '',
             emp.department || '',
             emp.phone || '',
             emp.userId || ''
@@ -152,7 +154,7 @@ export default {
           employeeRole: emp.employeeRole,
           employeeName: emp.employeeName,
           email: emp.email,
-          venderId: emp.venderId,
+          employeeId: emp.employeeId,
           department: emp.department,
           phone: emp.phone,
           userName: emp.userId
@@ -162,10 +164,11 @@ export default {
     },
     headers() {
       return [
-        { text: 'Role', value: 'employeeRole', sortable: false },
+        { text: 'S.No', value: 'sn', sortable: false, align: 'start' },
         { text: 'Name', value: 'employeeName', sortable: false },
+        { text: 'Employee ID', value: 'employeeId', sortable: false },
+        { text: 'Role', value: 'employeeRole', sortable: false },
         { text: 'Email', value: 'email', sortable: false },
-        { text: 'Vender ID', value: 'venderId', sortable: false },
         { text: 'Department', value: 'department', sortable: false },
         { text: 'Phone', value: 'phone', sortable: false },
         { text: 'User Name', value: 'userName', sortable: false }
@@ -194,7 +197,7 @@ export default {
       if (!item) return;
       // find full record in this.employees by vendorId, userId or employeeName
       const found = (this.employees || []).find(e => {
-        return (e.venderId && e.venderId === item.venderId)
+        return (e.employeeId && e.employeeId === item.employeeId)
           || (e.userId && e.userId === item.userName)
           || (e.employeeName && e.employeeName === item.employeeName);
       });

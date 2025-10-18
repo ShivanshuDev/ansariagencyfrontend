@@ -51,6 +51,7 @@ export default {
   computed: {
     // array of column keys (value) in order
     columnOrder() {
+      console.log('this.items', this.items)
       if (!this.headers || !this.headers.length) {
         // fallback to keys of first item
         return this.items && this.items.length ? Object.keys(this.items[0]) : [];
@@ -106,33 +107,68 @@ export default {
       });
     },
 
+    // download() {
+    //   if (!this.hasRows) {
+    //     this.$emit('no-data');
+    //     return;
+    //   }
+
+    //   // Use full items provided by parent
+    //   const rows = this.prepareRows(this.items);
+
+    //   // create worksheet from JSON
+    //   const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true });
+
+    //   // If includeHeader is true, write header labels on first row
+    //   if (this.includeHeader && this.headerLabels && this.headerLabels.length) {
+    //     XLSX.utils.sheet_add_aoa(ws, [this.headerLabels], { origin: 'A1' });
+    //   }
+
+    //   // create workbook and append sheet
+    //   const wb = XLSX.utils.book_new();
+    //   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+    //   // write file
+    //   const outName = `${this.filename}.xlsx`;
+    //   XLSX.writeFile(wb, outName);
+
+    //   this.$emit('downloaded', { filename: outName, count: rows.length });
+    // }
     download() {
       if (!this.hasRows) {
         this.$emit('no-data');
         return;
       }
 
-      // Use full items provided by parent
       const rows = this.prepareRows(this.items);
 
-      // create worksheet from JSON
-      const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: true });
+      // create an empty worksheet
+      const ws = XLSX.utils.aoa_to_sheet([]);
 
-      // If includeHeader is true, write header labels on first row
+      // if we include headers, write them in A1
+      let startRow = 0;
       if (this.includeHeader && this.headerLabels && this.headerLabels.length) {
         XLSX.utils.sheet_add_aoa(ws, [this.headerLabels], { origin: 'A1' });
+        startRow = 1; // data goes to A2 now
       }
 
-      // create workbook and append sheet
+      // append data starting after the header
+      XLSX.utils.sheet_add_json(ws, rows, {
+        header: this.columnOrder, // keep column order
+        skipHeader: true,         // don't auto-generate headers
+        origin: { r: startRow, c: 0 }
+      });
+
+      // workbook + save
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
 
-      // write file
       const outName = `${this.filename}.xlsx`;
       XLSX.writeFile(wb, outName);
 
       this.$emit('downloaded', { filename: outName, count: rows.length });
     }
+
   }
 };
 </script>

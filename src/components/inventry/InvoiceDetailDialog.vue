@@ -135,4 +135,10 @@ export default {
   background-color: #040891; /* Set to your desired color */
   color: #ffffff; /* For the text */
 }
+
+::v-deep(.v-data-table thead th) {
+  background-color: #040891 !important; /* Deep blue header */
+  color: #ffffff !important;             /* White text */
+}
+
 </style>

@@ -106,7 +106,7 @@
                     <div class="kpi-grid">
                         <!-- Added Date -->
                         <v-hover v-slot="{ hover }">
-                        <div class="kpi-card" :class="{ 'kpi-hover': hover }" v-tooltip.bottom="addedDateTooltip">
+                        <div class="kpi-card" :class="{ 'kpi-hover': hover }">
                             <div class="kpi-left">
                             <div class="kpi-icon-wrap"><v-icon large>mdi-calendar-plus</v-icon></div>
                             </div>
@@ -119,7 +119,7 @@
 
                         <!-- Last Modified -->
                         <v-hover v-slot="{ hover }">
-                        <div class="kpi-card" :class="{ 'kpi-hover': hover }" v-tooltip.bottom="lastModifiedTooltip">
+                        <div class="kpi-card" :class="{ 'kpi-hover': hover }" >
                             <div class="kpi-left">
                             <div class="kpi-icon-wrap"><v-icon large>mdi-calendar-edit</v-icon></div>
                             </div>

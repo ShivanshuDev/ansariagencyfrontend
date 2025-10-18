@@ -1,128 +1,54 @@
 <template>
   <v-card class="pa-6" style="margin:12px;" elevation="6">
-    <!-- Header -->
-    <v-row align="center" justify="space-between" class="mb-4">
-      <v-col cols="12" md="6" class="d-flex align-center">
-        <v-avatar size="48" class="mr-3"><v-img src="/assets/logo-placeholder.png" /></v-avatar>
-        <div>
-          <h2 class="mb-0">Create Invoice</h2>
-          <div class="subtitle-2 text--secondary">Quick billing • GST-ready • Print & export</div>
-        </div>
-      </v-col>
-
-      <v-col cols="12" md="6" class="text-right">
-        <v-btn icon @click="togglePreview"><v-icon>{{ preview ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon></v-btn>
-        <v-btn class="ml-2" color="primary" elevation="2" @click="printInvoice" :disabled="!selectedItems.length"><v-icon left>mdi-printer</v-icon> Print</v-btn>
-        <v-btn class="ml-2" color="success" elevation="2" @click="saveInvoice" :disabled="!selectedItems.length"><v-icon left>mdi-content-save</v-icon> Save</v-btn>
-      </v-col>
-    </v-row>
+    <!-- header & action-bar omitted for brevity in this paste; assume same as earlier version -->
+    <!-- inside your parent template, replacing the old buttons -->
+    <v-col cols="12" md="6" class="text-right">
+      <action-bar
+        :preview="preview"
+        :has-items="selectedItems.length > 0"
+        @toggle-preview="togglePreview"
+        @print="printInvoice"
+        @save="saveInvoice"
+      />
+    </v-col>
 
     <v-row dense>
-      <!-- Left column (form) -->
       <v-col cols="12" md="4">
         <v-sheet class="pa-4 rounded-lg" elevation="2">
-          <v-row>
-            <!-- Vendor select -->
-            <v-col cols="12">
-              <v-select
-                :items="vendors"
-                item-text="name"
-                item-value="pk"
-                label="Select vendor"
-                v-model="selectedVendorKey"
-                dense
-                outlined
-                clearable
-                :loading="loadingVendors"
-                @change="onVendorChange"
-              />
-            </v-col>
-
-            <!-- Vendor card -->
-            <v-col cols="12" v-if="selectedVendor" class="pt-0">
-              <v-row no-gutters align="center">
-                <v-col cols="9">
-                  <div class="font-weight-medium">{{ selectedVendor.name }}</div>
-                  <div class="text--secondary">{{ selectedVendor.billing?.line1 }}, {{ selectedVendor.billing?.city }}, {{ selectedVendor.billing?.state }}</div>
-                </v-col>
-                <v-col cols="3" class="text-right">
-                  <v-chip small outlined>{{ selectedVendor.gstin || '—' }}</v-chip>
-                </v-col>
-              </v-row>
-            </v-col>
-            <!-- Model select -->
-            <v-col cols="12" class="mt-3">
-              <v-select
-                :items="availableModel"
-                item-text="label"
-                item-value="__key"
-                label="Search / select inventory"
-                v-model="selectedModelKey"
-                dense
-                outlined
-                clearable
-                :loading="loadingModel"
-              />
-            </v-col>
-
-            <!-- Item form -->
-            <v-col cols="12" class="mt-3">
-              <v-form ref="itemFormRef" v-model="itemFormValid" lazy-validation>
-                <v-row>
-                  <v-col cols="12" md="6">
-                    <v-text-field v-model.number="itemForm.price" label="Price (per unit)" type="number" dense outlined prepend-inner-icon="mdi-currency-inr" />
-                  </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-text-field v-model.number="itemForm.quantity" label="Quantity" type="number" dense outlined />
-                  </v-col>
-
-                  <v-col cols="12" md="6" class="mt-2">
-                    <v-row>
-                      <v-col cols="6">
-                        <v-text-field v-model.number="itemForm.discount" label="Discount (₹)" type="number" dense outlined min="0" />
-                      </v-col>
-                      <v-col cols="6">
-                        <v-text-field v-model="itemForm.hsn" label="HSN" type="text" dense outlined />
-                      </v-col>
-                    </v-row>
-                  </v-col>
-
-                  <!-- Only CGST & SGST -->
-                  <v-col cols="12" md="6" class="mt-2">
-                    <v-row>
-                      <v-col cols="6">
-                        <v-text-field v-model.number="itemForm.cgst" label="CGST (%)" type="number" dense outlined />
-                      </v-col>
-                      <v-col cols="6">
-                        <v-text-field v-model.number="itemForm.sgst" label="SGST (%)" type="number" dense outlined />
-                      </v-col>
-                    </v-row>
-                  </v-col>
-
-                  <!-- Kit checkbox -->
-                  <v-col cols="12" class="mt-2">
-                    <v-checkbox v-model="itemForm.kitGiven" label="Kit given" dense hide-details />
-                  </v-col>
-
-                  <v-col cols="12" class="text-right mt-3">
-                    <v-btn color="primary" elevation="3" @click="onAddOrUpdate" :disabled="!canAddItem">
-                      <v-icon left>{{ isEditing ? 'mdi-check' : 'mdi-plus' }}</v-icon>
-                      {{ isEditing ? 'Update item' : 'Add to invoice' }}
-                    </v-btn>
-
-                    <v-btn v-if="isEditing" text class="ml-2" @click="cancelEdit">Cancel</v-btn>
-                  </v-col>
-                </v-row>
-              </v-form>
-            </v-col>
-          </v-row>
+          <vendor-select
+            :vendors="vendors"
+            :loading="loadingVendors"
+            :selected-key.sync="selectedVendorKey"
+            @fetch-vendors="fetchVendors"
+          />
+         
+          <!-- NEW complex selector -->
+          <category-model-chassis-select
+            :inventories="availableModel"
+            v-model="selectedModelKey"
+            @chassis-selected="onChassisSelected"
+          />
+           <br />
+          <br />
+          <item-form
+            :selected-model-key="selectedModelKey"
+            :inventories-map="inventoriesMap"
+            :inventory-key-field="inventoryKeyField"
+            :is-editing="isEditing"
+            :item-form.sync="itemForm"
+            :can-add-item="canAddItem"
+            @add-or-update="onAddOrUpdate"
+            @cancel-edit="cancelEdit"
+          />
         </v-sheet>
       </v-col>
 
-      <!-- Right column (summary + payment) -->
+      <!-- right column unchanged -->
       <v-col cols="12" md="8">
+        <!-- ... invoice summary, table, summary payment ... (unchanged) -->
         <v-sheet class="pa-4 rounded-lg" elevation="2">
+          <!-- same content as before: header, invoice-table, totals, payment -->
+          <!-- InvoiceTable uses same props / events -->
           <div class="d-flex justify-space-between align-center mb-3">
             <div>
               <div class="subtitle-1 font-weight-medium">Invoice summary</div>
@@ -134,72 +60,13 @@
             </div>
           </div>
 
-          <!-- scrollable table container with sticky header -->
-          <div class="fixed-table-container elevation-1">
-            <v-simple-table dense>
-              <thead>
-                <tr>
-                  <th class="text-left">Item</th>
-                  <th class="text-left">HSN</th>
-                  <th class="text-center">Kit</th>
-                  <th class="text-right">Qty</th>
-                  <th class="text-right">Discount</th>
-                  <th class="text-right">CGST</th>
-                  <th class="text-right">SGST</th>
-                  <th class="text-right">Total</th>
-                  <th class="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <template v-for="it in selectedItems">
-                  <!-- main row -->
-                  <tr :key="it.id">
-                    <td>
-                      <div>
-                        <div class="font-weight-medium">{{ it.label }}</div>
-                      </div>
-                    </td>
-
-                    <td>
-                      <div class="text-left">{{ it.hsn || '—' }}</div>
-                    </td>
-
-                    <td class="text-center">{{ it.kitGiven ? 'Yes' : 'No' }}</td>
-
-                    <td class="text-right">{{ it.quantity }} × ₹{{ formatMoney(it.price) }}</td>
-
-                    <td class="text-right">{{ formatMoney(it.discount) }}</td>
-
-                    <td class="text-right">{{ (it.cgst || 0) }}%</td>
-
-                    <td class="text-right">{{ (it.sgst || 0) }}%</td>
-
-                    <td class="text-right font-weight-medium">₹{{ formatMoney(it.totalWithTax) }}</td>
-
-                    <td class="text-right">
-                      <v-btn icon small color="primary" @click="editItem(it)"><v-icon small>mdi-pencil</v-icon></v-btn>
-                      <v-btn icon small color="red" @click="removeItemAndRestore(it)"><v-icon small>mdi-delete</v-icon></v-btn>
-                    </td>
-                  </tr>
-
-                  <!-- details full-width row -->
-                  <tr :key="`${it.id}-details`">
-                    <td colspan="9" style="padding:6px 12px 12px 12px; background: #fafafa;">
-                      <div style="width:100%; display:flex; flex-direction:row; font-size:12px; color:rgba(0,0,0,0.6);">
-                        <div style="margin-bottom:4px;">Chassis: {{ it.chassisNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
-                        <div style="margin-bottom:4px;">Engine: {{ it.engineNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
-                        <div>Color: {{ it.color || '—' }}</div>
-                      </div>
-                    </td>
-                  </tr>
-                </template>
-              </tbody>
-
-            </v-simple-table>
-          </div>
+          <invoice-table
+            :items="selectedItems"
+            @edit="editItem"
+            @remove="removeItemAndRestore"
+          />
 
           <v-divider class="my-3" />
-
           <v-row>
             <v-col cols="12" md="6">
               <div class="text--secondary">Tax & discount breakdown</div>
@@ -215,264 +82,126 @@
             </v-col>
           </v-row>
 
-          <!-- Payment section -->
           <v-divider class="my-3" />
-          <v-row class="align-center">
-            <v-col cols="12" md="4">
-              <v-text-field
-                v-model.number="amountPaid"
-                label="Amount paid (₹)"
-                type="number"
-                min="0"
-                dense
-                outlined
-                @input="onAmountPaidChange"
-              />
-            </v-col>
-
-            <v-col cols="12" md="4">
-              <v-select
-                :items="paymentTypes"
-                label="Payment type"
-                v-model="paymentType"
-                dense
-                outlined
-                clearable
-              />
-            </v-col>
-
-            <v-col cols="12" md="4" class="text-right">
-              <div>Due amount: <strong>₹{{ formatMoney(dueAmount) }}</strong></div>
-              <div v-if="changeDue>0" class="text-success">Change: ₹{{ formatMoney(changeDue) }}</div>
-            </v-col>
-          </v-row>
-
-          <v-row class="mt-4" justify="end">
-            <v-col cols="12" md="6" class="text-right">
-              <v-btn text small @click="clearAll">Clear</v-btn>
-              <v-btn class="ml-2" color="secondary" @click="downloadPdf" :disabled="!selectedItems.length">Export PDF</v-btn>
-            </v-col>
-          </v-row>
+          <summary-payment
+            :amount-paid.sync="amountPaid"
+            :payment-type.sync="paymentType"
+            :payment-types="paymentTypes"
+            :due-amount="dueAmount"
+            :change-due="changeDue"
+            :has-items="selectedItems.length>0"
+            @clear-all="clearAll"
+            @download-pdf="downloadPdf"
+          />
         </v-sheet>
       </v-col>
     </v-row>
 
-    <!-- Invoice preview / print area -->
-    <v-dialog v-model="preview" width="900">
-      <v-card>
-        <v-card-title>
-          <span class="headline">Invoice preview</span>
-          <v-spacer />
-          <v-btn icon @click="preview=false"><v-icon>mdi-close</v-icon></v-btn>
-        </v-card-title>
+    <!-- <invoice-preview
+      :preview.sync="preview"
+      :selected-vendor="selectedVendor"
+      :items="selectedItems"
+      :invoice-number="invoiceNumber"
+      :invoice-date="invoiceDate"
+      :subtotal="subtotal"
+      :total-discount="totalDiscount"
+      :total-tax="totalTax"
+      :grand-total="grandTotal"
+      :payment-type="paymentType"
+      :amount-paid="amountPaid"
+      :due-amount="dueAmount"
+      :change-due="changeDue"
+      @print="printInvoice"
+    /> -->
+    <invoice-preview
+      :preview.sync="preview"
+      :selected-vendor="selectedVendor"
+      :items="selectedItems"
+      :invoice-number="invoiceNumber"
+      :invoice-date="invoiceDate"
+      :subtotal="subtotal"
+      :total-discount="totalDiscount"
+      :total-cgst="totalCgst"
+      :total-sgst="totalSgst"
+      :total-tax="totalTax"
+      :grand-total="grandTotal"
+      :amount-paid="amountPaid"
+      :payment-type="paymentType"
+      :inventory-map="inventoriesMap"
+    />
 
-        <v-card-text>
-          <div id="print-area" class="pa-2">
-            <div class="d-flex justify-space-between mb-4">
-              <div style="width:100%;">
-                <div style="display:flex; gap:8px; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd; padding-bottom:8px;">
-                  <div>
-                    <h3 class="mb-1">{{ selectedVendor?.name || 'Vendor' }}</h3>
-                    <div class="text--secondary">{{ selectedVendor?.billing?.line1 }}, {{ selectedVendor?.billing?.city }}, {{ selectedVendor?.billing?.state }}</div>
-                    <div class="text--secondary">GSTIN: {{ selectedVendor?.gstin || '' }}</div>
-                  </div>
 
-                  <div style="text-align:right">
-                    <h3 class="mb-1">Invoice</h3>
-                    <div>No: {{ invoiceNumber }}</div>
-                    <div>Date: {{ invoiceDate }}</div>
-                  </div>
-                </div>
-
-                <div style="display:flex; justify-content:space-between; margin-top:12px;">
-                  <div style="width:50%;">
-                    <strong>Shipping from:</strong>
-                    <div class="text--secondary">
-                      ANSARI AUTOMOBILE, <br />
-                      Badi Kamhariya, <br />
-                      Near over bridge, Bypass road<br />
-                      Mau, Uttar Pradesh, India
-                    </div>
-                  </div>
-
-                  <div style="width:50%; text-align:right;">
-                    <strong>Shipping to: {{ selectedVendor?.name }}</strong>
-                    <div class="text--secondary">
-                      {{ selectedVendor?.shipping?.name }}<br />
-                      {{ selectedVendor?.shipping?.line1 }} {{ selectedVendor?.shipping?.line2 }}<br />
-                      {{ selectedVendor?.shipping?.city }} - {{ selectedVendor?.shipping?.pincode }}, {{ selectedVendor?.shipping?.state }}<br />
-                      {{ selectedVendor?.phone || selectedVendor?.altphone }}
-                    </div>
-                    <div class="text--secondary">GSTIN: {{ selectedVendor?.gstin || '' }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- items table for preview/pdf -->
-            <div style="height:500px; overflow:auto; width:100%; margin-top:12px;">
-              <v-simple-table style="width:100%;">
-                <thead>
-                  <tr>
-                    <th style="height:50px; line-height:50px; font-size:16px; text-align:left; padding:0 12px;">Item</th>
-                    <th style="height:50px; line-height:50px; font-size:16px; text-align:left; padding:0 12px;">HSN</th>
-                    <th style="height:50px; line-height:50px; font-size:16px; text-align:center; padding:0 12px;">Kit</th>
-                    <th style="height:50px; line-height:50px; font-size:16px; text-align:right; padding:0 12px;">Qty</th>
-                    <th style="height:50px; line-height:50px; font-size:16px; text-align:right; padding:0 12px;">Rate</th>
-                    <th style="height:50px; line-height:50px; font-size:16px; text-align:right; padding:0 12px;">Discount</th>
-                    <th style="height:50px; line-height:50px; font-size:16px; text-align:right; padding:0 12px;">CGST</th>
-                    <th style="height:50px; line-height:50px; font-size:16px; text-align:right; padding:0 12px;">SGST</th>
-                    <th style="height:50px; line-height:50px; font-size:16px; text-align:right; padding:0 12px;">Total</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  <template v-for="it in selectedItems">
-                    <!-- main row (keeps your inline styles) -->
-                    <tr :key="it.id" style="height:50px; line-height:50px; font-size:14px;">
-                      <td style="padding:0 12px;">
-                        <div>{{ it.label }}</div>
-                      </td>
-                      <td style="padding:0 12px;">{{ it.hsn }}</td>
-                      <td style="padding:0 12px; text-align:center;">{{ it.kitGiven ? 'Yes' : 'No' }}</td>
-                      <td style="padding:0 12px; text-align:right;">{{ it.quantity }}</td>
-                      <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.price) }}</td>
-                      <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.discount) }}</td>
-                      <td style="padding:0 12px; text-align:right;">{{ it.cgst }}%</td>
-                      <td style="padding:0 12px; text-align:right;">{{ it.sgst }}%</td>
-                      <td style="padding:0 12px; text-align:right;">₹{{ formatMoney(it.totalWithTax) }}</td>
-                    </tr>
-
-                    <!-- details full-width row -->
-                    <tr :key="`${it.id}-details`">
-                      <td colspan="9" style="padding:6px 12px 12px 12px; background:#fafafa;">
-                        <div style="width:100%; display:flex; font-size:13px; color:rgba(0,0,0,0.65);">
-                          <div style="margin-bottom:4px;">Chassis: {{ it.chassisNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
-                          <div style="margin-bottom:4px;">Engine: {{ it.engineNumber || '—' }}</div> &nbsp;&nbsp;&nbsp;&nbsp;
-                          <div>Color: {{ it.color || '—' }}</div>
-                        </div>
-                      </td>
-                    </tr>
-                  </template>
-                </tbody>
-
-              </v-simple-table>
-            </div>
-
-            <div style="width:100%; display:flex; flex-direction:row; justify-content:space-between; margin-top:12px;">
-              <div style="width:50%;">
-                <div>Subtotal: ₹{{ formatMoney(subtotal) }}</div>
-                <div>Discount: ₹{{ formatMoney(totalDiscount) }}</div>
-                <div>Tax: ₹{{ formatMoney(totalTax) }}</div>
-                <div>Payment Type: {{ paymentType || '—' }}</div>
-              </div>
-              <div style="text-align:right;">
-                <div class="font-weight-bold">Grand Total: ₹{{ formatMoney(grandTotal) }}</div>
-                <div>Amount Paid: ₹{{ formatMoney(amountPaid) }}</div>
-                <div>Due: ₹{{ formatMoney(dueAmount) }}</div>
-                <div v-if="changeDue > 0" class="text-success">Change: ₹{{ formatMoney(changeDue) }}</div>
-              </div>
-            </div>
-
-          </div>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer />
-          <v-btn color="primary" @click="printInvoice">Print</v-btn>
-          <v-btn text @click="preview=false">Close</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </v-card>
 </template>
 
 <script>
 import axios from 'axios'
+import VendorSelect from './VendorSelect.vue'
+import CategoryModelChassisSelect from './CategoryModelChassisSelect.vue'
+import ItemForm from './ItemForm.vue'
+import InvoiceTable from './InvoiceTable.vue'
+import SummaryPayment from './SummaryPayment.vue'
+import InvoicePreview from './InvoicePreview.vue'
+import ActionBar from './ActionBar.vue'
 
 export default {
-  name: 'InvoiceItemSelector',
+  name: 'InvoiceWrapper',
+  components: { VendorSelect, CategoryModelChassisSelect, ItemForm, InvoiceTable, SummaryPayment, InvoicePreview, ActionBar },
+
   data() {
     return {
       vendors: [],
-      availableModel: [],
-      inventoriesMap: {},                // key -> original inventory object
-      inventoryKeyField: 'id',
+      availableModel: [],      // now list of individual inventory entries with __key (chassis-level)
+      inventoriesMap: {},      // maps __key -> inventory object (chassis-level)
+      inventoryKeyField: 'chassisNumber',
       selectedVendorKey: null,
-      selectedModelKey: null,
-
-      // item form (hsn and kitGiven included)
+      selectedModelKey: null,  // now holds chassis-key (same name preserved)
       itemForm: { price: 0, quantity: 1, discount: 0, cgst: 0, sgst: 0, hsn: '', kitGiven: false },
       itemFormValid: true,
-
-      // selected items on invoice
       selectedItems: [],
-
-      // editing support
       isEditing: false,
-      editingBackup: null,               // holds the original item while editing (so cancel restores it)
-
-      // payments
+      editingBackup: null,
       amountPaid: 0,
       paymentType: null,
       paymentTypes: ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Other'],
-
-      // ui
       preview: false,
       invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(Math.random()*9000+1000)}`,
       invoiceDate: new Date().toLocaleDateString('en-GB'),
       loadingVendors: false,
-      loadingModel: false
+      loadingModel: false,
+
+
+      preview: false,
+      selectedItems: [],
     }
   },
 
   computed: {
-    selectedVendor() {
-      return this.vendors.find(v => v.pk === this.selectedVendorKey) || null
-    },
-
-    subtotal() {
-      // sum of price * qty (without taxes and discounts)
-      return this.selectedItems.reduce((s, it) => s + (Number(it.price || 0) * Number(it.quantity || 0)), 0)
-    },
-
-    totalDiscount() {
-      return this.selectedItems.reduce((s, it) => s + Number(it.discount || 0), 0)
-    },
-
+    selectedVendor() { return this.vendors.find(v => v.pk === this.selectedVendorKey) || null },
+    subtotal() { return this.selectedItems.reduce((s, it) => s + (Number(it.price || 0) * Number(it.quantity || 0)), 0) },
+    totalDiscount() { return this.selectedItems.reduce((s, it) => s + Number(it.discount || 0), 0) },
     totalCgst() {
       return this.selectedItems.reduce((s, it) => {
         const taxable = Number(it.price || 0) * Number(it.quantity || 0)
         return s + (taxable * (Number(it.cgst || 0) / 100))
       }, 0)
     },
-
     totalSgst() {
       return this.selectedItems.reduce((s, it) => {
         const taxable = Number(it.price || 0) * Number(it.quantity || 0)
         return s + (taxable * (Number(it.sgst || 0) / 100))
       }, 0)
     },
-
-    totalTax() {
-      return this.totalCgst + this.totalSgst
-    },
-
-    grandTotal() {
-      // We store row.totalWithTax precomputed on every item; sum it
-      return this.selectedItems.reduce((s, it) => s + Number(it.totalWithTax || 0), 0)
-    },
-
+    totalTax() { return this.totalCgst + this.totalSgst },
+    grandTotal() { return this.selectedItems.reduce((s, it) => s + Number(it.totalWithTax || 0), 0) },
     dueAmount() {
       const due = Number(this.grandTotal) - Number(this.amountPaid || 0)
       return due > 0 ? Number(due.toFixed(2)) : 0
     },
-
     changeDue() {
       const change = Number(this.amountPaid || 0) - Number(this.grandTotal)
       return change > 0 ? Number(change.toFixed(2)) : 0
     },
-
     canAddItem() {
       return Boolean(this.selectedModelKey) && Number(this.itemForm.price) > 0 && Number(this.itemForm.quantity) > 0
     }
@@ -481,6 +210,22 @@ export default {
   created() {
     this.fetchVendors()
     this.fetchInventories()
+  },
+
+  watch: {
+    selectedModelKey(newKey) {
+      // When a chassis (inventory) is selected, auto-populate the form with available data
+      if (!newKey) return
+      const inv = this.inventoriesMap[newKey] || null
+      if (!inv) return
+      // populate form fields but DO NOT overwrite price/discount if user changed them earlier while editing (only set if zero)
+      this.itemForm.hsn = (inv.hsn || this.itemForm.hsn || '')
+      if (!this.itemForm.price || this.itemForm.price === 0) this.itemForm.price = Number(inv.price || 0)
+      this.itemForm.kitGiven = !!this.itemForm.kitGiven
+      // We do not auto-set quantity (keep default 1)
+      // store chassis/engine/color into editing backup fields so computeRowTotals uses them later (buildItemFromForm reads from inventoriesMap)
+      // (buildItemFromForm will copy chassis/engine/color from inventoriesMap)
+    }
   },
 
   methods: {
@@ -497,24 +242,25 @@ export default {
       }
     },
 
+    // improved fetchInventories: create chassis-level keys (use chassisNumber or sk)
     async fetchInventories() {
       this.loadingModel = true
       try {
         const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry')
         const items = (res.data?.items || []).map(i => ({ ...i }))
 
-        // detect id-like field on first item
-        const first = items[0] || {}
-        const possible = ['id', '_id', 'inventoryId', 'pk', 'sku', 'uid']
-        const found = possible.find(k => first[k] !== undefined)
-        this.inventoryKeyField = found || 'id'
-
-        // build map and assign __key for selects
+        // build map keyed by chassisNumber (or sk fallback)
         this.inventoriesMap = {}
         this.availableModel = items.map(it => {
-          const key = it[this.inventoryKeyField] ?? it.id ?? it._id ?? it.pk ?? `g_${Math.random().toString(36).slice(2,8)}`
-          this.inventoriesMap[key] = it
-          return { ...it, __key: key, label: it.label || it.modelName || it.name || it.modelName || 'Item' }
+          // prefer chassisNumber or gsisk3 or sk as unique key; fallback to a generated id
+          const key = (it.chassisNumber && String(it.chassisNumber).trim()) ||
+                      (it.gsisk3 && String(it.gsisk3).trim()) ||
+                      (it.sk && String(it.sk).trim()) ||
+                      (`inv_${Math.random().toString(36).slice(2,8)}`)
+          // store __key for v-select usage and preserve original fields used in builds
+          const copy = { ...it, __key: key, label: it.modelName || it.label || it.model || 'Item' }
+          this.inventoriesMap[key] = copy
+          return copy
         })
 
         // sort for convenience
@@ -528,22 +274,6 @@ export default {
 
     formatMoney(v) { return Number(v || 0).toFixed(2) },
 
-    // ---------- helpers for inventory availability ----------
-    ensureInventoryInAvailable(key) {
-      if (!key) return
-      if (!this.availableModel.some(a => a.__key === key) && this.inventoriesMap[key]) {
-        const orig = this.inventoriesMap[key]
-        this.availableModel.push({ ...orig, __key: key, label: orig.label || orig.modelName || orig.name || 'Item' })
-        this.availableModel.sort((a,b) => (a.label||'').localeCompare(b.label||''))
-      }
-    },
-
-    removeInventoryFromAvailable(key) {
-      if (!key) return
-      this.availableModel = this.availableModel.filter(a => a.__key !== key)
-    },
-
-    // ---------- form & item computations ----------
     resolveSelectedInventory() {
       if (!this.selectedModelKey) return null
       return this.inventoriesMap[this.selectedModelKey] || this.availableModel.find(it => it.__key === this.selectedModelKey) || null
@@ -558,7 +288,6 @@ export default {
       const sgstAmt = taxable * (Number(row.sgst || 0) / 100)
       let total = taxable + cgstAmt + sgstAmt - discount
       if (total < 0) total = 0
-      // store rounded values
       row.taxable = Number(taxable.toFixed(2))
       row.cgstAmount = Number(cgstAmt.toFixed(2))
       row.sgstAmount = Number(sgstAmt.toFixed(2))
@@ -571,7 +300,6 @@ export default {
       row.sgst = Number(row.sgst || 0)
       row.hsn = row.hsn || ''
       row.kitGiven = !!row.kitGiven
-      // ensure additional inventory details exist (may be undefined)
       row.chassisNumber = row.chassisNumber || row.chassisNo || row.chassis || ''
       row.engineNumber = row.engineNumber || row.engineNo || row.engine || ''
       row.color = row.color || ''
@@ -582,13 +310,12 @@ export default {
       if (!inv) return null
       const hsnVal = (this.itemForm.hsn && String(this.itemForm.hsn).trim()) ? String(this.itemForm.hsn).trim() : (inv.hsn || '')
       return {
-        id: `${inv[this.inventoryKeyField] ?? this.selectedModelKey}-${Date.now()}`,
-        inventoryId: inv[this.inventoryKeyField] ?? this.selectedModelKey,
-        label: inv.label || inv.modelName || inv.name || inv.modelName || 'Item',
+        id: `${inv.__key ?? this.selectedModelKey}-${Date.now()}`,
+        inventoryId: inv.__key ?? this.selectedModelKey,
+        label: inv.label || inv.modelName || inv.name || 'Item',
         hsn: hsnVal,
         unit: inv.unit || '',
         image: inv.image || '',
-        // NEW: include chassis, engine, color from inventory object (if present)
         chassisNumber: inv.chassisNumber || inv.gsisk3 || inv.chassisNo || inv.chassis || '',
         engineNumber: inv.engineNumber || inv.engineNo || inv.engine || '',
         color: inv.color || '',
@@ -597,7 +324,10 @@ export default {
         discount: Number(this.itemForm.discount || 0),
         cgst: Number(this.itemForm.cgst || 0),
         sgst: Number(this.itemForm.sgst || 0),
-        kitGiven: !!this.itemForm.kitGiven
+        kitGiven: !!this.itemForm.kitGiven,
+        // carry attached pdf name if any (and file object)
+        attachedPdfName: this.itemForm.attachedPdfName || '',
+        attachedPdfFile: this.itemForm.attachedPdfFile || null
       }
     },
 
@@ -605,13 +335,11 @@ export default {
     onAddOrUpdate() {
       if (!this.canAddItem) return
       if (this.isEditing && this.editingBackup) {
-        // Update existing (preserve ID)
         const inv = this.resolveSelectedInventory()
         if (!inv) return
-        // create updated object preserving id; prefer inventory fields for chassis/engine/color
         const updated = {
           ...this.editingBackup,
-          inventoryId: inv[this.inventoryKeyField] ?? this.selectedModelKey,
+          inventoryId: inv.__key ?? this.selectedModelKey,
           label: inv.label || inv.modelName || inv.name || this.editingBackup.label,
           hsn: (this.itemForm.hsn && String(this.itemForm.hsn).trim()) ? String(this.itemForm.hsn).trim() : (inv.hsn || ''),
           chassisNumber: inv.chassisNumber || inv.gsisk3 || inv.chassisNo || inv.chassis || this.editingBackup.chassisNumber || '',
@@ -622,30 +350,22 @@ export default {
           discount: Number(this.itemForm.discount || 0),
           cgst: Number(this.itemForm.cgst || 0),
           sgst: Number(this.itemForm.sgst || 0),
-          kitGiven: !!this.itemForm.kitGiven
+          kitGiven: !!this.itemForm.kitGiven,
+          attachedPdfName: this.itemForm.attachedPdfName || this.editingBackup.attachedPdfName || '',
+          attachedPdfFile: this.itemForm.attachedPdfFile || this.editingBackup.attachedPdfFile || null
         }
         this.computeRowTotals(updated)
-
-        // replace existing
         const idx = this.selectedItems.findIndex(i => i.id === this.editingBackup.id)
-        if (idx >= 0) {
-          this.$set(this.selectedItems, idx, updated)
-        } else {
-          this.selectedItems.push(updated)
-        }
-
-        // cleanup: remove inventory from available list (it was restored when editing started)
+        if (idx >= 0) this.$set(this.selectedItems, idx, updated)
+        else this.selectedItems.push(updated)
         this.removeInventoryFromAvailable(updated.inventoryId)
         this.clearFormAndEditing()
         return
       }
 
-      // Add new item
       const newItem = this.buildItemFromForm()
       if (!newItem) return
       this.computeRowTotals(newItem)
-
-      // If same inventory already exists (unlikely because we remove from available), merge quantities and prefer latest details
       const existing = this.selectedItems.find(i => i.inventoryId === newItem.inventoryId)
       if (existing) {
         existing.quantity = Number(existing.quantity || 0) + newItem.quantity
@@ -658,26 +378,35 @@ export default {
         existing.chassisNumber = newItem.chassisNumber
         existing.engineNumber = newItem.engineNumber
         existing.color = newItem.color
+        existing.attachedPdfName = newItem.attachedPdfName || existing.attachedPdfName
+        existing.attachedPdfFile = newItem.attachedPdfFile || existing.attachedPdfFile
         this.computeRowTotals(existing)
       } else {
         this.selectedItems.push(newItem)
       }
-
-      // remove inventory from available list
       this.removeInventoryFromAvailable(newItem.inventoryId)
       this.clearFormAndEditing()
     },
 
+    ensureInventoryInAvailable(key) {
+      if (!key) return
+      if (!this.availableModel.some(a => a.__key === key) && this.inventoriesMap[key]) {
+        const orig = this.inventoriesMap[key]
+        this.availableModel.push({ ...orig, __key: key, label: orig.label || orig.modelName || orig.name || 'Item' })
+        this.availableModel.sort((a,b) => (a.label||'').localeCompare(b.label||''))
+      }
+    },
+
+    removeInventoryFromAvailable(key) {
+      if (!key) return
+      this.availableModel = this.availableModel.filter(a => a.__key !== key)
+    },
+
     // when edit clicked
     editItem(row) {
-      // ensure inventory is visible in select (so user can re-select or update)
       this.ensureInventoryInAvailable(row.inventoryId)
-
-      // remove the row from selectedItems and keep a backup to restore on cancel
       this.selectedItems = this.selectedItems.filter(i => i.id !== row.id)
       this.editingBackup = { ...row }
-
-      // populate form with row data
       this.selectedModelKey = row.inventoryId
       this.itemForm.price = Number(row.price || 0)
       this.itemForm.quantity = Number(row.quantity || 1)
@@ -686,15 +415,14 @@ export default {
       this.itemForm.sgst = Number(row.sgst || 0)
       this.itemForm.hsn = row.hsn || ''
       this.itemForm.kitGiven = !!row.kitGiven
-
+      this.itemForm.attachedPdfName = row.attachedPdfName || ''
+      this.itemForm.attachedPdfFile = row.attachedPdfFile || null
       this.isEditing = true
     },
 
     cancelEdit() {
-      // if there is a backup, restore it to selectedItems
       if (this.editingBackup) {
         this.selectedItems.push({ ...this.editingBackup })
-        // remove the inventory entry we added to availableModel while editing (so inventory remains removed)
         this.removeInventoryFromAvailable(this.editingBackup.inventoryId)
       }
       this.clearFormAndEditing()
@@ -702,57 +430,51 @@ export default {
 
     clearFormAndEditing() {
       this.selectedModelKey = null
-      this.itemForm = { price: 0, quantity: 1, discount: 0, cgst: 0, sgst: 0, hsn: '', kitGiven: false }
+      this.itemForm = { price: 0, quantity: 1, discount: 0, cgst: 0, sgst: 0, hsn: '', kitGiven: false, attachedPdfName: '', attachedPdfFile: null }
       this.isEditing = false
       this.editingBackup = null
     },
 
-    recomputeRow(it) {
-      this.computeRowTotals(it)
-    },
+    recomputeRow(it) { this.computeRowTotals(it) },
 
     removeItemAndRestore(it) {
-      // remove item
       this.selectedItems = this.selectedItems.filter(i => i.id !== it.id)
-      // restore inventory option
       this.ensureInventoryInAvailable(it.inventoryId)
-      // reset payments if none left
-      if (!this.selectedItems.length) {
-        this.amountPaid = 0
-        this.paymentType = null
-      }
+      if (!this.selectedItems.length) { this.amountPaid = 0; this.paymentType = null }
     },
 
     clearAll() {
-      // restore available inventories for all selected items
-      this.selectedItems.forEach(i => {
-        if (this.inventoriesMap[i.inventoryId]) {
-          this.ensureInventoryInAvailable(i.inventoryId)
-        }
-      })
+      this.selectedItems.forEach(i => { if (this.inventoriesMap[i.inventoryId]) this.ensureInventoryInAvailable(i.inventoryId) })
       this.selectedItems = []
-      // reset payments
       this.amountPaid = 0
       this.paymentType = null
       this.clearFormAndEditing()
     },
 
-    togglePreview() {
-      this.preview = !this.preview
-    },
+    togglePreview() { this.preview = !this.preview },
 
-    onAmountPaidChange() {
-      if (this.amountPaid === '' || this.amountPaid == null) this.amountPaid = 0
-      this.amountPaid = Number(this.amountPaid || 0)
-    },
+    onAmountPaidChange() { if (this.amountPaid === '' || this.amountPaid == null) this.amountPaid = 0; this.amountPaid = Number(this.amountPaid || 0) },
 
-    // ---------- printing / pdf ----------
+    // printInvoice() {
+    //   const printArea = document.getElementById('print-area')
+    //   if (!printArea) return window.print()
+    //   const newWin = window.open('', '_blank', 'width=900,height=700')
+    //   newWin.document.write('<html><head><title>Invoice</title>')
+    //   newWin.document.write('<style>body{font-family:Arial;padding:20px;} table{width:100%;border-collapse:collapse;border-bottom:1px solid #ddd;} th,td{border-bottom:1px solid #ddd;padding:3px;text-align:left}</style>')
+    //   newWin.document.write('</head><body>')
+    //   newWin.document.write(printArea.innerHTML)
+    //   newWin.document.write('</body></html>')
+    //   newWin.document.close()
+    //   newWin.print()
+    // },
+
     printInvoice() {
+      // existing print logic — open print dialog for invoice preview area
       const printArea = document.getElementById('print-area')
       if (!printArea) return window.print()
       const newWin = window.open('', '_blank', 'width=900,height=700')
       newWin.document.write('<html><head><title>Invoice</title>')
-      newWin.document.write('<style>body{font-family:Arial;padding:20px;} table{width:100%;border-collapse:collapse;border-bottom:1px solid #ddd;} th,td{border-bottom:1px solid #ddd;padding:3px;text-align:left}</style>')
+      newWin.document.write('<style>body{font-family:Arial;padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ddd;padding:6px}</style>')
       newWin.document.write('</head><body>')
       newWin.document.write(printArea.innerHTML)
       newWin.document.write('</body></html>')
@@ -762,7 +484,7 @@ export default {
 
     downloadPdf() {
       const el = document.getElementById('print-area')
-      if (!el) { alert('Nothing to export'); return }
+      if (!el) { this.$toast && this.$toast.error && this.$toast.error('Nothing to export'); return }
       try {
         const opt = { margin: 10, filename: `${this.invoiceNumber}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' } }
         if (typeof html2pdf === 'undefined') { this.printInvoice(); return }
@@ -773,45 +495,61 @@ export default {
       }
     },
 
+    // saveInvoice() {
+    //   const payload = {
+    //     invoiceNumber: this.invoiceNumber,
+    //     date: this.invoiceDate,
+    //     vendor: this.selectedVendor,
+    //     items: this.selectedItems.map(it => ({
+    //       inventoryId: it.inventoryId,
+    //       label: it.label,
+    //       hsn: it.hsn,
+    //       chassisNumber: it.chassisNumber || '',
+    //       engineNumber: it.engineNumber || '',
+    //       color: it.color || '',
+    //       price: it.price,
+    //       quantity: it.quantity,
+    //       discount: it.discount,
+    //       cgst: it.cgst,
+    //       sgst: it.sgst,
+    //       kitGiven: !!it.kitGiven,
+    //       taxable: it.taxable,
+    //       taxAmount: it.taxAmount,
+    //       totalWithTax: it.totalWithTax,
+    //       attachedPdfName: it.attachedPdfName || ''
+    //       // attachedPdfFile is intentionally not serialized here; handle upload separately
+    //     })),
+    //     totals: { subtotal: this.subtotal, discountTotal: this.totalDiscount, tax: this.totalTax, grandTotal: this.grandTotal },
+    //     payment: { amountPaid: Number(this.amountPaid || 0), dueAmount: Number(this.dueAmount || 0), change: Number(this.changeDue || 0), paymentType: this.paymentType || null }
+    //   }
+    //   console.log('Saving invoice:', JSON.stringify(payload, null, 2))
+    //   this.$emit('save', payload)
+    //   this.$vuetify.goTo && this.$vuetify.goTo(0)
+    //   this.$toast && this.$toast.success && this.$toast.success('Invoice saved')
+    // },
+
+    // additional handler if component emits chassis-selected
     saveInvoice() {
+      // existing save logic — build payload and emit or post to server
       const payload = {
         invoiceNumber: this.invoiceNumber,
         date: this.invoiceDate,
         vendor: this.selectedVendor,
-        items: this.selectedItems.map(it => ({
-          inventoryId: it.inventoryId,
-          label: it.label,
-          hsn: it.hsn,
-          chassisNumber: it.chassisNumber || '',
-          engineNumber: it.engineNumber || '',
-          color: it.color || '',
-          price: it.price,
-          quantity: it.quantity,
-          discount: it.discount,
-          cgst: it.cgst,
-          sgst: it.sgst,
-          kitGiven: !!it.kitGiven,
-          taxable: it.taxable,
-          taxAmount: it.taxAmount,
-          totalWithTax: it.totalWithTax
-        })),
+        items: this.selectedItems,
         totals: {
           subtotal: this.subtotal,
-          discountTotal: this.totalDiscount,
           tax: this.totalTax,
           grandTotal: this.grandTotal
-        },
-        payment: {
-          amountPaid: Number(this.amountPaid || 0),
-          dueAmount: Number(this.dueAmount || 0),
-          change: Number(this.changeDue || 0),
-          paymentType: this.paymentType || null
         }
       }
-      console.log('Saving invoice:', JSON.stringify(payload, null, 2))
+      // example: emit payload upward or call API
       this.$emit('save', payload)
-      this.$vuetify.goTo && this.$vuetify.goTo(0)
       this.$toast && this.$toast.success && this.$toast.success('Invoice saved')
+    },
+    
+    onChassisSelected(chassisKey) {
+      // set selectedModelKey (already bound via v-model) — this method is optional but kept for clarity
+      this.selectedModelKey = chassisKey
     }
   }
 }
@@ -821,33 +559,8 @@ export default {
 .rounded-lg { border-radius: 12px }
 .pa-4 { padding: 16px }
 .display-1 { font-size: 28px }
-
-/* scrollable invoice summary table */
-.fixed-table-container {
-  height: 420px;
-  max-height: 420px;
-  overflow: auto;
-  border-radius: 6px;
-}
-
-/* Ensure table stretches */
-.fixed-table-container table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-/* Sticky header */
-.fixed-table-container thead th {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: white;
-  backdrop-filter: blur(2px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-  padding-top: 12px;
-  padding-bottom: 12px;
-}
-
-/* Small caption style for details */
+.fixed-table-container { height: 420px; max-height: 420px; overflow: auto; border-radius: 6px; }
+.fixed-table-container table { width: 100%; border-collapse: collapse; }
+.fixed-table-container thead th { position: sticky; top: 0; z-index: 10; background: white; backdrop-filter: blur(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.04); padding-top: 12px; padding-bottom: 12px; }
 .caption { font-size: 12px; }
 </style>

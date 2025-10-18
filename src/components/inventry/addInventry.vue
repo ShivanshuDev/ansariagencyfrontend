@@ -38,7 +38,7 @@
         <div class="fields-row">
           <div class="field-detail" :class="{'field-error': singleBikeErrors.categoryName}">
             <label>Category Name *</label>
-            <v-select
+            <v-autocomplete
               v-model="bikeForm.categoryName"
               :items="categories"
               item-text="category"
@@ -52,7 +52,7 @@
 
           <div class="field-detail" :class="{'field-error': singleBikeErrors.modelName}">
             <label>Model Name *</label>
-            <v-select
+            <v-autocomplete
               v-model="bikeForm.modelName"
               :items="models"
               item-text="modelName"
@@ -66,7 +66,7 @@
 
           <div class="field-detail" :class="{'field-error': singleBikeErrors.color}">
             <label>Color *</label>
-            <v-select
+            <v-autocomplete
               v-model="bikeForm.color"
               :items="getColorsForModel(bikeForm.modelName)"
               outlined
@@ -90,7 +90,7 @@
 
           <div class="field-detail" :class="{'field-error': singleBikeErrors.warehouse}">
             <label>Warehouse *</label>
-            <v-select
+            <v-autocomplete
               v-model="bikeForm.warehouse"
               :items="warehouses"
               outlined
@@ -303,7 +303,7 @@ export default {
         addedBy: this.userName || "",
         notes: "",
         statusType: "DRAFT",
-        source: ""
+        source: "TVS Company"
       };
     },
 

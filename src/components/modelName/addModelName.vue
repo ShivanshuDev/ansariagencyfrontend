@@ -2,12 +2,10 @@
   <v-container fluid>
     <v-row dense>
       <!-- CATEGORIES -->
-      <v-col cols="12" md="3">
+      <v-col cols="12" md="4">
         <v-card class="pa-3">
           <v-card-title class="d-flex align-center">
             <div class="headline">Categories</div>
-            <v-spacer />
-            <v-btn icon small @click="openCategoryDialog('add')"><v-icon>mdi-plus</v-icon></v-btn>
           </v-card-title>
 
           <v-card-text>
@@ -29,9 +27,7 @@
                 </v-btn>
               </v-col>
             </v-row>
-
             <v-divider class="my-2" />
-
             <v-list two-line dense class="category-list" >
               <v-list-item
                 v-for="(c, idx) in categoriesData"
@@ -45,6 +41,7 @@
                 </v-list-item-content>
 
                 <v-list-item-action style="display:flex; flex-direction:row;">
+                  <v-btn icon small @click.stop="addModelForCategory(c)"><v-icon>mdi-plus</v-icon></v-btn>
                   <v-btn icon small @click.stop="openCategoryDialog('edit', c)"><v-icon>mdi-pencil</v-icon></v-btn>
                   <v-btn icon small @click.stop="deleteCategoryConfirm(c)"><v-icon color="red">mdi-delete</v-icon></v-btn>
                 </v-list-item-action>
@@ -61,7 +58,7 @@
       </v-col>
 
       <!-- MODEL FORM (dialog-based trigger) -->
-      <v-col cols="12" md="3">
+      <!-- <v-col cols="12" md="3">
         <v-card class="pa-3">
           <v-card-title>
             <div>{{ editing ? "Update Model" : "Add New Model" }}</div>
@@ -86,10 +83,10 @@
             <v-btn outlined text @click="snackbar.visible = false">Close</v-btn>
           </template>
         </v-snackbar>
-      </v-col>
+      </v-col> -->
 
       <!-- MODELS TABLE -->
-      <v-col cols="12" md="6">
+      <v-col cols="12" md="8">
         <v-card class="pa-3">
           <v-card-title>
             <div class="headline">Models</div>
@@ -101,6 +98,7 @@
               single-line
               hide-details
               dense
+              outlined
               @input="debouncedFilter"
               style="max-width:260px"
               clearable
@@ -110,7 +108,7 @@
           <v-data-table
             :headers="headers"
             :items="filteredModels"
-            :items-per-page="6"
+            :items-per-page="17"
             dense
             class="elevation-1"
             item-key="modelName"
@@ -177,17 +175,7 @@
 
         <v-card-text>
           <v-form ref="modelDialogForm" v-model="modelDialog.valid" lazy-validation>
-            <v-text-field
-              v-model="form.modelName"
-              :rules="[rules.required, rules.min3]"
-              label="Model Name"
-              name="modelName"
-              required
-              outlined
-              dense
-            />
-
-            <v-select
+             <v-select
               v-model="form.category"
               :items="categoriesData.map(c => c.category || c.name)"
               label="Category"
@@ -197,16 +185,15 @@
               hide-details
               clearable
             />
-
-            <!-- new status field (v-model bound) -->
+            <br />
             <v-text-field
-              v-model="form.status"
-              label="Status"
-              dense
+              v-model="form.modelName"
+              :rules="[rules.required, rules.min3]"
+              label="Model Name"
+              name="modelName"
+              required
               outlined
-              hide-details
-              class="mt-3"
-              placeholder="e.g. available / out-of-stock"
+              dense
             />
 
             <div class="mt-3">
@@ -220,31 +207,26 @@
               <div v-if="form.colorInputs.length === 0" class="text--secondary mb-2">No color fields — click "Add color field".</div>
 
               <div style="max-height:220px; overflow:auto;">
+                  <br />
                 <v-row v-for="(c, idx) in form.colorInputs" :key="`fci-${idx}`" class="mb-2" align="center">
-                  <v-col cols="8">
+                  <v-col cols="10">
                     <v-text-field
                       ref="colorInputs"
                       v-model="form.colorInputs[idx]"
                       :label="`Color ${idx + 1}`"
                       dense
                       outlined
-                      hide-details
+                      hide-details 
                       @keyup.enter="onColorEnter(idx)"
                       clearable
                     />
                   </v-col>
-                  <v-col cols="4" class="text-right d-flex align-center">
-                    <v-chip small class="mr-2">
-                      <span class="swatch" :style="{ background: form.colorInputs[idx] }"></span>
-                      <span class="ml-2">{{ form.colorInputs[idx] }}</span>
-                    </v-chip>
+                  <v-col cols="1" class="text-right d-flex align-center">
                     <v-btn icon small @click="removeColorField(idx)"><v-icon color="red">mdi-delete</v-icon></v-btn>
                   </v-col>
                 </v-row>
               </div>
             </div>
-
-            <v-switch v-model="form.active" label="Active" inset dense class="mt-2" />
           </v-form>
         </v-card-text>
 
@@ -299,7 +281,6 @@ export default {
         colorInputs: [],
         active: true,
         category: null,
-        status: ""            // <-- added status bound with v-model
       },
       editing: false,
       originalModelName: "",
@@ -354,8 +335,7 @@ export default {
         const colors = Array.isArray(m.colors) ? m.colors : (Array.isArray(m.color) ? m.color : (m.colors ? [m.colors] : []));
         const active = typeof m.active !== "undefined" ? !!m.active : true;
         const category = m.category ?? m.cat ?? m.categoryName ?? null;
-        const status = m.status ?? null;
-        return { modelName, colors, active, category, status, __raw: m };
+        return { modelName, colors, active, category, __raw: m };
       });
     },
 
@@ -365,8 +345,7 @@ export default {
       return this.displayModels.filter(m =>
         (m.modelName && m.modelName.toLowerCase().includes(q)) ||
         (m.category && m.category.toString().toLowerCase().includes(q)) ||
-        (m.colors && m.colors.join(", ").toLowerCase().includes(q)) ||
-        (m.status && m.status.toString().toLowerCase().includes(q))
+        (m.colors && m.colors.join(", ").toLowerCase().includes(q))
       );
     },
 
@@ -419,6 +398,22 @@ export default {
       this.categoryDialog.editingItem = item;
       this.categoryDialog.value = mode === "edit" && item ? (item.category || item.name) : "";
       this.categoryDialog.visible = true;
+    },
+
+    addModelForCategory(c) {
+      const name = c?.category || c?.name || null;
+      if (!name) return;
+
+      // prepare "add" mode with category preselected
+      this.editing = false;
+      this.originalModelName = "";
+      this.form.modelName = "";
+      this.form.colorInputs = [];
+      this.form.active = true;
+      this.form.category = name;   // preselect category
+      this.modelDialog.mode = "add";
+      this.modelDialog.editingKey = null;
+      this.modelDialog.visible = true;
     },
 
     closeCategoryDialog() {
@@ -542,7 +537,6 @@ export default {
         modelName: model,
         category: payload.category ?? null,
         colors: Array.isArray(payload.colors) ? payload.colors : (payload.colors ? [payload.colors] : []),
-        status: payload.status ?? (payload.active !== undefined ? (payload.active ? 'active' : 'inactive') : undefined),
         active: typeof payload.active === 'boolean' ? payload.active : undefined
       };
 
@@ -568,7 +562,6 @@ export default {
         this.form.colorInputs = Array.isArray(item.colors) ? [...item.colors] : [];
         this.form.active = !!item.active;
         this.form.category = item.category || null;
-        this.form.status = item.status || "";
         this.modelDialog.mode = "edit";
         this.modelDialog.editingKey = this.getKey(item.modelName);
       } else {
@@ -578,7 +571,6 @@ export default {
         this.form.colorInputs = [];
         this.form.active = true;
         this.form.category = null;
-        this.form.status = "";
         this.modelDialog.mode = "add";
         this.modelDialog.editingKey = null;
       }
@@ -641,7 +633,6 @@ export default {
       this.form.colorInputs = [];
       this.form.active = keepActive ? true : false;
       this.form.category = null;
-      this.form.status = "";
       this.editing = false;
       this.originalModelName = "";
       if (this.$refs.form) this.$refs.form.resetValidation();
@@ -672,7 +663,6 @@ export default {
         colors: uniqueColors,
         active: !!this.form.active,
         category: this.form.category || null,
-        status: this.form.status || undefined
       };
 
       if (this.editing) {
@@ -691,7 +681,7 @@ export default {
           });
 
           if (idx !== -1) {
-            this.$set(this.models, idx, { modelName: payload.modelName, colors: payload.colors, active: payload.active, category: payload.category, status: payload.status });
+            this.$set(this.models, idx, { modelName: payload.modelName, colors: payload.colors, active: payload.active, category: payload.category });
           } else {
             await this.fetchModels();
           }
@@ -701,7 +691,6 @@ export default {
             this.selectedModel.colors = Array.from(payload.colors);
             this.selectedModel.category = payload.category;
             this.selectedModel.active = payload.active;
-            this.selectedModel.status = payload.status;
           }
         } catch (err) {
           console.error("update model error", err);
@@ -717,7 +706,7 @@ export default {
           this.loading = true;
           await this.addModel(payload);
           this.showSnackbar("Model added");
-          this.models.unshift({ modelName: payload.modelName, colors: payload.colors, active: payload.active, category: payload.category, status: payload.status });
+          this.models.unshift({ modelName: payload.modelName, colors: payload.colors, active: payload.active, category: payload.category });
           await this.fetchCategories();
           this.resetForm(true);
         } catch (err) {
@@ -765,7 +754,7 @@ export default {
     },
 
     selectModel(item) {
-      this.selectedModel = { modelName: item.modelName, colors: Array.isArray(item.colors) ? [...item.colors] : [], active: !!item.active, category: item.category || null, status: item.status || "" };
+      this.selectedModel = { modelName: item.modelName, colors: Array.isArray(item.colors) ? [...item.colors] : [], active: !!item.active, category: item.category || null};
     },
 
     clearSelection() {
@@ -822,7 +811,6 @@ export default {
           colors: Array.isArray(this.selectedModel.colors) ? this.selectedModel.colors : [],
           active: !!this.selectedModel.active,
           category: this.selectedModel.category || null,
-          status: this.selectedModel.status || undefined
         };
 
         await this.updateModel(null, payload);
@@ -834,7 +822,7 @@ export default {
           return name === this.selectedModel.modelName;
         });
         if (idx !== -1) {
-          this.$set(this.models, idx, { modelName: payload.modelName, colors: payload.colors, active: payload.active, category: payload.category, status: payload.status });
+          this.$set(this.models, idx, { modelName: payload.modelName, colors: payload.colors, active: payload.active, category: payload.category });
         } else {
           await this.fetchModels();
         }
@@ -858,7 +846,7 @@ export default {
 </script>
 
 <style scoped>
-.category-list { max-height: 360px; overflow-y: auto; }
+.category-list { max-height: 730px; overflow-y: auto; }
 .category-row { cursor: pointer; }
 .color-list { max-height: 220px; overflow-y: auto; }
 .v-data-table .v-chip { min-width: 36px; text-align: center; }

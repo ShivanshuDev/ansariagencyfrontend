@@ -42,20 +42,12 @@
             <input type="text" v-model="employee.permanentAddress.line2" placeholder="Address Line 2" />
             <input type="text" v-model="employee.permanentAddress.tahsil" placeholder="Tahsil" />
             <select v-model="employee.permanentAddress.country" class="full-select">
-              <option value="">Country</option>
-              <option value="IN">India</option>
-              <option value="US">United States</option>
+              <option value="India">India</option>
             </select>
             <select v-model="employee.permanentAddress.state" class="full-select">
-              <option value="">State</option>
-              <option value="KA">Karnataka</option>
-              <option value="MH">Maharashtra</option>
+              <option value="Uttar Pradesh">Uttar Pradesh</option>
             </select>
-            <select v-model="employee.permanentAddress.city" class="full-select">
-              <option value="">City</option>
-              <option value="Bangalore">Bangalore</option>
-              <option value="Mumbai">Mumbai</option>
-            </select>
+            <input type="text" v-model="employee.permanentAddress.city" placeholder="City" />
             <input type="text" v-model="employee.permanentAddress.pincode" placeholder="Pincode" />
           </div>
         </div>
@@ -72,20 +64,12 @@
             <input type="text" v-model="employee.currentAddress.line2" placeholder="Address Line 2" />
             <input type="text" v-model="employee.currentAddress.tahsil" placeholder="Tahsil" />
             <select v-model="employee.currentAddress.country" class="full-select">
-              <option value="">Country</option>
               <option value="IN">India</option>
-              <option value="US">United States</option>
             </select>
             <select v-model="employee.currentAddress.state" class="full-select">
-              <option value="">State</option>
-              <option value="KA">Karnataka</option>
-              <option value="MH">Maharashtra</option>
+              <option value="Uttar Pradesh">UTTAR PRADESH</option>
             </select>
-            <select v-model="employee.currentAddress.city" class="full-select">
-              <option value="">City</option>
-              <option value="Bangalore">Bangalore</option>
-              <option value="Mumbai">Mumbai</option>
-            </select>
+            <input type="text" employee.currentAddress.city  placeholder="City"/>
             <input type="text" v-model="employee.currentAddress.pincode" placeholder="Pincode" />
           </div>
         </div>
@@ -162,8 +146,8 @@ export default {
           line1: "",
           line2: "",
           tahsil: "",
-          country: "",
-          state: "",
+          country: "India",
+          state: "Uttar Pradesh",
           city: "",
           pincode: "",
         },
