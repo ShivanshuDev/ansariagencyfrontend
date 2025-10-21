@@ -31,12 +31,20 @@
                   </v-list-item-content>
                 </v-list-item>
 
-                <!-- <v-list-item @click="$emit('tab-selected', 'InventryTable')">
-                  <v-list-item-content>
-                    <v-list-item-title>Sales Details</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item> -->
               </v-list-group>
+
+              <!-- LEDGER submenu -->
+              <!-- <v-list-group prepend-icon="mdi-warehouse" no-action>
+                <template v-slot:activator>
+                  <v-list-item-title>Ledger</v-list-item-title>
+                </template>
+
+                <v-list-item @click="$emit('tab-selected', 'LEDGER')">
+                  <v-list-item-content>
+                    <v-list-item-title>Ledger</v-list-item-title>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list-group> -->
 
               <!-- Inventory submenu -->
               <v-list-group prepend-icon="mdi-warehouse" no-action>
@@ -86,29 +94,7 @@
                 </v-list-item>
               </v-list-group>
 
-            </v-list>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
-
-      <v-divider class="my-2"></v-divider>
-
-      <div  v-if="permission && permission.admin">
-        <!-- Admin: show only if permission.admin is true -->
-        <v-expansion-panels
-          v-model="panels.admin"
-          accordion
-          class="exp-panels"
-        >
-          <v-expansion-panel>
-            <v-expansion-panel-header class="panel-header">
-              <v-icon left class="header-icon">mdi-cube</v-icon>
-              <span class="header-text">Admin</span>
-            </v-expansion-panel-header>
-
-            <v-expansion-panel-content>
-              <v-list dense>
-                <!-- Client submenu -->
+               <!-- Client submenu -->
                 <v-list-group prepend-icon="mdi-account" no-action>
                   <template v-slot:activator>
                     <v-list-item-title>Client</v-list-item-title>
@@ -146,6 +132,28 @@
                   </v-list-item>
                 </v-list-group>
 
+            </v-list>
+          </v-expansion-panel-content>
+        </v-expansion-panel>
+      </v-expansion-panels>
+
+      <v-divider class="my-2"></v-divider>
+
+      <div  v-if="permission && permission.admin">
+        <!-- Admin: show only if permission.admin is true -->
+        <v-expansion-panels
+          v-model="panels.admin"
+          accordion
+          class="exp-panels"
+        >
+          <v-expansion-panel>
+            <v-expansion-panel-header class="panel-header">
+              <v-icon left class="header-icon">mdi-cube</v-icon>
+              <span class="header-text">Admin</span>
+            </v-expansion-panel-header>
+
+            <v-expansion-panel-content>
+              <v-list dense>
                 <!-- <v-list-group prepend-icon="mdi-warehouse" no-action>
                   <template v-slot:activator>
                     <v-list-item-title>Inventory</v-list-item-title>

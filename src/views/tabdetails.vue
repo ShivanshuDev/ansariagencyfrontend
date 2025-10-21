@@ -72,6 +72,7 @@ import BILL from '@/components/bill/addbill.vue';
 import ADDSPARES from '@/components/spares/addSpares.vue';
 import SPARESTABLE from '@/components/spares/sparesTable.vue';
 import SellToVendor from '@/components/vendorSell/sellToVendor.vue';
+import LEDGER from '@/components/ledger/ledgerComponent.vue'
 
 export default {
   components:{
@@ -86,6 +87,7 @@ export default {
     ADDSPARES,
     SPARESTABLE,
     SellToVendor,
+    LEDGER
   },
   props: {
     selectedTab: {
@@ -113,6 +115,7 @@ export default {
       if(this.selectedTab === 'ADDSPARES') return 'ADDSPARES';
       if(this.selectedTab === 'sparesTable') return 'SPARESTABLE';
       if(this.selectedTab === 'SellToVendor') return 'SellToVendor';
+      if(this.selectedTab === 'LEDGER') return 'LEDGER';
       return null;
     },
     displayName() {

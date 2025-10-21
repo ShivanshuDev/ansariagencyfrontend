@@ -1,7 +1,5 @@
 <template>
   <v-card class="pa-6" style="margin:12px;" elevation="6">
-    <!-- header & action-bar omitted for brevity in this paste; assume same as earlier version -->
-    <!-- inside your parent template, replacing the old buttons -->
     <v-col cols="12" md="6" class="text-right">
       <action-bar
         :preview="preview"
@@ -97,22 +95,6 @@
       </v-col>
     </v-row>
 
-    <!-- <invoice-preview
-      :preview.sync="preview"
-      :selected-vendor="selectedVendor"
-      :items="selectedItems"
-      :invoice-number="invoiceNumber"
-      :invoice-date="invoiceDate"
-      :subtotal="subtotal"
-      :total-discount="totalDiscount"
-      :total-tax="totalTax"
-      :grand-total="grandTotal"
-      :payment-type="paymentType"
-      :amount-paid="amountPaid"
-      :due-amount="dueAmount"
-      :change-due="changeDue"
-      @print="printInvoice"
-    /> -->
     <invoice-preview
       :preview.sync="preview"
       :selected-vendor="selectedVendor"
@@ -177,23 +159,25 @@ export default {
   },
 
   computed: {
-    selectedVendor() { return this.vendors.find(v => v.pk === this.selectedVendorKey) || null },
-    subtotal() { return this.selectedItems.reduce((s, it) => s + (Number(it.price || 0) * Number(it.quantity || 0)), 0) },
-    totalDiscount() { return this.selectedItems.reduce((s, it) => s + Number(it.discount || 0), 0) },
+    subtotal() {
+      return this.selectedItems.reduce((s, it) => s + (Number(it.price || 0) * Number(it.quantity || 0)), 0);
+    },
+    totalDiscount() {
+      return this.selectedItems.reduce((s, it) => s + Number(it.discount || 0), 0);
+    },
     totalCgst() {
-      return this.selectedItems.reduce((s, it) => {
-        const taxable = Number(it.price || 0) * Number(it.quantity || 0)
-        return s + (taxable * (Number(it.cgst || 0) / 100))
-      }, 0)
+      return this.selectedItems.reduce((s, it) => s + Number(it.cgstAmount || 0), 0);
     },
     totalSgst() {
-      return this.selectedItems.reduce((s, it) => {
-        const taxable = Number(it.price || 0) * Number(it.quantity || 0)
-        return s + (taxable * (Number(it.sgst || 0) / 100))
-      }, 0)
+      return this.selectedItems.reduce((s, it) => s + Number(it.sgstAmount || 0), 0);
     },
-    totalTax() { return this.totalCgst + this.totalSgst },
-    grandTotal() { return this.selectedItems.reduce((s, it) => s + Number(it.totalWithTax || 0), 0) },
+    totalTax() {
+      return this.totalCgst + this.totalSgst;
+    },
+    grandTotal() {
+      return this.selectedItems.reduce((s, it) => s + Number(it.totalWithTax || 0), 0);
+    },
+    selectedVendor() { return this.vendors.find(v => v.pk === this.selectedVendorKey) || null },
     dueAmount() {
       const due = Number(this.grandTotal) - Number(this.amountPaid || 0)
       return due > 0 ? Number(due.toFixed(2)) : 0
@@ -214,17 +198,12 @@ export default {
 
   watch: {
     selectedModelKey(newKey) {
-      // When a chassis (inventory) is selected, auto-populate the form with available data
       if (!newKey) return
       const inv = this.inventoriesMap[newKey] || null
       if (!inv) return
-      // populate form fields but DO NOT overwrite price/discount if user changed them earlier while editing (only set if zero)
       this.itemForm.hsn = (inv.hsn || this.itemForm.hsn || '')
       if (!this.itemForm.price || this.itemForm.price === 0) this.itemForm.price = Number(inv.price || 0)
       this.itemForm.kitGiven = !!this.itemForm.kitGiven
-      // We do not auto-set quantity (keep default 1)
-      // store chassis/engine/color into editing backup fields so computeRowTotals uses them later (buildItemFromForm reads from inventoriesMap)
-      // (buildItemFromForm will copy chassis/engine/color from inventoriesMap)
     }
   },
 
@@ -242,36 +221,42 @@ export default {
       }
     },
 
-    // improved fetchInventories: create chassis-level keys (use chassisNumber or sk)
     async fetchInventories() {
-      this.loadingModel = true
+      this.loadingModel = true;
       try {
-        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry')
-        const items = (res.data?.items || []).map(i => ({ ...i }))
+        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry');
+        const allItems = res.data?.items || [];
 
-        // build map keyed by chassisNumber (or sk fallback)
-        this.inventoriesMap = {}
-        this.availableModel = items.map(it => {
-          // prefer chassisNumber or gsisk3 or sk as unique key; fallback to a generated id
-          const key = (it.chassisNumber && String(it.chassisNumber).trim()) ||
-                      (it.gsisk3 && String(it.gsisk3).trim()) ||
-                      (it.sk && String(it.sk).trim()) ||
-                      (`inv_${Math.random().toString(36).slice(2,8)}`)
-          // store __key for v-select usage and preserve original fields used in builds
-          const copy = { ...it, __key: key, label: it.modelName || it.label || it.model || 'Item' }
-          this.inventoriesMap[key] = copy
-          return copy
-        })
+        // ✅ Filter only items with status ACTIVE
+        const activeItems = allItems.filter(it => it.status === 'ACTIVE');
 
-        // sort for convenience
-        this.availableModel.sort((a,b) => (a.label||'').localeCompare(b.label||''))
+        // ✅ Map the filtered list
+        this.inventoriesMap = {};
+        this.availableModel = activeItems.map(it => {
+          const key =
+            (it.chassisNumber && String(it.chassisNumber).trim()) ||
+            (it.gsisk3 && String(it.gsisk3).trim()) ||
+            (it.sk && String(it.sk).trim()) ||
+            `inv_${Math.random().toString(36).slice(2, 8)}`;
+
+          const copy = {
+            ...it,
+            __key: key,
+            label: it.modelName || it.label || it.model || 'Item'
+          };
+
+          this.inventoriesMap[key] = copy;
+          return copy;
+        });
+
+        // ✅ Sort by label for consistent UI
+        this.availableModel.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
       } catch (e) {
-        console.warn('Failed to fetch inventories', e)
+        console.warn('Failed to fetch inventories', e);
       } finally {
-        this.loadingModel = false
+        this.loadingModel = false;
       }
     },
-
     formatMoney(v) { return Number(v || 0).toFixed(2) },
 
     resolveSelectedInventory() {
@@ -280,30 +265,38 @@ export default {
     },
 
     computeRowTotals(row) {
-      const price = Number(row.price || 0)
-      const qty = Number(row.quantity || 0)
-      const discount = Number(row.discount || 0)
-      const taxable = price * qty
-      const cgstAmt = taxable * (Number(row.cgst || 0) / 100)
-      const sgstAmt = taxable * (Number(row.sgst || 0) / 100)
-      let total = taxable + cgstAmt + sgstAmt - discount
-      if (total < 0) total = 0
-      row.taxable = Number(taxable.toFixed(2))
-      row.cgstAmount = Number(cgstAmt.toFixed(2))
-      row.sgstAmount = Number(sgstAmt.toFixed(2))
-      row.taxAmount = Number((cgstAmt + sgstAmt).toFixed(2))
-      row.totalWithTax = Number(total.toFixed(2))
-      row.price = Number(price)
-      row.quantity = Number(qty)
-      row.discount = Number(discount)
-      row.cgst = Number(row.cgst || 0)
-      row.sgst = Number(row.sgst || 0)
-      row.hsn = row.hsn || ''
-      row.kitGiven = !!row.kitGiven
-      row.chassisNumber = row.chassisNumber || row.chassisNo || row.chassis || ''
-      row.engineNumber = row.engineNumber || row.engineNo || row.engine || ''
-      row.color = row.color || ''
+      const price = Number(row.price || 0); // price is GST-inclusive per unit
+      const qty = Number(row.quantity || 0);
+      const cgstRate = Number(row.cgst || 0);
+      const sgstRate = Number(row.sgst || 0);
+      const totalGstRate = cgstRate + sgstRate;
+
+      // GST-inclusive total per line
+      const lineTotal = price * qty;
+
+      // Reverse calculate base
+      const base = totalGstRate > 0 ? lineTotal / (1 + totalGstRate / 100) : lineTotal;
+
+      // GST breakdown
+      const cgstAmt = base * (cgstRate / 100);
+      const sgstAmt = base * (sgstRate / 100);
+
+      // Discount logic if any
+      const discount = Number(row.discount || 0);
+
+      // Final assignment
+      row.taxable = Number(base.toFixed(2));
+      row.cgstAmount = Number(cgstAmt.toFixed(2));
+      row.sgstAmount = Number(sgstAmt.toFixed(2));
+      row.taxAmount = Number((cgstAmt + sgstAmt).toFixed(2));
+      row.totalWithTax = Number((lineTotal - discount).toFixed(2)); // user total minus discount
+      row.price = price;
+      row.quantity = qty;
+      row.discount = discount;
+      row.cgst = cgstRate;
+      row.sgst = sgstRate;
     },
+
 
     buildItemFromForm() {
       const inv = this.resolveSelectedInventory()
@@ -454,22 +447,7 @@ export default {
     togglePreview() { this.preview = !this.preview },
 
     onAmountPaidChange() { if (this.amountPaid === '' || this.amountPaid == null) this.amountPaid = 0; this.amountPaid = Number(this.amountPaid || 0) },
-
-    // printInvoice() {
-    //   const printArea = document.getElementById('print-area')
-    //   if (!printArea) return window.print()
-    //   const newWin = window.open('', '_blank', 'width=900,height=700')
-    //   newWin.document.write('<html><head><title>Invoice</title>')
-    //   newWin.document.write('<style>body{font-family:Arial;padding:20px;} table{width:100%;border-collapse:collapse;border-bottom:1px solid #ddd;} th,td{border-bottom:1px solid #ddd;padding:3px;text-align:left}</style>')
-    //   newWin.document.write('</head><body>')
-    //   newWin.document.write(printArea.innerHTML)
-    //   newWin.document.write('</body></html>')
-    //   newWin.document.close()
-    //   newWin.print()
-    // },
-
     printInvoice() {
-      // existing print logic — open print dialog for invoice preview area
       const printArea = document.getElementById('print-area')
       if (!printArea) return window.print()
       const newWin = window.open('', '_blank', 'width=900,height=700')
@@ -494,43 +472,7 @@ export default {
         this.printInvoice()
       }
     },
-
-    // saveInvoice() {
-    //   const payload = {
-    //     invoiceNumber: this.invoiceNumber,
-    //     date: this.invoiceDate,
-    //     vendor: this.selectedVendor,
-    //     items: this.selectedItems.map(it => ({
-    //       inventoryId: it.inventoryId,
-    //       label: it.label,
-    //       hsn: it.hsn,
-    //       chassisNumber: it.chassisNumber || '',
-    //       engineNumber: it.engineNumber || '',
-    //       color: it.color || '',
-    //       price: it.price,
-    //       quantity: it.quantity,
-    //       discount: it.discount,
-    //       cgst: it.cgst,
-    //       sgst: it.sgst,
-    //       kitGiven: !!it.kitGiven,
-    //       taxable: it.taxable,
-    //       taxAmount: it.taxAmount,
-    //       totalWithTax: it.totalWithTax,
-    //       attachedPdfName: it.attachedPdfName || ''
-    //       // attachedPdfFile is intentionally not serialized here; handle upload separately
-    //     })),
-    //     totals: { subtotal: this.subtotal, discountTotal: this.totalDiscount, tax: this.totalTax, grandTotal: this.grandTotal },
-    //     payment: { amountPaid: Number(this.amountPaid || 0), dueAmount: Number(this.dueAmount || 0), change: Number(this.changeDue || 0), paymentType: this.paymentType || null }
-    //   }
-    //   console.log('Saving invoice:', JSON.stringify(payload, null, 2))
-    //   this.$emit('save', payload)
-    //   this.$vuetify.goTo && this.$vuetify.goTo(0)
-    //   this.$toast && this.$toast.success && this.$toast.success('Invoice saved')
-    // },
-
-    // additional handler if component emits chassis-selected
     saveInvoice() {
-      // existing save logic — build payload and emit or post to server
       const payload = {
         invoiceNumber: this.invoiceNumber,
         date: this.invoiceDate,
@@ -542,13 +484,11 @@ export default {
           grandTotal: this.grandTotal
         }
       }
-      // example: emit payload upward or call API
       this.$emit('save', payload)
       this.$toast && this.$toast.success && this.$toast.success('Invoice saved')
     },
     
     onChassisSelected(chassisKey) {
-      // set selectedModelKey (already bound via v-model) — this method is optional but kept for clarity
       this.selectedModelKey = chassisKey
     }
   }

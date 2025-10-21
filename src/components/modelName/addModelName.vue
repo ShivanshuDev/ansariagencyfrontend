@@ -57,34 +57,6 @@
         </v-card>
       </v-col>
 
-      <!-- MODEL FORM (dialog-based trigger) -->
-      <!-- <v-col cols="12" md="3">
-        <v-card class="pa-3">
-          <v-card-title>
-            <div>{{ editing ? "Update Model" : "Add New Model" }}</div>
-            <v-spacer />
-          </v-card-title>
-
-          <v-card-text>
-            <div class="text--secondary">Open dialog to add or edit a model (edit affects only clicked row).</div>
-            <v-divider class="my-3" />
-            <div class="caption">Selected category: <strong>{{ form.category || '-' }}</strong></div>
-            <v-row class="mt-3">
-              <v-col cols="12">
-                <v-btn block color="primary" @click="openModelDialog()" :disabled="loading">Open Model Dialog</v-btn>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-
-        <v-snackbar v-model="snackbar.visible" :timeout="3500">
-          {{ snackbar.message }}
-          <template v-slot:action>
-            <v-btn outlined text @click="snackbar.visible = false">Close</v-btn>
-          </template>
-        </v-snackbar>
-      </v-col> -->
-
       <!-- MODELS TABLE -->
       <v-col cols="12" md="8">
         <v-card class="pa-3">
@@ -114,7 +86,7 @@
             item-key="modelName"
             @click:row="selectModel"
           >
-            <template v-slot:item.modelName="{ item }">
+            <!-- <template v-slot:item.modelName="{ item }">
               <div class="d-flex align-center justify-space-between">
                 <div>
                   <div class="font-weight-medium">{{ item.modelName }}</div>
@@ -124,16 +96,106 @@
                   <v-chip small v-if="item.colors && item.colors.length">{{ item.colors.length }} colors</v-chip>
                 </div>
               </div>
+            </template> -->
+            <template v-slot:item.modelName="{ item }">
+              <div class="d-flex align-center justify-space-between">
+                <div style="max-width: 380px; overflow: hidden;">
+                  <!-- Tooltip for Model Name -->
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                      <div
+                        v-bind="attrs"
+                        v-on="on"
+                        class="font-weight-medium"
+                        :style="{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '360px',
+                          cursor: item.modelName?.length > 30 ? 'pointer' : 'default'
+                        }"
+                      >
+                        {{
+                          item.modelName && item.modelName.length > 30
+                            ? item.modelName.substring(0, 30) + '...'
+                            : item.modelName
+                        }}
+                      </div>
+                    </template>
+                    <span>{{ item.modelName }}</span>
+                  </v-tooltip>
+
+                  <!-- Category (truncated if too long) -->
+                  <div
+                    class="caption text--secondary"
+                    :style="{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '320px',
+                    }"
+                  >
+                    {{ item.category }}
+                  </div>
+                </div>
+
+                <div class="text-right">
+                  <v-chip small v-if="item.colors && item.colors.length">
+                    {{ item.colors.length }} colors
+                  </v-chip>
+                </div>
+              </div>
             </template>
 
-            <template v-slot:item.color="{ item }">
+
+            <!-- <template v-slot:item.color="{ item }">
               <div>
                 <span v-for="(c,i) in (item.colors||[]).slice(0,3)" :key="`c-${item.modelName}-${i}`">{{ c }}<span v-if="i < Math.min((item.colors||[]).length,3)-1">, </span></span>
                 <span v-if="item.colors && item.colors.length > 3">…</span>
               </div>
+            </template> -->
+
+            <!-- COLORS (chips, truncated text, tooltip, +N more) -->
+            <template v-slot:item.color="{ item }">
+              <div class="d-flex align-center flex-wrap" style="max-width:480px">
+                <template v-for="(c,i) in (item.colors || []).slice(0,3)">
+                  <v-tooltip bottom :key="`c-${getKey(item.modelName)}-${i}`">
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-chip
+                        v-bind="attrs"
+                        v-on="on"
+                        small
+                        class="ma-1 color-chip text-truncate"
+                        :style="{ maxWidth: '160px' }"
+                        outlined
+                        pill
+                      >
+                        {{ truncateText(c, 18) }}
+                      </v-chip>
+                    </template>
+                    <span>{{ c }}</span>
+                  </v-tooltip>
+                </template>
+
+                <v-chip
+                  v-if="item.colors && item.colors.length > 3"
+                  small
+                  class="ma-1"
+                  outlined
+                  pill
+                >
+                  +{{ item.colors.length - 3 }} more
+                </v-chip>
+              </div>
             </template>
 
+
             <template v-slot:item.actions="{ item }">
+              <!-- NEW: details icon -->
+              <v-btn icon small @click.stop="openDetails(item)">
+                <v-icon>mdi-eye</v-icon>
+              </v-btn>
+
               <v-btn icon small :loading="itemLoading[getKey(item.modelName)]" @click.stop="onEdit(item)" :disabled="itemLoading[getKey(item.modelName)]">
                 <v-icon>mdi-pencil</v-icon>
               </v-btn>
@@ -258,6 +320,141 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Model details dialog (polished) -->
+    <v-dialog v-model="modelDetailsDialog.visible" max-width="720px">
+      <v-card class="rounded-xl elevation-8">
+        <!-- Header -->
+        <div class="details-header d-flex align-center px-4 py-3">
+          <v-avatar size="40" class="mr-3" tile>
+            <v-icon large>mdi-car-cog</v-icon>
+          </v-avatar>
+
+          <div class="mr-3">
+            <div class="text-h6 font-weight-bold mb-1">
+              {{ modelDetailsDialog.data?.modelName || '—' }}
+            </div>
+            <div class="d-flex align-center flex-wrap">
+              <v-chip
+                v-if="modelDetailsDialog.data?.category"
+                small
+                class="mr-2 mb-1"
+                outlined
+              >
+                <v-icon left small>mdi-folder</v-icon>{{ modelDetailsDialog.data.category }}
+              </v-chip>
+
+              <v-chip
+                small
+                class="mr-2 mb-1"
+                :color="modelDetailsDialog.data?.active ? 'green' : 'red'"
+                dark
+              >
+                <v-icon left small>
+                  {{ modelDetailsDialog.data?.active ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                </v-icon>
+                {{ modelDetailsDialog.data?.active ? 'Active' : 'Inactive' }}
+              </v-chip>
+
+              <v-chip
+                v-if="modelDetailsDialog.data?.colors?.length"
+                small
+                class="mb-1"
+                outlined
+              >
+                <v-icon left small>mdi-palette</v-icon>
+                {{ modelDetailsDialog.data.colors.length }} colors
+              </v-chip>
+            </div>
+          </div>
+
+          <v-spacer />
+
+          <v-btn icon small class="mr-1" @click="copyText(modelDetailsDialog.data?.modelName)">
+            <v-icon>mdi-content-copy</v-icon>
+          </v-btn>
+          <v-btn icon small @click="closeDetails">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </div>
+
+        <!-- Body -->
+        <v-card-text class="pt-4">
+          <!-- Info grid -->
+          <v-container fluid class="pt-0">
+            <v-row dense>
+              <v-col cols="12" md="6" class="mb-3">
+                <div class="label">Model Name</div>
+                <div class="value">
+                  {{ modelDetailsDialog.data?.modelName || '—' }}
+                  <v-btn text x-small class="ml-1" @click="copyText(modelDetailsDialog.data?.modelName)">Copy</v-btn>
+                </div>
+              </v-col>
+
+              <v-col cols="12" md="6" class="mb-3">
+                <div class="label">Category</div>
+                <div class="value">{{ modelDetailsDialog.data?.category || '—' }}</div>
+              </v-col>
+
+              <v-col cols="12" md="6" class="mb-3">
+                <div class="label">Status</div>
+                <div class="value d-flex align-center">
+                  <v-icon small class="mr-1" :color="modelDetailsDialog.data?.active ? 'green' : 'red'">
+                    {{ modelDetailsDialog.data?.active ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                  </v-icon>
+                  {{ modelDetailsDialog.data?.active ? 'Active' : 'Inactive' }}
+                </div>
+              </v-col>
+
+              <v-col cols="12" md="6" class="mb-3">
+                <div class="label">Total Colors</div>
+                <div class="value">{{ modelDetailsDialog.data?.colors?.length || 0 }}</div>
+              </v-col>
+            </v-row>
+
+            <v-divider class="my-4" />
+
+            <!-- Colors -->
+            <div class="mb-2 d-flex align-center">
+              <v-icon small class="mr-2">mdi-palette</v-icon>
+              <div class="subtitle-2 font-weight-medium">Colors</div>
+            </div>
+
+            <div v-if="modelDetailsDialog.data?.colors?.length" class="d-flex flex-wrap">
+              <v-tooltip bottom v-for="(c, i) in modelDetailsDialog.data.colors" :key="'chip-'+i">
+                <template v-slot:activator="{ on, attrs }">
+                  <v-chip
+                    v-bind="attrs"
+                    v-on="on"
+                    small
+                    class="ma-1 color-chip"
+                    :style="chipStyle(c)"
+                    :text-color="chipTextColor(c)"
+                    pill
+                    outlined
+                  >
+                    <span class="swatch" :style="swatchStyle(c)"></span>
+                    {{ c }}
+                  </v-chip>
+                </template>
+                <span>{{ c }}</span>
+              </v-tooltip>
+            </div>
+            <div v-else class="text--secondary">No colors</div>
+          </v-container>
+        </v-card-text>
+
+        <!-- Footer -->
+        <v-card-actions class="px-4 pb-4">
+          <v-btn text @click="closeDetails">Close</v-btn>
+          <v-spacer />
+          <v-btn color="primary" @click="goToEditFromDetails">
+            <v-icon left>mdi-pencil</v-icon>Edit
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
   </v-container>
 </template>
 
@@ -268,6 +465,11 @@ export default {
   name: "AddModelManager",
   data() {
     return {
+    modelDetailsDialog: {
+      visible: false,
+      data: null,     // { modelName, category, colors, active, ... }
+    },
+
       loading: false,
       valid: false,
       models: [],
@@ -367,6 +569,77 @@ export default {
   },
 
   methods: {
+    copyText(text) {
+      if (!text) return;
+      try {
+        navigator.clipboard?.writeText(text);
+        this.showSnackbar('Copied!');
+      } catch (e) {
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        this.showSnackbar('Copied!');
+      }
+    },
+    // style helpers for color chips
+    chipStyle(c) {
+      const bg = this.normalizeColor(c);
+      return { background: this.isLight(bg) ? '#0000000a' : '#ffffff0a', borderColor: bg };
+    },
+    swatchStyle(c) {
+      const bg = this.normalizeColor(c);
+      return { background: bg, borderColor: this.isLight(bg) ? 'rgba(0,0,0,.2)' : 'rgba(255,255,255,.25)' };
+    },
+    chipTextColor(c) {
+      const bg = this.normalizeColor(c);
+      return this.isLight(bg) ? undefined : 'white';
+    },
+    // naive normalization: if user passed a named color/hex, just return it
+    normalizeColor(c) {
+      return (c || '').toString().trim();
+    },
+    // contrast check (very small util for hex like #RRGGBB); falls back to dark text
+    isLight(color) {
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color || '');
+      if (!m) return true; // assume light background for unknown names => dark text
+      const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
+      const luma = 0.2126*(r/255) + 0.7152*(g/255) + 0.0722*(b/255);
+      return luma > 0.6;
+    },
+
+    openDetails(item) {
+  // Normalize the row payload (same way you normalize elsewhere)
+      const normalized = {
+        modelName: item?.modelName ?? '',
+        category: item?.category ?? null,
+        colors: Array.isArray(item?.colors) ? [...item.colors] : [],
+        active: !!item?.active,
+        __raw: item,
+      };
+      this.modelDetailsDialog.data = normalized;
+      this.modelDetailsDialog.visible = true;
+    },
+
+    closeDetails() {
+      this.modelDetailsDialog.visible = false;
+      this.modelDetailsDialog.data = null;
+    },
+
+    goToEditFromDetails() {
+      const item = this.modelDetailsDialog.data;
+      this.modelDetailsDialog.visible = false;
+      if (!item) return;
+      // Reuse your existing edit flow with pre-filled data
+      this.openModelDialog({
+        modelName: item.modelName,
+        category: item.category,
+        colors: item.colors,
+        active: item.active,
+      });
+    },
+
     // utility to normalize a key for itemLoading (safe)
     getKey(name) {
       if (!name) return "";
@@ -392,6 +665,13 @@ export default {
         this.categoriesData = [];
       }
     },
+
+    truncateText(text, maxLength = 18) {
+      if (!text) return '';
+      const t = String(text);
+      return t.length > maxLength ? t.slice(0, maxLength) + '…' : t;
+    },
+
 
     openCategoryDialog(mode = "add", item = null) {
       this.categoryDialog.mode = mode;
@@ -851,4 +1131,48 @@ export default {
 .color-list { max-height: 220px; overflow-y: auto; }
 .v-data-table .v-chip { min-width: 36px; text-align: center; }
 .swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.08); display: inline-block; }
+.details-header{
+  background: linear-gradient(135deg, rgba(99,102,241,.22), rgba(16,185,129,.22));
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+.label{
+  font-size: .78rem;
+  letter-spacing: .02em;
+  opacity: .7;
+  margin-bottom: .25rem;
+  text-transform: uppercase;
+}
+
+.value{
+  font-size: 1rem;
+}
+
+.color-chip{
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.color-chip:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.swatch{
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  margin-right: 8px;
+  border: 1px solid;
+}
+
+.text-truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.color-chip {
+  max-width: 160px; /* keeps chips tidy in table cells */
+}
+
+
 </style>

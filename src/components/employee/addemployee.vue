@@ -13,10 +13,27 @@
 
       <div class="grid-3">
         <input type="text" v-model="employee.employeeName" placeholder="Full Name *" required />
-        <input type="text" v-model="employee.phone" placeholder="Phone Number *" required />
-        <input type="email" v-model="employee.email" placeholder="Email *" required />
+
+        <input
+          type="text"
+          v-model="employee.phone"
+          placeholder="Phone Number *"
+          required
+          inputmode="numeric"
+          maxlength="10"
+          @input="employee.phone = onlyDigits(employee.phone, 10)"
+        />
+
+        <input
+          type="email"
+          v-model="employee.email"
+          placeholder="Email *"
+          required
+        />
+
         <input type="text" v-model="employee.userId" placeholder="User ID" />
         <input type="text" v-model="employee.password" placeholder="Password" />
+
         <select v-model="employee.department" class="full-select">
           <option value="">Select Department</option>
           <option value="Warehouse">Warehouse</option>
@@ -48,7 +65,15 @@
               <option value="Uttar Pradesh">Uttar Pradesh</option>
             </select>
             <input type="text" v-model="employee.permanentAddress.city" placeholder="City" />
-            <input type="text" v-model="employee.permanentAddress.pincode" placeholder="Pincode" />
+            <input
+              type="text"
+              v-model="employee.permanentAddress.pincode"
+              placeholder="Pincode *"
+              required
+              inputmode="numeric"
+              maxlength="6"
+              @input="employee.permanentAddress.pincode = onlyDigits(employee.permanentAddress.pincode, 6)"
+            />
           </div>
         </div>
 
@@ -69,8 +94,16 @@
             <select v-model="employee.currentAddress.state" class="full-select">
               <option value="Uttar Pradesh">UTTAR PRADESH</option>
             </select>
-            <input type="text" employee.currentAddress.city  placeholder="City"/>
-            <input type="text" v-model="employee.currentAddress.pincode" placeholder="Pincode" />
+            <input type="text" v-model="employee.currentAddress.city" placeholder="City" />
+            <input
+              type="text"
+              v-model="employee.currentAddress.pincode"
+              placeholder="Pincode *"
+              required
+              inputmode="numeric"
+              maxlength="6"
+              @input="employee.currentAddress.pincode = onlyDigits(employee.currentAddress.pincode, 6)"
+            />
           </div>
         </div>
       </div>
@@ -122,9 +155,36 @@
 
       <div class="banking-actions">
         <button type="button" class="cancel-btn" @click="onCancel">Cancel</button>
-        <button type="button" class="create-btn" @click="onCreate">Create New</button>
+        <button type="button" class="create-btn" @click="onCreateClick">Create New</button>
       </div>
     </section>
+
+    <!-- Custom Dialog -->
+    <div v-if="dialog.visible" class="dlg-overlay" role="dialog" aria-modal="true">
+      <div class="dlg">
+        <div class="dlg-header" :class="'dlg-' + dialog.type">
+          <strong>{{ dialog.title }}</strong>
+          <button class="dlg-close" @click="closeDialog">×</button>
+        </div>
+        <div class="dlg-body">
+          <div v-if="Array.isArray(dialog.message)">
+            <ul class="dlg-list">
+              <li v-for="(m,i) in dialog.message" :key="i">{{ m }}</li>
+            </ul>
+          </div>
+          <div v-else>{{ dialog.message }}</div>
+        </div>
+        <div class="dlg-actions">
+          <button v-if="dialog.type === 'confirm'" class="btn" @click="onDialogCancel">Cancel</button>
+          <button
+            class="btn primary"
+            @click="onDialogOk"
+          >
+            {{ dialog.type === 'confirm' ? 'Yes, Continue' : 'OK' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -133,7 +193,27 @@ import axios from "axios";
 export default {
   data() {
     return {
-      employee: {
+      employee: this.emptyEmployee(),
+      bank: this.emptyBank(),
+      roleOptions: [
+        { value: "admin", text: "Admin" },
+        { value: "employee", text: "Employee" },
+      ],
+      venderOptions: [{ value: "001", text: "001" }],
+      dialog: {
+        visible: false,
+        type: "info", // 'success' | 'error' | 'confirm' | 'info'
+        title: "",
+        message: "",
+        confirmHandler: null,
+      },
+      isSubmitting: false,
+    };
+  },
+  methods: {
+    // helpers
+    emptyEmployee() {
+      return {
         image: null,
         employeeName: "",
         email: "",
@@ -173,67 +253,156 @@ export default {
           sales: false,
           insurence: false,
         },
-      },
-      bank: {
+      };
+    },
+    emptyBank() {
+      return {
         bankName: "",
         branch: "",
         accountHolder: "",
         accountNumber: "",
         ifsc: "",
-      },
-      roleOptions: [
-        { value: "admin", text: "Admin" },
-        { value: "employee", text: "Employee" },
-      ],
-      venderOptions: [{ value: "001", text: "001" }],
-    };
-  },
-  methods: {
-    onImageChange(event) {
-      const file = event.target.files[0];
-      if (file && file.size <= 5 * 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.employee.image = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      } else {
-        alert("Please select a valid image file (Max 5MB).");
-      }
+      };
+    },
+    onlyDigits(val, maxLen) {
+      return (val || "").replace(/\D/g, "").slice(0, maxLen);
     },
     copyPermanentAddress() {
       this.employee.currentAddress = { ...this.employee.permanentAddress };
     },
     onCancel() {
-      this.bank = {
-        bankName: "",
-        branch: "",
-        accountHolder: "",
-        accountNumber: "",
-        ifsc: "",
-      };
+      // clear only bank section per your previous logic
+      this.bank = this.emptyBank();
     },
-    onCreate() {
-      const payload = {
-        employee: this.employee,
-        bank: this.bank,
-      };
 
-      axios
-        .post(process.env.VUE_APP_AGENCY_BACKEND_URL + "employeeDetail", payload)
-        .then((response) => {
-          console.log("response", response);
-          alert("Employee details submitted successfully!");
-        })
-        .catch((error) => {
-          alert("Submission failed: " + error.message);
-        });
+    // dialog controls
+    openDialog(type, title, message, onConfirm = null) {
+      this.dialog.visible = true;
+      this.dialog.type = type;
+      this.dialog.title = title;
+      this.dialog.message = message;
+      this.dialog.confirmHandler = typeof onConfirm === "function" ? onConfirm : null;
+    },
+    closeDialog() {
+      this.dialog.visible = false;
+      this.dialog.confirmHandler = null;
+    },
+    onDialogCancel() {
+      this.closeDialog();
+    },
+    onDialogOk() {
+      const fn = this.dialog.confirmHandler;
+      this.closeDialog();
+      if (fn) fn();
+    },
+
+    // validation
+    validateForm() {
+      const errs = [];
+      const email = (this.employee.email || "").trim();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const ten = /^\d{10}$/;
+      const six = /^\d{6}$/;
+
+      if (!this.employee.employeeName?.trim()) errs.push("Full Name is required");
+      if (!this.employee.phone?.trim()) errs.push("Phone Number is required");
+      if (!this.employee.email?.trim()) errs.push("Email is required");
+
+      if (this.employee.phone && !ten.test(this.employee.phone)) errs.push("Phone must be exactly 10 digits");
+      if (this.employee.email && !emailRegex.test(email)) errs.push("Invalid email format");
+
+      if (!this.employee.permanentAddress.pincode?.trim()) errs.push("Permanent Pincode is required");
+      if (!this.employee.currentAddress.pincode?.trim()) errs.push("Current Pincode is required");
+
+      if (this.employee.permanentAddress.pincode && !six.test(this.employee.permanentAddress.pincode)) errs.push("Permanent Pincode must be exactly 6 digits");
+      if (this.employee.currentAddress.pincode && !six.test(this.employee.currentAddress.pincode)) errs.push("Current Pincode must be exactly 6 digits");
+
+      return errs;
+    },
+
+    // confirm -> submit
+    onCreateClick() {
+      const errs = this.validateForm();
+      if (errs.length) {
+        this.openDialog("error", "Please fix the following", errs);
+        return;
+      }
+      this.openDialog(
+        "confirm",
+        "Create Employee?",
+        "Are you sure you want to create this employee record?",
+        this.submitCreate
+      );
+    },
+
+    async submitCreate() {
+      if (this.isSubmitting) return;
+      this.isSubmitting = true;
+
+      try {
+        const payload = { employee: this.employee, bank: this.bank };
+        const res = await axios.post(
+          process.env.VUE_APP_AGENCY_BACKEND_URL + "employeeDetail",
+          payload
+        );
+
+        // success dialog
+        this.openDialog("success", "Success", res?.data?.message || "Employee details submitted successfully!");
+
+        // clear all fields after success
+        this.employee = this.emptyEmployee();
+        this.bank = this.emptyBank();
+      } catch (error) {
+        // error dialog
+        const msg = error?.response?.data?.message || error.message || "Submission failed.";
+        this.openDialog("error", "Submission Failed", msg);
+      } finally {
+        this.isSubmitting = false;
+      }
     },
   },
 };
 </script>
 
 <style scoped>
+/* Simple modal/dialog */
+.dlg-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.dlg {
+  width: min(520px, 92vw);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  overflow: hidden;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+.dlg-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  color: #fff;
+}
+.dlg-success { background: #2e7d32; }
+.dlg-error   { background: #c62828; }
+.dlg-confirm { background: #1565c0; }
+.dlg-info    { background: #6d4c41; }
+.dlg-close {
+  background: transparent; border: 0; color: #fff; font-size: 22px; line-height: 1; cursor: pointer;
+}
+.dlg-body { padding: 16px; color: #333; }
+.dlg-actions {
+  display: flex; justify-content: flex-end; gap: 10px; padding: 12px 16px; background: #fafafa;
+}
+.dlg-list { margin: 0; padding-left: 18px; }
+.btn {
+  border: 1px solid #ddd; background: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer;
+}
+.btn.primary {
+  background: #1976d2; border-color: #1976d2; color: #fff;
+}
 /* Layout container */
 .add-employee-form {
   width: 98%;

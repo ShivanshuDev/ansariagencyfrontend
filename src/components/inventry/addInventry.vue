@@ -1,6 +1,14 @@
 <template>
   <div class="add-bike-form">
-    <h2>Add Bike Details</h2>
+  <div style="display:flex; flex-direction:row; justify-content:space-between; width:100%;">
+    <h2 style="width:50%;">Add Bike Details</h2>
+    <div style="width:50%; text-align:right; font-size:10px;">
+      <div v-if="singleBikeErrors.chassisNumber" class="error-msg">{{ singleBikeErrors.chassisNumber }}</div>
+      <div v-else-if="bikeForm.chassisNumber && chassisCheck.loading" class="error-msg">Checking…</div>
+      <div v-else-if="bikeForm.chassisNumber && chassisCheck.available === false" class="error-msg">Chassis number already exists</div>
+      <div v-else-if="bikeForm.chassisNumber && chassisCheck.available === null && !chassisCheck.loading" class="error-msg">Could not verify chassis number</div>
+    </div>
+  </div>
 
     <!-- COMMON INVOICE -->
     <div style="margin-bottom: 20px; display:flex; flex-direction:row; justify-content:space-between;">
@@ -26,13 +34,12 @@
         </div>
       </div>
 
-      <!-- Quick actions -->
       <div class="actions" style="align-items:flex-end;">
         <button type="button" class="add-btn" @click="onReset">Reset Form</button>
       </div>
     </div>
 
-    <!-- SINGLE-BIKE FORM (one bike at a time) -->
+    <!-- SINGLE-BIKE FORM -->
     <div class="row">
       <div class="form-fields" style="width:100%; padding:0px 10px; margin:10px 0px 20px 0px;">
         <div class="fields-row">
@@ -76,15 +83,20 @@
             <div v-if="singleBikeErrors.color" class="error-msg">{{ singleBikeErrors.color }}</div>
           </div>
 
-          <div class="field-detail" :class="{'field-error': singleBikeErrors.chassisNumber}">
+          <!-- CHASSIS with debounce + feedback -->
+          <div class="field-detail" :class="{'field-error': singleBikeErrors.chassisNumber || chassisCheck.available === false}">
             <label>Chassis Number *</label>
-            <input type="text" v-model="bikeForm.chassisNumber" placeholder="Chassis Number *" />
-            <div v-if="singleBikeErrors.chassisNumber" class="error-msg">{{ singleBikeErrors.chassisNumber }}</div>
+            <input
+              type="text"
+              v-model="bikeForm.chassisNumber"
+              placeholder="Chassis Number *"
+              @blur="triggerImmediateChassisCheck"
+            />
           </div>
 
           <div class="field-detail" :class="{'field-error': singleBikeErrors.engineNumber}">
             <label>Engine Number *</label>
-            <input type="text" v-model="bikeForm.engineNumber" placeholder="Engine Number *" />
+            <input  type="text" v-model="bikeForm.engineNumber" placeholder="Engine Number *" />
             <div v-if="singleBikeErrors.engineNumber" class="error-msg">{{ singleBikeErrors.engineNumber }}</div>
           </div>
 
@@ -109,7 +121,11 @@
           </div>
 
           <div style="flex:1; display:flex; align-items:flex-end; justify-content:flex-end; padding-top:9px;">
-            <button class="create-btn" @click="saveBikeToTable" :disabled="isSavingBike">
+            <button
+              class="create-btn"
+              @click="saveBikeToTable"
+              :disabled="isSavingBike || chassisCheck.loading || chassisCheck.available === false"
+            >
               {{ isSavingBike ? 'Saving...' : 'Add More' }}
             </button>
           </div>
@@ -200,6 +216,24 @@
       </v-card>
     </v-dialog>
 
+    <!-- Chassis Available Popup -->
+    <!-- <v-dialog v-model="dialogs.chassisAvailable" max-width="420px">
+      <v-card>
+        <v-card-title class="text-h6">
+          Chassis Available
+          <v-spacer />
+          <v-btn icon @click="dialogs.chassisAvailable = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-card-title>
+        <v-card-text>
+          Chassis number <strong>{{ dialogs.chassisNumber }}</strong> is available.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn color="primary" @click="dialogs.chassisAvailable = false">OK</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog> -->
+
     <!-- Snackbar -->
     <v-snackbar
       v-model="snackbar.show"
@@ -251,6 +285,18 @@ export default {
         timeout: 3000,
         color: "success",
       },
+      // chassis availability state
+      chassisCheck: {
+        loading: false,
+        available: null
+      },
+      chassisDebounce: null,
+      debounceDelayMs: 3000,
+      // dialogs
+      dialogs: {
+        chassisAvailable: false,
+        chassisNumber: ""
+      }
     };
   },
   mounted() {
@@ -266,8 +312,13 @@ export default {
         console.warn("Error parsing auth_user from localStorage", e);
       }
     }
-
     this.fetchCategory();
+  },
+  beforeDestroy() {
+    if (this.chassisDebounce) {
+      clearTimeout(this.chassisDebounce);
+      this.chassisDebounce = null;
+    }
   },
   watch: {
     commonInvoiceNumber(newVal) {
@@ -288,6 +339,25 @@ export default {
         this.models = [];
       }
     },
+    // Debounced chassis check (3s after last keystroke)
+    'bikeForm.chassisNumber': function (val) {
+      if (this.chassisDebounce) {
+        clearTimeout(this.chassisDebounce);
+        this.chassisDebounce = null;
+      }
+      const trimmed = (val || '').trim();
+      if (!trimmed) {
+        this.chassisCheck.loading = false;
+        this.chassisCheck.available = null;
+        this.dialogs.chassisAvailable = false;
+        return;
+      }
+      this.chassisCheck.loading = true;
+      this.chassisCheck.available = null;
+      this.chassisDebounce = setTimeout(() => {
+        this.scheduleChassisCheck(trimmed);
+      }, this.debounceDelayMs);
+    }
   },
   methods: {
     getEmptyBikeForm() {
@@ -306,18 +376,15 @@ export default {
         source: "TVS Company"
       };
     },
-
     formatDate(d) {
       if (!d) return "";
       return d;
     },
-
     ensureModelFieldsDefaults() {
       if (this.commonInvoiceNumber) this.bikeForm.invoiceNumber = this.commonInvoiceNumber;
       if (this.commonInvoiceDate) this.bikeForm.invoiceDate = this.commonInvoiceDate;
       if (this.userName) this.bikeForm.addedBy = this.userName;
     },
-
     async fetchModels(categoryName) {
       if (!categoryName) {
         this.models = [];
@@ -328,7 +395,6 @@ export default {
         if (res.data && Array.isArray(res.data.models)) {
           this.models = res.data.models;
         } else {
-          console.warn("Unexpected response from getModel:", res.data);
           this.models = [];
         }
       } catch (err) {
@@ -336,14 +402,12 @@ export default {
         this.models = [];
       }
     },
-
     async fetchCategory() {
       try {
         const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + "getCategory");
         if (res.data && Array.isArray(res.data.categories)) {
           this.categories = res.data.categories;
         } else {
-          console.warn("Unexpected response from getCategory:", res.data);
           this.categories = [];
         }
       } catch (err) {
@@ -351,12 +415,59 @@ export default {
         this.categories = [];
       }
     },
-
     getColorsForModel(modelName) {
       const model = this.models.find((m) => m.modelName === modelName);
       return model && Array.isArray(model.colors) ? model.colors : [];
     },
+    // Run check immediately when field loses focus
+    triggerImmediateChassisCheck() {
+      const trimmed = (this.bikeForm.chassisNumber || '').trim();
+      if (!trimmed) return;
+      if (this.chassisDebounce) {
+        clearTimeout(this.chassisDebounce);
+        this.chassisDebounce = null;
+      }
+      this.chassisCheck.loading = true;
+      this.chassisCheck.available = null;
+      this.scheduleChassisCheck(trimmed);
+    },
+    scheduleChassisCheck(trimmed) {
+      if (trimmed !== (this.bikeForm.chassisNumber || '').trim()) return;
+      this.checkChassisAvailability(trimmed);
+    },
+    async checkChassisAvailability(chassis) {
+      try {
+        const url = process.env.VUE_APP_AGENCY_BACKEND_URL + "inventory/check-chassis";
+        const res = await axios.get(url, { params: { chassisNumber: chassis } });
+        const body = res && res.data ? res.data : {};
+        const hasItems = Array.isArray(body.items) && body.items.length > 0;
+        const hasCount = typeof body.count === 'number' ? body.count > 0 : false;
+        const availableFlag = typeof body.available === 'boolean'
+          ? body.available
+          : (typeof body.available === 'string' ? body.available.toLowerCase() === 'true' : undefined);
 
+        const exists = (availableFlag === false) || hasItems || hasCount || body.exists === true;
+
+        // Ignore stale responses
+        if (chassis !== (this.bikeForm.chassisNumber || '').trim()) return;
+
+        this.chassisCheck.available = exists ? false : true;
+
+        // 🔔 Show popup when available
+        if (!exists) {
+          this.dialogs.chassisNumber = chassis;
+          this.dialogs.chassisAvailable = true;
+        } else {
+          this.dialogs.chassisAvailable = false;
+        }
+      } catch (e) {
+        this.chassisCheck.available = null;
+        this.dialogs.chassisAvailable = false;
+        console.error("check-chassis failed", e);
+      } finally {
+        this.chassisCheck.loading = false;
+      }
+    },
     validateCommon() {
       this.commonErrors = {};
       if (!this.commonInvoiceNumber || !this.commonInvoiceNumber.toString().trim()) {
@@ -367,7 +478,6 @@ export default {
       }
       return Object.keys(this.commonErrors).length === 0;
     },
-
     validateSingleBike(single = null) {
       const b = single || this.bikeForm;
       const errors = {};
@@ -381,9 +491,10 @@ export default {
       if (!b.invoiceNumber || !b.invoiceNumber.toString().trim()) errors.invoiceNumber = "Invoice Number is required";
       if (!b.invoiceDate) errors.invoiceDate = "Invoice Date is required";
       if (!b.source || !b.source.toString().trim()) errors.source = "Source is required";
+      if (this.chassisCheck.available === false) errors.chassisNumber = "Chassis number already exists";
+      if (this.chassisCheck.loading) errors.chassisNumber = "Please wait, checking chassis number…";
       return errors;
     },
-
     saveBikeToTable() {
       this.ensureModelFieldsDefaults();
 
@@ -405,12 +516,14 @@ export default {
         const payloadBike = { ...this.bikeForm, _localId: Date.now() + Math.floor(Math.random() * 1000) };
         this.addedBikes.push(payloadBike);
 
-        // reset single form but keep common invoice
         this.bikeForm = this.getEmptyBikeForm();
         this.bikeForm.addedBy = this.userName || "";
         this.bikeForm.invoiceNumber = this.commonInvoiceNumber || "";
         this.bikeForm.invoiceDate = this.commonInvoiceDate || "";
         this.singleBikeErrors = {};
+        this.chassisCheck.loading = false;
+        this.chassisCheck.available = null;
+        this.dialogs.chassisAvailable = false;
 
         this.showSnackbar("success", "Bike added to list.");
       } catch (err) {
@@ -420,12 +533,10 @@ export default {
         this.isSavingBike = false;
       }
     },
-
     removeFromTable(index) {
       this.addedBikes.splice(index, 1);
       this.showSnackbar("success", "Bike removed from list.");
     },
-
     onResetEverything() {
       this.commonInvoiceNumber = "";
       this.commonInvoiceDate = "";
@@ -433,16 +544,20 @@ export default {
       this.addedBikes = [];
       this.commonErrors = {};
       this.singleBikeErrors = {};
+      this.chassisCheck.loading = false;
+      this.chassisCheck.available = null;
+      this.dialogs.chassisAvailable = false;
     },
-
     onReset() {
       this.bikeForm = this.getEmptyBikeForm();
       this.bikeForm.addedBy = this.userName || "";
       this.bikeForm.invoiceNumber = this.commonInvoiceNumber;
       this.bikeForm.invoiceDate = this.commonInvoiceDate;
       this.singleBikeErrors = {};
+      this.chassisCheck.loading = false;
+      this.chassisCheck.available = null;
+      this.dialogs.chassisAvailable = false;
     },
-
     onClickSubmitAll() {
       if (this.addedBikes.length === 0) {
         this.showSnackbar("Alert", "No bikes to submit.");
@@ -450,11 +565,9 @@ export default {
       }
       this.showConfirmation = true;
     },
-
     noConfirmation() {
       this.showConfirmation = false;
     },
-
     async submitAll() {
       this.showConfirmation = false;
       this.isSubmitting = true;
@@ -474,7 +587,6 @@ export default {
         const response = await axios.post(process.env.VUE_APP_AGENCY_BACKEND_URL + "addInventry", payload);
         console.log("✅ Bike details submitted:", response.data);
 
-        // reset after success
         this.addedBikes = [];
         this.onReset();
         this.showSnackbar("success", "Bikes submitted successfully.");
@@ -486,7 +598,6 @@ export default {
         this.isSubmitting = false;
       }
     },
-
     showSnackbar(color = "success", message = "") {
       this.snackbar.message = message || "Action completed";
       this.snackbar.color = color;
@@ -495,6 +606,7 @@ export default {
   },
 };
 </script>
+
 
 <style scoped>
 .add-bike-form {
