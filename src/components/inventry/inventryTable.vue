@@ -119,6 +119,7 @@ export default {
       invoiceListHeaders: [
         { text: 'Invoice Number', value: 'invoiceNumber' },
         { text: 'Invoice Date', value: 'invoiceDate' },
+        { text: 'QTY', value: 'invoiceDate' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
 

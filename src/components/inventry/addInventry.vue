@@ -4,8 +4,8 @@
     <h2 style="width:50%;">Add Bike Details</h2>
     <div style="width:50%; text-align:right; font-size:10px;">
       <div v-if="singleBikeErrors.chassisNumber" class="error-msg">{{ singleBikeErrors.chassisNumber }}</div>
-      <div v-else-if="bikeForm.chassisNumber && chassisCheck.loading" class="error-msg">Checking…</div>
-      <div v-else-if="bikeForm.chassisNumber && chassisCheck.available === false" class="error-msg">Chassis number already exists</div>
+      <div style="font-size:1.2rem; font-weight:600;" v-else-if="bikeForm.chassisNumber && chassisCheck.loading" class="error-msg">Checking…</div>
+      <div style="font-size:1.2rem; font-weight:600;" v-else-if="bikeForm.chassisNumber && chassisCheck.available === false" class="error-msg">Chassis number already exists</div>
       <div v-else-if="bikeForm.chassisNumber && chassisCheck.available === null && !chassisCheck.loading" class="error-msg">Could not verify chassis number</div>
     </div>
   </div>

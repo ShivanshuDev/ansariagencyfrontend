@@ -192,12 +192,12 @@
 
               <div class="quick-actions">
                 <v-btn block color="primary" @click="$emit('edit')">
-                  <v-icon left small>mdi-pencil</v-icon>Edit Item
+                  <v-icon left small>mdi-pencil</v-icon>Edit Inventory
                 </v-btn>
 
-                <v-btn block outlined class="mt-2" @click="downloadSummary">
+                <!-- <v-btn block outlined class="mt-2" @click="downloadSummary">
                   <v-icon left small>mdi-download</v-icon> Download Summary
-                </v-btn>
+                </v-btn> -->
               </div>
             </v-card>
           </v-col>

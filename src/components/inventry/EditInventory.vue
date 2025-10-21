@@ -1,7 +1,5 @@
 <template>
   <div class="edit-inventory-form">
-    <h2>Edit Inventory Item</h2>
-
     <v-form ref="form" v-model="valid" lazy-validation>
       <section class="section">
         <div class="row">

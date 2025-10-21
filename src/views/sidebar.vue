@@ -22,12 +22,12 @@
               <!-- Inventory submenu -->
               <v-list-group prepend-icon="mdi-warehouse" no-action>
                 <template v-slot:activator>
-                  <v-list-item-title>Vendor Sell</v-list-item-title>
+                  <v-list-item-title>Invoice Process</v-list-item-title>
                 </template>
 
                 <v-list-item @click="$emit('tab-selected', 'SellToVendor')">
                   <v-list-item-content>
-                    <v-list-item-title>Sell To Vendor</v-list-item-title>
+                    <v-list-item-title>Vehicle Invoice</v-list-item-title>
                   </v-list-item-content>
                 </v-list-item>
 
@@ -52,15 +52,15 @@
                   <v-list-item-title>Inventory</v-list-item-title>
                 </template>
 
-                <v-list-item @click="$emit('tab-selected', 'AddInventryVue')">
-                  <v-list-item-content>
-                    <v-list-item-title>Add Inventory</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
                 <v-list-item @click="$emit('tab-selected', 'InventryTable')">
                   <v-list-item-content>
                     <v-list-item-title>Inventory Details</v-list-item-title>
+                  </v-list-item-content>
+                </v-list-item>
+
+                <v-list-item @click="$emit('tab-selected', 'AddInventryVue')">
+                  <v-list-item-content>
+                    <v-list-item-title>Add Inventory</v-list-item-title>
                   </v-list-item-content>
                 </v-list-item>
 
@@ -97,18 +97,18 @@
                <!-- Client submenu -->
                 <v-list-group prepend-icon="mdi-account" no-action>
                   <template v-slot:activator>
-                    <v-list-item-title>Client</v-list-item-title>
+                    <v-list-item-title>Vendor</v-list-item-title>
                   </template>
 
                   <v-list-item @click="$emit('tab-selected', 'Addclient')">
                     <v-list-item-content>
-                      <v-list-item-title>Add Client</v-list-item-title>
+                      <v-list-item-title>Add Vendor</v-list-item-title>
                     </v-list-item-content>
                   </v-list-item>
 
                   <v-list-item @click="$emit('tab-selected', 'ClientTable')">
                     <v-list-item-content>
-                      <v-list-item-title>Client Table</v-list-item-title>
+                      <v-list-item-title>Vendor Details</v-list-item-title>
                     </v-list-item-content>
                   </v-list-item>
                 </v-list-group>
