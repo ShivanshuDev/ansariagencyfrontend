@@ -1,6 +1,6 @@
 <template>
   <div class="add-customer-form">
-    <h2>Add Client</h2>
+    <h2>Add Vendor</h2>
 
     <section class="section">
       <h3>Basic Details</h3>
@@ -8,7 +8,7 @@
         <div class="form-fields">
           <div class="fields-row">
             <label>
-              Client Id *
+              Vendor Id *
               <input type="text" v-model="customer.clientId" required />
             </label>
             <label>
@@ -374,7 +374,7 @@ export default {
       const c = this.customer;
       // required basics
       if (!c.clientId?.toString().trim()) {
-        this.dialogError = 'Client Id is required.';
+        this.dialogError = 'Vendor Id is required.';
         return false;
       }
       if (!c.name?.toString().trim()) {
@@ -496,7 +496,7 @@ export default {
       }
       this.openDlg(
         'confirm',
-        'Add Client?',
+        'Add Vendor?',
         'Are you sure you want to create this client record?',
         this.onCreate // run actual submit on confirm
       );
@@ -517,7 +517,7 @@ export default {
         const res = await axios.post(url, payload);
 
         // Success popup + clear form
-        this.openDlg('success', 'Success', res?.data?.message || 'Client added successfully');
+        this.openDlg('success', 'Success', res?.data?.message || 'Vendor added successfully');
         this.clearForm();
       } catch (err) {
         console.error('add client failed', err);

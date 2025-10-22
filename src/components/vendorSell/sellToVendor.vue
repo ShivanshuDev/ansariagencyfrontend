@@ -221,41 +221,102 @@ export default {
       }
     },
 
+    // async fetchInventories() {
+    //   this.loadingModel = true;
+    //   try {
+    //     const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry');
+    //     const allItems = res.data?.items || [];
+
+    //     // ✅ Filter only items with status ACTIVE
+    //     const activeItems = allItems.filter(it => it.status === 'ACTIVE');
+
+    //     // ✅ Map the filtered list
+    //     this.inventoriesMap = {};
+    //     this.availableModel = activeItems.map(it => {
+    //       const key =
+    //         (it.chassisNumber && String(it.chassisNumber).trim()) ||
+    //         (it.gsisk3 && String(it.gsisk3).trim()) ||
+    //         (it.sk && String(it.sk).trim()) ||
+    //         `inv_${Math.random().toString(36).slice(2, 8)}`;
+
+    //       const copy = {
+    //         ...it,
+    //         __key: key,
+    //         label: it.modelName || it.label || it.model || 'Item'
+    //       };
+
+    //       this.inventoriesMap[key] = copy;
+    //       return copy;
+    //     });
+
+    //     // ✅ Sort by label for consistent UI
+    //     this.availableModel.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+    //   } catch (e) {
+    //     console.warn('Failed to fetch inventories', e);
+    //   } finally {
+    //     this.loadingModel = false;
+    //   }
+    // },
     async fetchInventories() {
-      this.loadingModel = true;
+      this.loadingModel = true
       try {
-        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry');
-        const allItems = res.data?.items || [];
+        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry')
+        const items = (res.data?.items || []).map(i => ({ ...i }))
 
-        // ✅ Filter only items with status ACTIVE
-        const activeItems = allItems.filter(it => it.status === 'ACTIVE');
+        // build map keyed by chassisNumber (or sk fallback)
+        this.inventoriesMap = {}
+        this.availableModel = items.map(it => {
+          // prefer chassisNumber or gsisk3 or sk as unique key; fallback to a generated id
+          const key = (it.chassisNumber && String(it.chassisNumber).trim()) ||
+                      (it.gsisk3 && String(it.gsisk3).trim()) ||
+                      (it.sk && String(it.sk).trim()) ||
+                      (`inv_${Math.random().toString(36).slice(2,8)}`)
+          // store __key for v-select usage and preserve original fields used in builds
+          const copy = { ...it, __key: key, label: it.modelName || it.label || it.model || 'Item' }
+          this.inventoriesMap[key] = copy
+          return copy
+        })
 
-        // ✅ Map the filtered list
-        this.inventoriesMap = {};
-        this.availableModel = activeItems.map(it => {
-          const key =
-            (it.chassisNumber && String(it.chassisNumber).trim()) ||
-            (it.gsisk3 && String(it.gsisk3).trim()) ||
-            (it.sk && String(it.sk).trim()) ||
-            `inv_${Math.random().toString(36).slice(2, 8)}`;
-
-          const copy = {
-            ...it,
-            __key: key,
-            label: it.modelName || it.label || it.model || 'Item'
-          };
-
-          this.inventoriesMap[key] = copy;
-          return copy;
-        });
-
-        // ✅ Sort by label for consistent UI
-        this.availableModel.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+        // sort for convenience
+        this.availableModel.sort((a,b) => (a.label||'').localeCompare(b.label||''))
       } catch (e) {
-        console.warn('Failed to fetch inventories', e);
+        console.warn('Failed to fetch inventories', e)
       } finally {
-        this.loadingModel = false;
+        this.loadingModel = false
       }
+    },
+
+    formatMoney(v) { return Number(v || 0).toFixed(2) },
+
+    resolveSelectedInventory() {
+      if (!this.selectedModelKey) return null
+      return this.inventoriesMap[this.selectedModelKey] || this.availableModel.find(it => it.__key === this.selectedModelKey) || null
+    },
+
+    computeRowTotals(row) {
+      const price = Number(row.price || 0)
+      const qty = Number(row.quantity || 0)
+      const discount = Number(row.discount || 0)
+      const taxable = price * qty
+      const cgstAmt = taxable * (Number(row.cgst || 0) / 100)
+      const sgstAmt = taxable * (Number(row.sgst || 0) / 100)
+      let total = taxable + cgstAmt + sgstAmt - discount
+      if (total < 0) total = 0
+      row.taxable = Number(taxable.toFixed(2))
+      row.cgstAmount = Number(cgstAmt.toFixed(2))
+      row.sgstAmount = Number(sgstAmt.toFixed(2))
+      row.taxAmount = Number((cgstAmt + sgstAmt).toFixed(2))
+      row.totalWithTax = Number(total.toFixed(2))
+      row.price = Number(price)
+      row.quantity = Number(qty)
+      row.discount = Number(discount)
+      row.cgst = Number(row.cgst || 0)
+      row.sgst = Number(row.sgst || 0)
+      row.hsn = row.hsn || ''
+      row.kitGiven = !!row.kitGiven
+      row.chassisNumber = row.chassisNumber || row.chassisNo || row.chassis || ''
+      row.engineNumber = row.engineNumber || row.engineNo || row.engine || ''
+      row.color = row.color || ''
     },
     formatMoney(v) { return Number(v || 0).toFixed(2) },
 

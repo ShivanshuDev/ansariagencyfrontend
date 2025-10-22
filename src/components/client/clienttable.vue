@@ -15,9 +15,7 @@
           clearable
           style="max-width:360px"
         />
-        <v-btn icon :loading="loading" @click="fetchClients" title="Refresh list">
-          <v-icon>mdi-refresh</v-icon>
-        </v-btn>
+
       </v-card-title>
 
       <v-data-table
@@ -49,9 +47,9 @@
           {{ item.phone || '-' }}
         </template>
 
-        <template v-slot:item.status="{ item }">
+        <!-- <template v-slot:item.status="{ item }">
           {{ item.status || '-' }}
-        </template>
+        </template> -->
 
         <!-- Actions column: Show button -->
         <template v-slot:item.actions="{ item }">
@@ -73,7 +71,7 @@
     <v-dialog v-model="dialog" max-width="920px" persistent>
       <v-card>
         <v-card-title>
-          Client Information
+          Vendor Information
           <v-spacer></v-spacer>
           <v-btn icon @click="closeDialog">
             <v-icon>mdi-close</v-icon>
@@ -97,7 +95,7 @@
     <v-dialog v-model="editDialog" max-width="1420px">
       <v-card>
         <v-card-title>
-          Edit Client
+          Edit Vendor
           <v-spacer></v-spacer>
           <v-btn icon @click="closeEdit">
             <v-icon>mdi-close</v-icon>
@@ -135,7 +133,6 @@ export default {
       editDialog: false,
       editPk: null,        // decoded/UUID pk used for editing
       search: '',
-
       // NEW: pagination state
       page: 1,
       itemsPerPage: 10
@@ -181,11 +178,12 @@ export default {
     headers() {
       return [
         { text: '#', value: 'sn', sortable: false, width: 70, align: 'start' }, // Serial No.
+        { text: 'Vendor Id', value: 'clientId', sortable: false },
         { text: 'Name', value: 'name', sortable: false },
         { text: 'Email', value: 'email', sortable: false },
         { text: 'Phone', value: 'phone', sortable: false },
         { text: 'GSTIN', value: 'gstin', sortable: false },
-        { text: 'Status', value: 'status', sortable: false },
+        // { text: 'Status', value: 'status', sortable: false },
         { text: 'Actions', value: 'actions', sortable: false, align: 'end' }
       ];
     }

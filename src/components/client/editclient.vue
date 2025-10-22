@@ -1,14 +1,13 @@
 <template>
   <div class="add-customer-form">
-    <h2>Edit Client</h2>
     <section class="section">
       <h3>Basic Details</h3>
       <div class="row">
         <div class="form-fields">
           <div class="fields-row">
             <label>
-              Client Id *
-              <input disabled type="text" v-model="customer.clientId" required />
+              Vendor Id *
+              <input type="text" v-model="customer.clientId" required />
             </label>
             <label>
               Name *

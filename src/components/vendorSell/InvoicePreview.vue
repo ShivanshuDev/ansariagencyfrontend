@@ -3,23 +3,23 @@
     <v-card class="pa-0" style="overflow: hidden;">
       <br />
       <v-card-text class="invoice-root" ref="invoiceCard">
+        <!-- ===== YOUR INVOICE MARKUP (unchanged) ===== -->
         <div class="top-header">
           <div class="top-header-left">
-            <img style="height:100px; width:100px;" src="@/assets/image.png" />
+            <img style="height:60px; width:160px;" src="@/assets/newLogoTVS.png" />
           </div>
           <div class="top-header-right">
-            <h2>Ansari Automobiles</h2>
+            <h2>ANSARI AUTOMOBILES</h2>
             <h3>BADI KAMHARIYA BY PASS ROAD, MAU</h3>
             <h4>GSTIN/UIN - 09AJBPA4037B1ZY</h4>
             <h4>STATE NAME: UTTAR PRADESH CODE 09</h4>
           </div>
         </div>
-        <!-- ===== TOP STRIP ===== -->
-        <div class="top-strip" style="background-color:#b9b8b8d6; font-weight:600; font-size:14px;">
-          <div class="label">TAX INVOICE</div>
+
+        <div class="top-strip" style="background-color:#b9b8b8d6; font-weight:600; font-size:12px;">
+          <div class="label">BILL INVOICE</div>
         </div>
 
-        <!-- ===== HEADER ROW (Invoice No/Date) ===== -->
         <div class="header-row" style="margin-top:5px;">
           <div class="cell left">
             <div class="row">
@@ -27,29 +27,26 @@
               <div class="cell-val bold">{{ invoiceNumber || '—' }}</div>
             </div>
           </div>
-          <div class=" right">
-            <div class="row">
-              <div class="cell-key" > &nbsp; &nbsp;&nbsp; &nbsp;  Invoice Date</div>
-              <div class="cell-val bold">{{ meta.dated || '—' }}</div>
+          <div class=" right" style="height:30px; width:100%; text-align:right;">
+            <div class="row" style="display:flex; flex-direction:row; justify-content:right;">
+              <div class="cell-key"> &nbsp; &nbsp;&nbsp; &nbsp;  Invoice Date</div>
+              <div class="cell-val bold">{{ meta.dated || '—' }}&nbsp;</div>
             </div>
           </div>
         </div>
 
-        <!-- ===== BILL / SHIP BLOCK ===== -->
-        <div class="two-col bordered">
+        <div class="two-col">
           <div class="col">
-            <div class="blk-head">BILL TO</div>
+            <div class="blk-head">BILL TO - {{ buyer.name || '—' }}</div>
             <div class="blk-body">
-              <div class="bold">{{ buyer.name || '—' }}</div>
               <div class="small">{{ formatAddressPlain(buyer.address) }}</div>
               <div class="small">GSTIN : {{ buyer.gstin || '—' }}</div>
               <div class="small">State : {{ buyer.stateName || '—' }} &nbsp; Code : {{ buyer.stateCode || '—' }}</div>
             </div>
           </div>
           <div class="col">
-            <div class="blk-head">SHIP TO</div>
+            <div class="blk-head">SHIP TO - {{ consignee.name || '—' }}</div>
             <div class="blk-body">
-              <div class="bold">{{ consignee.name || '—' }}</div>
               <div class="small">{{ formatAddressPlain(consignee.address) }}</div>
               <div class="small">GSTIN : {{ consignee.gstin || '—' }}</div>
               <div class="small">State : {{ consignee.stateName || '—' }} &nbsp; Code : {{ consignee.stateCode || '—' }}</div>
@@ -57,42 +54,17 @@
           </div>
         </div>
 
-        <!-- ===== COMPANY (top-left) + GSTIN (top-right like image) ===== -->
-        <div class="company-bar bordered">
-          <div class="company">
-            <div class="name">{{ company.name }}</div>
-            <div class="addr small">
-              {{ company.addressLine1 }}<br />
-              {{ company.cityState }}<br />
-              GSTIN : {{ company.gstin }}
-            </div>
-          </div>
-          <div class="ship-meta small">
-            <div>{{ company.stateName }} </div>
-            <div>{{ company.stateCode }}-{{ company.stateName }}</div>
-          </div>
-        </div>
-
-        <!-- ===== ITEMS TABLE (same order as sample) ===== -->
         <table class="items bordered">
           <thead>
             <tr>
               <th class="w-sl">S. NO.</th>
               <th>DESCRIPTION</th>
-              <th class="w-hsn">HSN/SAC CODE</th>
-              <th class="w-uom">UOM</th>
+              <th class="w-hsn">HSN CODE</th>
               <th class="w-qty">QTY</th>
               <th class="w-rate">RATE</th>
-              <th class="w-scheme">Scheme %</th>
-              <th class="w-disc">Discount<br/>Amt.</th>
               <th class="w-taxable">Taxable<br/>Value</th>
-              <th class="w-gst">CGST-Rate</th>
-              <!-- <th class="w-amt">Amt.</th> -->
-              <th class="w-gst">SGST-Rate</th>
-              <!-- <th class="w-amt">Amt.</th> -->
-              <!-- <th class="w-gst">IGST<br/>Rate</th>
-              <th class="w-amt">Amt.</th>
-              <th class="w-cess">CESS</th> -->
+              <th class="w-gst" style="white-space: nowrap;">CGST <br /> Rate-Amt</th>
+              <th class="w-gst" style="white-space: nowrap;">SGST <br /> Rate-Amt</th>
               <th class="w-total">TOTAL</th>
             </tr>
           </thead>
@@ -104,45 +76,25 @@
                 <div v-if="it.note" class="small text-dim">{{ it.note }}</div>
               </td>
               <td class="text-center">{{ it.hsn || '—' }}</td>
-              <td class="text-center">{{ it.unit }}</td>
-              <td class="text-right">{{ fmtQty(it.qty) }}</td>
+              <td class="text-center">{{ fmtQty(it.qty) }}</td>
               <td class="text-right">{{ money(it.rate) }}</td>
-              <td class="text-right">{{ pct(it.schemePct) }}</td>
-              <td class="text-right">{{ money(it.discAmt) }}</td>
               <td class="text-right">{{ money(it.taxable) }}</td>
-
-              <td class="text-right">{{ pct(it.cgstRate) }} - {{ money(it.cgstAmt) }}</td>
-
-              <td class="text-right">{{ pct(it.sgstRate) }} - {{money(it.sgstAmt)}}</td>
-
-              <!-- <td class="text-right">{{ pct(it.igstRate) }}</td>
-              <td class="text-right">{{ money(it.igstAmt) }}</td>
-
-              <td class="text-right">{{ money(it.cessAmt) }}</td> -->
+              <td class="text-right" style="white-space: nowrap;">{{ pct(it.cgstRate) }}  -  {{ money(it.cgstAmt) }}</td>
+              <td class="text-right" style="white-space: nowrap;">{{ pct(it.sgstRate) }}  -  {{ money(it.sgstAmt) }}</td>
               <td class="text-right bold">{{ money(it.lineTotal) }}</td>
             </tr>
-
-            <!-- TOTAL LINE (like image) -->
             <tr class="total-row">
-              <td colspan="8" class="text-right bold">TOTAL</td>
+              <td class="text-right bold">TOTAL</td>
+              <td colspan="4" class="text-right bold"></td>
               <td class="text-right bold">{{ money(sum.taxable) }}</td>
-
               <td class="text-right bold">{{ money(sum.cgst) }}</td>
-
               <td class="text-right bold">{{ money(sum.sgst) }}</td>
-
-              <!-- <td></td> -->
-              <!-- <td class="text-right bold">{{ money(sum.igst) }}</td>
-
-              <td class="text-right bold">{{ money(sum.cess) }}</td> -->
               <td class="text-right bold">{{ money(sum.grand) }}</td>
             </tr>
           </tbody>
         </table>
 
-        <!-- ===== BOTTOM GRID: LEFT info + RIGHT summary box ===== -->
         <div class="bottom-grid">
-          <!-- LEFT STACK -->
           <div class="left bordered pad">
             <div class="row-line">
               <div>Salesman/Broker</div>
@@ -163,69 +115,57 @@
             </div>
 
             <div class="amount-words mt8">
-              Rupees <span class="bold">{{ amountInWords }}</span> Only
+              <span class="bold">{{ amountInWords }} Rupees Only </span>
             </div>
           </div>
 
-          <!-- RIGHT SUMMARY BOX -->
-          <div class="bordered">
-            <table class="summary">
-              <tbody>
-                <tr>
-                  <td>GROSS TOTAL</td>
-                  <td class="text-right">{{ money(sum.taxable) }}</td>
-                </tr>
-                <tr>
-                  <td>DISCOUNT RS.</td>
-                  <td class="text-right">{{ money(totalDiscountComputed) }}</td>
-                </tr>
-                <tr>
-                  <td class="bold">TOTAL AMOUNT BEFORE TAX</td>
-                  <td class="text-right bold">{{ money(sum.taxable) }}</td>
-                </tr>
-                <tr>
-                  <td>Add: CGST</td>
-                  <td class="text-right">{{ money(sum.cgst) }}</td>
-                </tr>
-                <tr>
-                  <td>Add: SGST</td>
-                  <td class="text-right">{{ money(sum.sgst) }}</td>
-                </tr>
-
-                <tr class="grand">
-                  <td class="bold">TOTAL AMOUNT AFTER TAX</td>
-                  <td class="text-right bold">{{ money(sum.grand) }}</td>
-                </tr>
-              </tbody>
-            </table>
+          <div style="display:flex; flex-direction:row;">
+            <div class="bordered">
+              <table class="summary">
+                <tbody>
+                  <tr>
+                    <td>GROSS TOTAL</td>
+                    <td class="text-right">{{ money(sum.taxable) }}</td>
+                  </tr>
+                  <tr>
+                    <td>DISCOUNT RS.</td>
+                    <td class="text-right">{{ money(totalDiscountComputed) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="bold">TOTAL AMOUNT BEFORE TAX</td>
+                    <td class="text-right bold">{{ money(sum.taxable) }}</td>
+                  </tr>
+                  <tr>
+                    <td>Add: CGST</td>
+                    <td class="text-right">{{ money(sum.cgst) }}</td>
+                  </tr>
+                  <tr>
+                    <td>Add: SGST</td>
+                    <td class="text-right">{{ money(sum.sgst) }}</td>
+                  </tr>
+                  <tr class="grand">
+                    <td class="bold">TOTAL AMOUNT AFTER TAX</td>
+                    <td class="text-right bold">{{ money(sum.grand) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex; flex-direction:row; justify-content:center; align-items:center; width:260px;">
+              <h3 style="margin-top:100px;">Signature</h3>
+            </div>
           </div>
         </div>
 
-        <!-- ===== DECLARATION + SIGN ===== -->
         <div class="declare bordered pad">
-          <div class="left">
-            <div><span class="bold">Company's PAN</span> : {{ company.pan }}</div>
-            <div class="bold mt8">Declaration</div>
-            <div class="small">
-              We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
-            </div>
+          <div class="small">
+            <h3>We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.</h3>
           </div>
-          <div class="right">
-            <div class="bold">for {{ company.name }}</div>
-            <div class="sign">Authorised Signatory</div>
-          </div>
-        </div>
-
-        <!-- ===== TERMS (single line like image) ===== -->
-        <div class="terms small">
-          Terms & Conditions : 1. We warranted hereby to certify be of that the foods nature mentioned and quality in which this invoice these are
-          purpose to be articles of food being of perishable nature must be stored in cool & dry place. 2. Subject to Jurisdiction. E. & O. E.
         </div>
       </v-card-text>
 
       <v-card-actions class="pa-3">
         <v-btn variant="text" @click="downloadPdf"><v-icon start>mdi-download</v-icon>Download</v-btn>
-        <v-btn variant="text" @click="openPrint"><v-icon start>mdi-printer</v-icon>Print</v-btn>
+        <v-btn variant="text" @click="printPdf"><v-icon start>mdi-printer</v-icon>Print</v-btn>
         <v-spacer />
         <v-btn variant="text" @click="previewLocal = false">Close</v-btn>
       </v-card-actions>
@@ -244,7 +184,6 @@ export default {
     items: { type: Array, default: () => [] },
     invoiceNumber: { default: '' },
     invoiceDate: { default: '' },
-    // legacy totals are accepted but recomputed below
     subtotal: { type: Number, default: 0 },
     totalDiscount: { type: Number, default: 0 },
     totalCgst: { type: Number, default: 0 },
@@ -253,27 +192,26 @@ export default {
     grandTotal: { type: Number, default: 0 },
     paymentType: { default: null },
   },
+  emits: ['update:preview', 'exported'],
   computed: {
     previewLocal: { get() { return this.preview }, set(v) { this.$emit('update:preview', v) } },
-
     company () {
       const v = this.selectedVendor || {}
       return {
-        name: v.name || 'RAJ DATA PROCESSORS',
-        addressLine1: v.billing?.line1 || '45, DAULATGANJ',
-        cityState: v.billing?.city ? `${v.billing.city}, ${v.billing.state}` : 'UJJAIN',
+        name: v.name || '',
+        addressLine1: v.billing?.line1 || '',
+        cityState: v.billing?.city ? `${v.billing.city}, ${v.billing.state}` : '',
         gstin: v.gstin || '',
-        stateName: v.billing?.state || 'Madhya Pradesh',
-        stateCode: v.billing?.stateCode || '23',
+        stateName: v.billing?.state || ' ',
+        stateCode: v.billing?.stateCode || ' ',
         pan: v.pan || '—',
         bank: {
-          name: (v.bank && v.bank.name) || 'BANK OF INDIA',
-          account: (v.bank && v.bank.account) || '9100123456456',
-          ifsc: (v.bank && v.bank.ifsc) || 'BKID00001901'
+          name: (v.bank && v.bank.name) || ' ',
+          account: (v.bank && v.bank.account) || '',
+          ifsc: (v.bank && v.bank.ifsc) || ''
         }
       }
     },
-
     consignee () {
       const v = this.selectedVendor || {}
       return {
@@ -285,219 +223,145 @@ export default {
         stateCode: v.shipping?.stateCode || v.billing?.stateCode || ''
       }
     },
-
     buyer () { return { ...this.consignee } },
-
     meta () {
-      return {
-        dated: this.invoiceDate || '',
-        paymentTerms: this.paymentType || ''
-      }
+      return { dated: this.invoiceDate || '', paymentTerms: this.paymentType || '' }
     },
+    normalizedItems () {
+      const round2 = v => Number((Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2))
+      return (this.items || []).map((raw, idx) => {
+        const qty = Number(raw.quantity ?? raw.qty ?? 1)
+        const entered = Number(raw.price ?? raw.rate ?? 0)   // GST-inclusive price per unit
+        const gross = qty * entered
 
-    /** Normalize each item into the columns of the sample */
-    // normalizedItems () {
-    //   return (this.items || []).map((raw, idx) => {
-    //     const qty = Number(raw.quantity ?? raw.qty ?? 1)
-    //     const unit = raw.unit || raw.uom || 'Nos'
-    //     const rate = Number(raw.price ?? raw.rate ?? 0)
-    //     const gross = qty * rate
+        const cgstRate = Number(raw.cgst ?? 0)
+        const sgstRate = Number(raw.sgst ?? 0)
+        const igstRate = Number(raw.igst ?? 0)
+        const totalGstRate = cgstRate + sgstRate + igstRate
 
-    //     // Allow either a fixed discount (raw.discount) or percent (raw.discountPercent)
-    //     const schemePct = Number(raw.schemePct || 0)
-    //     const discPct = Number(raw.discountPercent || 0)
-    //     const discFixed = Number(raw.discount || 0)
-    //     const discAmt = discFixed || (discPct ? (gross * discPct) / 100 : 0)
+        const base = totalGstRate ? gross / (1 + totalGstRate / 100) : gross
+        const cgstAmt = base * cgstRate / 100
+        const sgstAmt = base * sgstRate / 100
+        const igstAmt = base * igstRate / 100
 
-    //     const taxableBase = gross - discAmt
-    //     const cgstRate = Number(raw.cgst ?? 0)
-    //     const sgstRate = Number(raw.sgst ?? 0)
-    //     const igstRate = Number(raw.igst ?? 0)
-    //     const cessAmt  = Number(raw.cess ?? 0)
-
-    //     const cgstAmt = (taxableBase * cgstRate) / 100
-    //     const sgstAmt = (taxableBase * sgstRate) / 100
-    //     const igstAmt = (taxableBase * igstRate) / 100
-    //     const lineTotal = taxableBase + cgstAmt + sgstAmt + igstAmt + cessAmt
-
-    //     return {
-    //       _key: raw.id ?? idx,
-    //       label: raw.label || raw.modelName || 'Item',
-    //       note: (raw.chassisNumber || raw.engineNumber)
-    //         ? `Chassis: ${raw.chassisNumber || '—'}  |  Engine: ${raw.engineNumber || '—'}`
-    //         : '',
-    //       hsn: raw.hsn || '',
-    //       unit,
-    //       qty,
-    //       rate,
-    //       schemePct,
-    //       discAmt,
-    //       taxable: taxableBase,
-    //       cgstRate, cgstAmt,
-    //       sgstRate, sgstAmt,
-    //       igstRate, igstAmt,
-    //       cessAmt,
-    //       lineTotal
-    //     }
-    //   })
-    // },
-
-normalizedItems () {
-  const round2 = v => Number((Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2))
-
-  return (this.items || []).map((raw, idx) => {
-    const qty = Number(raw.quantity ?? raw.qty ?? 1)
-    const unit = raw.unit || raw.uom || 'Nos'
-    const entered = Number(raw.price ?? raw.rate ?? 0)   // GST-inclusive price per unit
-    const gross = qty * entered
-
-    const cgstRate = Number(raw.cgst ?? 0)
-    const sgstRate = Number(raw.sgst ?? 0)
-    const igstRate = Number(raw.igst ?? 0)
-    const totalGstRate = cgstRate + sgstRate + igstRate
-
-    // Reverse GST breakdown (for display only, not added to total again)
-    const base = totalGstRate ? gross / (1 + totalGstRate / 100) : gross
-    const cgstAmt = base * cgstRate / 100
-    const sgstAmt = base * sgstRate / 100
-    const igstAmt = base * igstRate / 100
-
-    return {
-      _key: raw.id ?? idx,
-      label: raw.label || raw.modelName || 'Item',
-      note: (raw.chassisNumber || raw.engineNumber)
-        ? `Chassis: ${raw.chassisNumber || '—'}  |  Engine: ${raw.engineNumber || '—'}`
-        : '',
-      hsn: raw.hsn || '',
-      unit,
-      qty,
-      rate: entered,
-      taxable: round2(base),
-      cgstRate,
-      cgstAmt: round2(cgstAmt),
-      sgstRate,
-      sgstAmt: round2(sgstAmt),
-      igstRate,
-      igstAmt: round2(igstAmt),
-      cessAmt: round2(Number(raw.cess ?? 0)),
-      lineTotal: round2(gross) // <<--- this is always the original user-entered amount × qty
-    }
-  })
-},
-    // sum () {
-    //   return this.normalizedItems.reduce((acc, it) => {
-    //     acc.taxable += it.taxable
-    //     acc.cgst += it.cgstAmt
-    //     acc.sgst += it.sgstAmt
-    //     acc.igst += it.igstAmt
-    //     acc.cess += it.cessAmt
-    //     acc.grand += it.lineTotal
-    //     return acc
-    //   }, { taxable: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, grand: 0 })
-    // },
-
-sum () {
-  return this.normalizedItems.reduce((acc, it) => {
-    acc.taxable += it.taxable
-    acc.cgst += it.cgstAmt
-    acc.sgst += it.sgstAmt
-    acc.igst += it.igstAmt
-    acc.cess += it.cessAmt
-    acc.grand += it.lineTotal // SUM OF GST-INCLUSIVE, NOT BASE+GST
-    return acc
-  }, { taxable: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, grand: 0 })
-}
-,
+        return {
+          _key: raw.id ?? idx,
+          label: raw.label || raw.modelName || 'Item',
+          note: (raw.chassisNumber || raw.engineNumber)
+            ? `Chassis: ${raw.chassisNumber || '—'}  |  Engine: ${raw.engineNumber || '—'}`
+            : '',
+          hsn: raw.hsn || '',
+          qty,
+          rate: entered,
+          taxable: round2(base),
+          cgstRate,
+          cgstAmt: round2(cgstAmt),
+          sgstRate,
+          sgstAmt: round2(sgstAmt),
+          igstRate,
+          igstAmt: round2(igstAmt),
+          cessAmt: round2(Number(raw.cess ?? 0)),
+          lineTotal: round2(gross) // GST-inclusive total
+        }
+      })
+    },
+    sum () {
+      return this.normalizedItems.reduce((acc, it) => {
+        acc.taxable += it.taxable
+        acc.cgst += it.cgstAmt
+        acc.sgst += it.sgstAmt
+        acc.igst += it.igstAmt
+        acc.cess += it.cessAmt
+        acc.grand += it.lineTotal
+        return acc
+      }, { taxable: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, grand: 0 })
+    },
     totalDiscountComputed () {
-      // Prefer incoming prop if provided, else recompute from items
       if (this.totalDiscount) return Number(this.totalDiscount)
-      const fromItems = this.normalizedItems.reduce((s, it) => s + it.discAmt, 0)
+      const fromItems = this.normalizedItems.reduce((s, it) => s + (it.discAmt || 0), 0)
       return fromItems
     },
-
     amountInWords () {
       return this.toCurrencyWords(this.sum.grand) || 'Zero'
     }
   },
-
   methods: {
     fmtQty (q) { return Number(q).toFixed(Number(q) % 1 ? 2 : 0) },
     pct (n) { const v = Number(n || 0); return v ? `${(v % 1 ? v.toFixed(2) : v)}%` : '' },
     money (v) { return `₹${Number(v || 0).toFixed(2)}` },
     formatAddressPlain (a) { if (!a) return ''; return String(a).replace(/\s+/g,' ').replace(/\s*,\s*/g, ', ').trim() },
 
-    openPrint () {
-      const node = this.$refs.invoiceCard
-      const w = window.open('', '_blank', 'width=1024,height=768')
-      w.document.write(`<html><head><title>Invoice</title><style>${this.$el.querySelector('style')?.innerHTML || ''}</style></head><body>${node.outerHTML}</body></html>`)
-      w.document.close(); w.focus(); w.print()
-    },
-
-    // downloadPdf () {
-    //   const node = this.$refs.invoiceCard
-    //   if (!node || typeof html2pdf === 'undefined') return
-    //   const opt = {
-    //     margin: 5,
-    //     filename: `${this.invoiceNumber || 'invoice'}.pdf`,
-    //     image: { type: 'jpeg', quality: 0.98 },
-    //     html2canvas: { scale: 2, useCORS: true },
-    //     jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }
-    //   }
-    //   html2pdf().set(opt).from(node).save()
-    // },
-
-    downloadPdf() {
+    /**
+     * Single source of truth for PDF generation.
+     * action: 'save' | 'print' | 'export'
+     */
+    async renderPdf (action = 'save') {
       const node = this.$refs.invoiceCard
       if (!node || typeof html2pdf === 'undefined') return
 
+      const filename = `${this.invoiceNumber || 'invoice'}.pdf`
+
+      // html2pdf/jspdf options
       const opt = {
-        margin: 5,
-        filename: `${this.invoiceNumber || 'invoice'}.pdf`,
+        margin: [10, 10, 10, 10],                     // top, right, bottom, left (pt)
+        filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          windowWidth: node.scrollWidth                 // reduce reflow differences
+        },
+        jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }, // keep your original orientation
+        pagebreak: { mode: ['css', 'legacy'] }
       }
 
-     html2pdf()
-      .set(opt)
-      .from(node)
-      .toPdf()
-      .get('pdf')
-      .then((pdf) => {
-        const totalPages = pdf.internal.getNumberOfPages()
-        const pageWidth = pdf.internal.pageSize.getWidth()
-        const pageHeight = pdf.internal.pageSize.getHeight()
+      // Build once
+      const worker = html2pdf().set(opt).from(node).toPdf()
 
-        for (let i = 1; i <= totalPages; i++) {
-          pdf.setPage(i)
+      // Add watermark + (optional) any PDF-level tweaks AFTER render
+      const pdf = await worker.get('pdf')
+      const totalPages = pdf.internal.getNumberOfPages()
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
 
-          // Save graphics state
-          pdf.saveGraphicsState()
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i)
+        pdf.saveGraphicsState()
+        pdf.setGState(new pdf.GState({ opacity: 0.08 }))
+        pdf.setTextColor(150, 150, 150)
+        pdf.setFontSize(70)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Ansari Automobile', pageWidth, pageHeight / 2, { align: 'left', angle: 10 })
+        pdf.restoreGraphicsState()
+      }
 
-          // Light watermark (behind text)
-          pdf.setGState(new pdf.GState({ opacity: 0.08 })) // adjust transparency
-          pdf.setTextColor(150, 150, 150)
-          pdf.setFontSize(70)
-          pdf.setFont('helvetica', 'bold')
+      if (action === 'save') {
+        pdf.save(filename)
+        return
+      }
 
-          // Translate + rotate for centered diagonal watermark
-          pdf.text(
-            'Ansari Automobile',
-            pageWidth,
-            pageHeight / 2,
-            {
-              align: 'center',
-              angle: 45,
-            }
-          )
+      if (action === 'print') {
+        // Open the same PDF and trigger print — identical layout to download
+        pdf.autoPrint({ variant: 'non-conform' })
+        const blobUrl = pdf.output('bloburl')
+        const w = window.open(blobUrl, '_blank')
+        // Some browsers auto-open print; this ensures it:
+        if (w) w.onload = () => w.print()
+        return
+      }
 
-          // Restore graphics state
-          pdf.restoreGraphicsState()
-        }
-      })
-      .save(`${this.invoiceNumber || 'invoice'}.pdf`)
+      if (action === 'export') {
+        // Emit Blob (and base64 too if you need). Parent can upload/store.
+        const blob = pdf.output('blob')
+        this.$emit('exported', { blob, filename })
+        return
+      }
     },
 
+    downloadPdf () { return this.renderPdf('save') },
+    printPdf () { return this.renderPdf('print') },
+    exportPdf () { return this.renderPdf('export') },
 
     /* ====== Words (Indian system) ====== */
     toCurrencyWords (amount) {
@@ -632,7 +496,7 @@ sum () {
 .row-line{ display:flex; gap:8px; align-items:center; }
 .row-line .dash{ flex:1; border-bottom:1px solid #000; height:1px; }
 
-.summary{ width:100%; border-collapse:collapse; }
+.summary{ width:100%; border-collapse:collapse; font-size: 11px; font-weight: 700; }
 .summary td{ border-bottom:1px solid #000; padding:6px 8px; }
 .summary tr:last-child td{ border-bottom:none; }
 .summary .grand td{ background:#eee; }
@@ -640,7 +504,8 @@ sum () {
 
 /* ===== Declaration + Sign ===== */
 .declare{
-  height: 100px;
+  height: 30px;
+  width: 100%;
   display:flex;justify-content:space-between;gap:16px;margin-top:6px;
 }
 .declare .right{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end}

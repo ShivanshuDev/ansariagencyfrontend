@@ -120,8 +120,8 @@
                   <v-icon color="primary">mdi-identifier</v-icon>
                 </v-list-item-avatar>
                 <v-list-item-content>
-                  <v-list-item-title>Vendor ID</v-list-item-title>
-                  <v-list-item-subtitle>{{ employee.venderId || '—' }}</v-list-item-subtitle>
+                  <v-list-item-title>Password</v-list-item-title>
+                  <v-list-item-subtitle>{{ employee.password || '—' }}</v-list-item-subtitle>
                 </v-list-item-content>
               </v-list-item>
             </v-list>
@@ -164,43 +164,17 @@
         <span>Addresses</span>
       </div>
       <v-row>
-        <v-col cols="12" md="6">
+        <v-col cols="12" md="12">
           <div class="section-card subtle">
             <div class="section-title">
               <v-icon class="mr-2" small>mdi-home-map-marker</v-icon>
               Current Address
             </div>
             <div v-if="employee.currentAddress" class="kv-grid">
-              <div class="kv"><span>Name</span><b>{{ employee.currentAddress.name || employee.currentAddress.employeeName || '—' }}</b></div>
-              <div class="kv"><span>Line 1</span><b>{{ employee.currentAddress.line1 || '—' }}</b></div>
-              <div class="kv"><span>Line 2</span><b>{{ employee.currentAddress.line2 || '—' }}</b></div>
-              <div class="kv"><span>City</span><b>{{ employee.currentAddress.city || '—' }}</b></div>
-              <div class="kv"><span>Tahsil</span><b>{{ employee.currentAddress.tahsil || '—' }}</b></div>
-              <div class="kv"><span>State</span><b>{{ employee.currentAddress.state || '—' }}</b></div>
-              <div class="kv"><span>Pincode</span><b>{{ employee.currentAddress.pincode || '—' }}</b></div>
-              <div class="kv"><span>Country</span><b>{{ employee.currentAddress.country || '—' }}</b></div>
+              <div class="kv"><b>{{ employee.currentAddress.name || employee.currentAddress.employeeName || '—' }}, {{ employee.currentAddress.line1 || '—' }}, {{ employee.currentAddress.line2 || '—' }}, {{ employee.currentAddress.city || '—' }}, {{ employee.currentAddress.tahsil || '—' }}, {{ employee.currentAddress.state || '—' }}, {{ employee.currentAddress.pincode || '—' }}, {{ employee.currentAddress.country || '—' }}</b></div>
+             
             </div>
             <div v-else class="empty-hint">No current address available.</div>
-          </div>
-        </v-col>
-
-        <v-col cols="12" md="6">
-          <div class="section-card subtle">
-            <div class="section-title">
-              <v-icon class="mr-2" small>mdi-home-city</v-icon>
-              Permanent Address
-            </div>
-            <div v-if="employee.permanentAddress" class="kv-grid">
-              <div class="kv"><span>Name</span><b>{{ employee.permanentAddress.name || employee.permanentAddress.employeeName || '—' }}</b></div>
-              <div class="kv"><span>Line 1</span><b>{{ employee.permanentAddress.line1 || '—' }}</b></div>
-              <div class="kv"><span>Line 2</span><b>{{ employee.permanentAddress.line2 || '—' }}</b></div>
-              <div class="kv"><span>City</span><b>{{ employee.permanentAddress.city || '—' }}</b></div>
-              <div class="kv"><span>Tahsil</span><b>{{ employee.permanentAddress.tahsil || '—' }}</b></div>
-              <div class="kv"><span>State</span><b>{{ employee.permanentAddress.state || '—' }}</b></div>
-              <div class="kv"><span>Pincode</span><b>{{ employee.permanentAddress.pincode || '—' }}</b></div>
-              <div class="kv"><span>Country</span><b>{{ employee.permanentAddress.country || '—' }}</b></div>
-            </div>
-            <div v-else class="empty-hint">No permanent address available.</div>
           </div>
         </v-col>
       </v-row>

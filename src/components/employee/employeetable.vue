@@ -45,11 +45,8 @@
         </template>
 
         <!-- Data cells -->
-        <template v-slot:item.employeeId="{ item }">{{ item.employeeId || '-' }}</template>
         <template v-slot:item.employeeRole="{ item }">{{ item.employeeRole || '-' }}</template>
         <template v-slot:item.employeeName="{ item }">{{ item.employeeName || '-' }}</template>
-        <template v-slot:item.email="{ item }">{{ item.email || '-' }}</template>
-        <template v-slot:item.department="{ item }">{{ item.department || '-' }}</template>
         <template v-slot:item.phone="{ item }">{{ item.phone || '-' }}</template>
         <template v-slot:item.userName="{ item }">{{ item.userName || '-' }}</template>
 
@@ -201,10 +198,7 @@ export default {
       return [
         { text: 'S.No', value: 'sn', sortable: false, align: 'start', width: 72 },
         { text: 'Name', value: 'employeeName', sortable: false },
-        { text: 'Employee ID', value: 'employeeId', sortable: false },
         { text: 'Role', value: 'employeeRole', sortable: false },
-        { text: 'Email', value: 'email', sortable: false },
-        { text: 'Department', value: 'department', sortable: false },
         { text: 'Phone', value: 'phone', sortable: false },
         { text: 'User Name', value: 'userName', sortable: false },
         { text: 'Details', value: 'actions', sortable: false, align: 'end', width: 110 }

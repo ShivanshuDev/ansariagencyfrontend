@@ -9,92 +9,19 @@
 
       <v-divider style="color:white;" class="my-2"></v-divider>
 
+
       <!-- Super Admin (always visible) -->
-      <v-expansion-panels v-model="activePanel" accordion class="exp-panels">
-        <v-expansion-panel>
-          <v-expansion-panel-header class="panel-header">
-            <v-icon left class="header-icon">mdi-view-dashboard</v-icon>
-            <span class="header-text">Super Admin</span>
-          </v-expansion-panel-header>
+      <div>
+        <v-expansion-panels accordion class="exp-panels">
+          <v-expansion-panel>
+            <v-expansion-panel-header class="panel-header">
+              <v-icon left class="header-icon">mdi-view-dashboard</v-icon>
+              <span class="header-text">Super Admin</span>
+            </v-expansion-panel-header>
 
-          <v-expansion-panel-content>
-            <v-list dense>
-              <!-- Inventory submenu -->
-              <v-list-group prepend-icon="mdi-warehouse" no-action>
-                <template v-slot:activator>
-                  <v-list-item-title>Invoice Process</v-list-item-title>
-                </template>
-
-                <v-list-item @click="$emit('tab-selected', 'SellToVendor')">
-                  <v-list-item-content>
-                    <v-list-item-title>Vehicle Invoice</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-              </v-list-group>
-
-              <!-- LEDGER submenu -->
-              <!-- <v-list-group prepend-icon="mdi-warehouse" no-action>
-                <template v-slot:activator>
-                  <v-list-item-title>Ledger</v-list-item-title>
-                </template>
-
-                <v-list-item @click="$emit('tab-selected', 'LEDGER')">
-                  <v-list-item-content>
-                    <v-list-item-title>Ledger</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-              </v-list-group> -->
-
-              <!-- Inventory submenu -->
-              <v-list-group prepend-icon="mdi-warehouse" no-action>
-                <template v-slot:activator>
-                  <v-list-item-title>Inventory</v-list-item-title>
-                </template>
-
-                <v-list-item @click="$emit('tab-selected', 'InventryTable')">
-                  <v-list-item-content>
-                    <v-list-item-title>Inventory Details</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <v-list-item @click="$emit('tab-selected', 'AddInventryVue')">
-                  <v-list-item-content>
-                    <v-list-item-title>Add Inventory</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <v-list-item @click="$emit('tab-selected', 'MODELNAME')">
-                  <v-list-item-content>
-                    <v-list-item-title>Bike Model</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                  <!-- <v-list-item @click="$emit('tab-selected', 'BILL')">
-                    <v-list-item-title>Bills</v-list-item-title>
-                  </v-list-item> -->
-              </v-list-group>
-
-              <!-- spares parts submenu -->
-              <v-list-group prepend-icon="mdi-account" no-action>
-                <template v-slot:activator>
-                  <v-list-item-title>Spares</v-list-item-title>
-                </template>
-
-                <v-list-item @click="$emit('tab-selected', 'ADDSPARES')">
-                  <v-list-item-content>
-                    <v-list-item-title>Add Spares</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <v-list-item @click="$emit('tab-selected', 'sparesTable')">
-                  <v-list-item-content>
-                    <v-list-item-title>Spares Table</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-              </v-list-group>
-
-               <!-- Client submenu -->
+            <v-expansion-panel-content>
+              <v-list dense>
+                <!-- Client submenu -->
                 <v-list-group prepend-icon="mdi-account" no-action>
                   <template v-slot:activator>
                     <v-list-item-title>Vendor</v-list-item-title>
@@ -132,32 +59,66 @@
                   </v-list-item>
                 </v-list-group>
 
-            </v-list>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
+              </v-list>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+        </v-expansion-panels>
 
-      <v-divider class="my-2"></v-divider>
+        <v-divider class="my-2"></v-divider>
 
-      <div  v-if="permission && permission.admin">
-        <!-- Admin: show only if permission.admin is true -->
-        <v-expansion-panels
-          v-model="panels.admin"
-          accordion
-          class="exp-panels"
-        >
-          <v-expansion-panel>
-            <v-expansion-panel-header class="panel-header">
-              <v-icon left class="header-icon">mdi-cube</v-icon>
-              <span class="header-text">Admin</span>
-            </v-expansion-panel-header>
+        <div  v-if="permission && permission.admin">
+          <!-- Admin: show only if permission.admin is true -->
+          <v-expansion-panels
+            v-model="panels.admin"
+            accordion
+            class="exp-panels"
+          >
+            <v-expansion-panel>
+              <v-expansion-panel-header class="panel-header">
+                <v-icon left class="header-icon">mdi-cube</v-icon>
+                <span class="header-text">Admin</span>
+              </v-expansion-panel-header>
 
             <v-expansion-panel-content>
               <v-list dense>
-                <!-- <v-list-group prepend-icon="mdi-warehouse" no-action>
+                <!-- Inventory submenu -->
+                <v-list-group prepend-icon="mdi-warehouse" no-action>
+                  <template v-slot:activator>
+                    <v-list-item-title>Invoice Process</v-list-item-title>
+                  </template>
+
+                  <v-list-item @click="$emit('tab-selected', 'SellToVendor')">
+                    <v-list-item-content>
+                      <v-list-item-title>Vehicle Invoice</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+
+                </v-list-group>
+
+                <!-- LEDGER submenu -->
+                <v-list-group prepend-icon="mdi-warehouse" no-action>
+                  <template v-slot:activator>
+                    <v-list-item-title>Ledger</v-list-item-title>
+                  </template>
+
+                  <v-list-item @click="$emit('tab-selected', 'LEDGER')">
+                    <v-list-item-content>
+                      <v-list-item-title>Ledger</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+                </v-list-group>
+
+                <!-- Inventory submenu -->
+                <v-list-group prepend-icon="mdi-warehouse" no-action>
                   <template v-slot:activator>
                     <v-list-item-title>Inventory</v-list-item-title>
                   </template>
+
+                  <v-list-item @click="$emit('tab-selected', 'InventryTable')">
+                    <v-list-item-content>
+                      <v-list-item-title>Inventory Details</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
 
                   <v-list-item @click="$emit('tab-selected', 'AddInventryVue')">
                     <v-list-item-content>
@@ -165,19 +126,110 @@
                     </v-list-item-content>
                   </v-list-item>
 
-                  <v-list-item @click="$emit('tab-selected', 'InventryTable')">
-                    <v-list-item-content>
-                      <v-list-item-title>Inventory Table</v-list-item-title>
-                    </v-list-item-content>
-                  </v-list-item>
-
                   <v-list-item @click="$emit('tab-selected', 'MODELNAME')">
                     <v-list-item-content>
-                      <v-list-item-title>Model Name</v-list-item-title>
+                      <v-list-item-title>Bike Model</v-list-item-title>
                     </v-list-item-content>
                   </v-list-item>
 
-                </v-list-group> -->
+                    <!-- <v-list-item @click="$emit('tab-selected', 'BILL')">
+                      <v-list-item-title>Bills</v-list-item-title>
+                    </v-list-item> -->
+                </v-list-group>
+
+                <!-- spares parts submenu -->
+                <v-list-group prepend-icon="mdi-account" no-action>
+                  <template v-slot:activator>
+                    <v-list-item-title>Spares</v-list-item-title>
+                  </template>
+
+                  <v-list-item @click="$emit('tab-selected', 'ADDSPARES')">
+                    <v-list-item-content>
+                      <v-list-item-title>Add Spares</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+
+                  <v-list-item @click="$emit('tab-selected', 'sparesTable')">
+                    <v-list-item-content>
+                      <v-list-item-title>Spares Table</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+                </v-list-group>
+
+                <!-- Client submenu -->
+                <v-list-group prepend-icon="mdi-account" no-action>
+                  <template v-slot:activator>
+                    <v-list-item-title>Vendor</v-list-item-title>
+                  </template>
+
+                  <v-list-item @click="$emit('tab-selected', 'Addclient')">
+                    <v-list-item-content>
+                      <v-list-item-title>Add Vendor</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+
+                  <v-list-item @click="$emit('tab-selected', 'ClientTable')">
+                    <v-list-item-content>
+                      <v-list-item-title>Vendor Details</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+                </v-list-group>
+
+                <!-- Employee submenu -->
+                <v-list-group prepend-icon="mdi-account-group" no-action>
+                  <template v-slot:activator>
+                    <v-list-item-title>Employee</v-list-item-title>
+                  </template>
+
+                  <v-list-item @click="$emit('tab-selected', 'Addemployee')">
+                    <v-list-item-content>
+                      <v-list-item-title>Add Employee</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+
+                  <v-list-item @click="$emit('tab-selected', 'EmployeeTable')">
+                    <v-list-item-content>
+                      <v-list-item-title>Employee Table</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+                </v-list-group>
+
+              </v-list>
+            </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
+          <v-divider class="my-2"></v-divider>
+        </div>
+      </div>
+
+      <!-- Sales: show only if permission.sales -->
+      <div  v-if="permission && permission.sales">
+        <v-expansion-panels
+        
+          v-model="panels.sales"
+          accordion
+          class="exp-panels"
+        >
+          <v-expansion-panel>
+            <v-expansion-panel-header class="panel-header">
+              <v-icon left class="header-icon">mdi-cart</v-icon>
+              <span class="header-text">Sales</span>
+            </v-expansion-panel-header>
+
+            <v-expansion-panel-content>
+              <v-list dense>
+                <v-list-item>
+                  <v-list-item-title>Sales</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Sales Orders</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Delivery Notes</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Sales Returns</v-list-item-title>
+                </v-list-item>
               </v-list>
             </v-expansion-panel-content>
           </v-expansion-panel>
@@ -185,100 +237,129 @@
         <v-divider class="my-2"></v-divider>
       </div>
 
-      <div  v-if="permission && permission.sales">
-      <!-- Sales: show only if permission.sales -->
-      <v-expansion-panels
-       
-        v-model="panels.sales"
-        accordion
-        class="exp-panels"
-      >
+      <!-- Master (always visible) -->
+      <!-- <v-expansion-panels v-model="activePanel" accordion class="exp-panels">
         <v-expansion-panel>
           <v-expansion-panel-header class="panel-header">
-            <v-icon left class="header-icon">mdi-cart</v-icon>
-            <span class="header-text">Sales</span>
+            <v-icon left class="header-icon">mdi-view-dashboard</v-icon>
+            <span class="header-text">Master</span>
           </v-expansion-panel-header>
-
           <v-expansion-panel-content>
             <v-list dense>
-              <v-list-item>
-                <v-list-item-title>Sales</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Sales Orders</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Delivery Notes</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Sales Returns</v-list-item-title>
-              </v-list-item>
+                <v-list-group prepend-icon="mdi-account" no-action>
+                  <template v-slot:activator>
+                    <v-list-item-title>Vendor</v-list-item-title>
+                  </template>
+                  <v-list-item @click="$emit('tab-selected', 'Addclient')">
+                    <v-list-item-content>
+                      <v-list-item-title>Add Vendor</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+                  <v-list-item @click="$emit('tab-selected', 'ClientTable')">
+                    <v-list-item-content>
+                      <v-list-item-title>Vendor Details</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+                </v-list-group>
+                <v-list-group prepend-icon="mdi-account-group" no-action>
+                  <template v-slot:activator>
+                    <v-list-item-title>Employee</v-list-item-title>
+                  </template>
+                  <v-list-item @click="$emit('tab-selected', 'Addemployee')">
+                    <v-list-item-content>
+                      <v-list-item-title>Add Employee</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+
+                  <v-list-item @click="$emit('tab-selected', 'EmployeeTable')">
+                    <v-list-item-content>
+                      <v-list-item-title>Employee Table</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+                </v-list-group>
             </v-list>
           </v-expansion-panel-content>
         </v-expansion-panel>
       </v-expansion-panels>
+      <v-divider class="my-2"></v-divider> -->
 
-      <v-divider class="my-2"></v-divider>
+      <!-- Accounts -->
+      <div>
+        <v-expansion-panels
+          v-model="panels.accounts"
+          accordion
+          class="exp-panels"
+        >
+          <v-expansion-panel>
+            <v-expansion-panel-header class="panel-header">
+              <v-icon left class="header-icon">mdi-truck</v-icon>
+              <span class="header-text">Accounts</span>
+            </v-expansion-panel-header>
+
+            <v-expansion-panel-content>
+              <v-list dense>
+                <!-- Client submenu -->
+                <v-list-group prepend-icon="mdi-account" no-action>
+                  <template v-slot:activator>
+                    <v-list-item-title>LEDGER</v-list-item-title>
+                  </template>
+
+                  <v-list-item @click="$emit('tab-selected', 'LEDGERENTRY')">
+                    <v-list-item-content>
+                      <v-list-item-title>View Ledger Entries</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+
+                  <v-list-item @click="$emit('tab-selected', 'DAYBOOK')">
+                    <v-list-item-content>
+                      <v-list-item-title>DAY Book</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+
+                  <v-list-item @click="$emit('tab-selected', '')">
+                    <v-list-item-content>
+                      <v-list-item-title>Payment Receipt</v-list-item-title>
+                    </v-list-item-content>
+                  </v-list-item>
+
+                </v-list-group>
+              </v-list>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+        </v-expansion-panels>
+        <v-divider class="my-2"></v-divider>
       </div>
 
-      <div v-if="permission && permission.rto">
-      <!-- RTO -->
-      <v-expansion-panels
-        v-if="permission && permission.rto"
-        v-model="panels.rto"
-        accordion
-        class="exp-panels"
-      >
-        <v-expansion-panel>
-          <v-expansion-panel-header class="panel-header">
-            <v-icon left class="header-icon">mdi-truck</v-icon>
-            <span class="header-text">RTO</span>
-          </v-expansion-panel-header>
+      <!-- Sales -->
+      <!-- <div v-if="permission && permission.sales"> -->
+        <v-expansion-panels
+          v-model="panels.rto"
+          accordion
+          class="exp-panels"
+        >
+          <v-expansion-panel>
+            <v-expansion-panel-header class="panel-header">
+              <v-icon left class="header-icon">mdi-truck</v-icon>
+              <span class="header-text">SALES</span>
+            </v-expansion-panel-header>
 
-          <v-expansion-panel-content>
-            <v-list dense>
-              <v-list-item>
-                <v-list-item-title>Dashboard</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Detail</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
-
-      <v-divider class="my-2"></v-divider>
-
-      </div>
-
-      <div  v-if="false">
-      <!-- Insurance -->
-      <v-expansion-panels
-       
-        v-model="panels.insurance"
-        accordion
-        class="exp-panels"
-      >
-        <v-expansion-panel>
-          <v-expansion-panel-header class="panel-header">
-            <v-icon left class="header-icon">mdi-settings-box</v-icon>
-            <span class="header-text">Insurance</span>
-          </v-expansion-panel-header>
-
-          <v-expansion-panel-content>
-            <v-list dense>
-              <v-list-item>
-                <v-list-item-title>Dashboard</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Detail</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
-      </div>
+            <v-expansion-panel-content>
+              <v-list dense>
+                <v-list-item>
+                  <v-list-item-title>RTO & INS Detail Updation </v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Quick Invoice</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-title>Payment Reciept</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+        </v-expansion-panels>
+        <v-divider class="my-2"></v-divider>
+      <!-- </div> -->
 
     </v-list>
   </v-navigation-drawer>
@@ -293,7 +374,7 @@ export default {
       panels: {
         admin: null,
         sales: null,
-        rto: null,
+        accounts: null,
         insurance: null
       },
       // put these at root so template can access them directly

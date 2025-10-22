@@ -7,33 +7,30 @@
           <v-avatar size="72" class="elevation-2" color="primary">
             <span class="avatar-initial">{{ avatarInitial }}</span>
           </v-avatar>
-        </v-col>
+        </v-col> &nbsp;
 
         <v-col>
           <div class="title-row">
             <div>
               <div class="client-name">{{ client?.name || '—' }}</div>
               <div class="client-meta">
-                <span class="muted">{{ client?.clientId ? `Client ID: ${client.clientId}` : '' }}</span>
-                <v-chip v-if="client?.status" small class="ml-2" :color="statusColor(client.status)" text-color="white">
-                  {{ client.status }}
-                </v-chip>
+                <span class="muted">{{ client?.clientId ? `Vender ID: ${client.clientId}` : '' }}</span>
               </div>
             </div>
           </div>
         </v-col>
 
-        <v-col cols="auto" class="actions-col">
+        <!-- <v-col cols="auto" class="actions-col">
           <v-btn icon @click="refresh" :title="'Refresh'">
             <v-icon>mdi-refresh</v-icon>
           </v-btn>
           <v-btn icon @click="onEdit" :title="'Edit client'">
             <v-icon>mdi-pencil</v-icon>
-          </v-btn>
+          </v-btn> -->
           <!-- <v-btn icon @click="downloadJSON" :title="'Export JSON'">
             <v-icon>mdi-download</v-icon>
           </v-btn> -->
-        </v-col>
+        <!-- </v-col> -->
       </v-row>
 
       <v-divider class="my-4"></v-divider>

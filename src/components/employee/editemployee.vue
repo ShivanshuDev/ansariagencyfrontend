@@ -14,25 +14,9 @@
           />
         </v-col>
 
-        <v-col cols="12" sm="6">
-          <div class="field-label">Email</div>
-          <v-text-field
-            outlined
-            density="compact"
-            v-model="form.email"
-            hide-details="auto"
-            :rules="[r => !r || /.+@.+\..+/.test(r) || 'Invalid email']"
-          />
-        </v-col>
-
         <v-col cols="12" sm="4">
           <div class="field-label">Phone</div>
           <v-text-field density="compact" outlined v-model="form.phone" hide-details="auto" />
-        </v-col>
-
-        <v-col cols="12" sm="4">
-          <div class="field-label">Vender ID</div>
-          <v-text-field density="compact" outlined v-model="form.venderId" hide-details="auto" />
         </v-col>
 
         <v-col cols="12" sm="4">
@@ -41,13 +25,13 @@
         </v-col>
 
         <v-col cols="12" sm="4">
-          <div class="field-label">Department</div>
+          <div class="field-label">Designation</div>
           <v-text-field density="compact" outlined v-model="form.department" hide-details="auto" />
         </v-col>
 
         <v-col cols="12" sm="4">
-          <div class="field-label">Role</div>
-          <v-text-field density="compact" outlined v-model="form.employeeRole" hide-details="auto" />
+          <div class="field-label">Password</div>
+          <v-text-field density="compact" outlined v-model="form.password" hide-details="auto" />
         </v-col>
       </v-row>
 
@@ -225,6 +209,7 @@ export default {
       form: {
         employeeName: '',
         email: '',
+        password:'',
         phone: '',
         venderId: '',
         userId: '',
@@ -279,9 +264,8 @@ export default {
 
     populateForm(emp) {
       this.form.employeeName = emp.employeeName || '';
-      this.form.email = emp.email || '';
+      this.form.password = emp.password || '';
       this.form.phone = emp.phone || '';
-      this.form.venderId = emp.venderId || '';
       this.form.userId = emp.userId || '';
       this.form.department = emp.department || '';
       this.form.employeeRole = emp.employeeRole || '';
