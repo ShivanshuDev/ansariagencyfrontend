@@ -3,7 +3,6 @@
     <v-card class="pa-0" style="overflow: hidden;">
       <br />
       <v-card-text class="invoice-root" ref="invoiceCard">
-        <!-- ===== YOUR INVOICE MARKUP (unchanged) ===== -->
         <div class="top-header">
           <div class="top-header-left">
             <img style="height:40px; width:140px;" src="@/assets/newLogoTVS.png" />
@@ -72,33 +71,28 @@
             <tr v-for="(it, i) in normalizedItems" :key="it._key">
               <td class="text-center">{{ i + 1 }}</td>
               <td>
-                <div class="bold">{{ it.label }} - {{it.color}}</div>
+                <div class="bold">{{ it.label }} - {{ it.color }}</div>
                 <div v-if="it.note" class="small text-dim">{{ it.note }}</div>
               </td>
               <td class="text-center">{{ it.hsn || '—' }}</td>
               <td class="text-center">{{ fmtQty(it.qty) }}</td>
               <td class="text-right">{{ money(it.rate) }}</td>
               <td class="text-right">{{ money(it.taxable) }}</td>
-              <!-- <td class="text-right" style="white-space: nowrap;"><span style="text-align:left; border:1px solid green;">{{ pct(it.cgstRate) }}</span> -<span> {{ money(it.cgstAmt) }} </span></td> -->
               <td style="white-space: nowrap; text-align: right;">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                   <span style="text-align: left;">{{ pct(it.cgstRate) }}</span>
                   <span style="text-align: right;">{{ money(it.cgstAmt) }}</span>
                 </div>
               </td>
-
-              <!-- <td class="text-right" style="white-space: nowrap;">{{ pct(it.sgstRate) }} - {{ money(it.sgstAmt) }}</td> -->
               <td style="white-space: nowrap;">
                 <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                   <span style="text-align: left;">{{ pct(it.sgstRate) }}</span>
                   <span style="text-align: right;">{{ money(it.sgstAmt) }}</span>
                 </div>
               </td>
-
               <td class="text-right bold">{{ money(it.lineTotal) }}</td>
             </tr>
             <tr class="total-row">
-              <!-- <td class="text-right bold">TOTAL</td> -->
               <td colspan="5" class="text-left bold">AMOUNT (IN WORDS) : <b>{{ amountInWords }} Rupees Only</b></td>
               <td class="text-right bold">{{ money(sum.taxable) }}</td>
               <td class="text-right bold">{{ money(sum.cgst) }}</td>
@@ -122,7 +116,8 @@
 
           <div style="display:flex; flex-direction:row; height:90px;">
             <div style="display:flex; flex-direction:column; justify-content:center;">
-              <h3 style="margin-left:200px; margin-top:10px;">for ANSARI AUTOMOBILES</h3> <br/>
+              <h3 style="margin-left:200px; margin-top:10px;">for ANSARI AUTOMOBILES</h3>
+              <br/>
               <h4 style="margin-left:200px; margin-top:10px; border-top:2px solid black; text-align:center;">Authorised Signatory</h4>
             </div>
           </div>
@@ -135,8 +130,66 @@
         </div>
       </v-card-text>
 
+      <!-- Hidden Gate Pass layout -->
+      <div ref="gatePassCard" style="padding:16px; background:#fff; color:#000; font-family: Arial, Helvetica, sans-serif; font-size:12px; display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <img style="height:40px; width:140px;" src="@/assets/newLogoTVS.png" />
+            <div>
+              <div style="font-weight:700; font-size:16px;">ANSARI AUTOMOBILES</div>
+              <div style="font-size:11px;">BADI KAMHARIYA BY PASS ROAD, MAU</div>
+              <div style="font-size:11px;">GSTIN/UIN - 09AJBPA4037B1ZY</div>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-weight:700; font-size:18px; letter-spacing:.5px;">GATE PASS</div>
+            <div style="font-size:11px;">Date: {{ meta.dated || '' }}</div>
+            <div v-if="invoiceNumber" style="font-size:11px;">Ref: {{ invoiceNumber }}</div>
+          </div>
+        </div>
+
+        <div style="margin:10px 0; padding:8px; border:1px solid #000; font-weight:700; background:#eee;">
+          Selected Units
+        </div>
+
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:center; width:44px;">S.No</th>
+              <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:left;">Category</th>
+              <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:left;">Model No</th>
+              <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:left;">Chassis No</th>
+              <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:left;">Engine No</th>
+              <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:left;">Color</th>
+              <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:left;">Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(r, i) in gatePassRows" :key="r.key">
+              <td style="border:1px solid #000; padding:6px; text-align:center;">{{ i + 1 }}</td>
+              <td style="border:1px solid #000; padding:6px;">{{ r.category || '—' }}</td>
+              <td style="border:1px solid #000; padding:6px;">{{ r.model || '—' }}</td>
+              <td style="border:1px solid #000; padding:6px;">{{ r.chassis || '—' }}</td>
+              <td style="border:1px solid #000; padding:6px;">{{ r.engine || '—' }}</td>
+              <td style="border:1px solid #000; padding:6px;">{{ r.color || '—' }}</td>
+              <td style="border:1px solid #000; padding:6px;">{{ r.warehouse || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="display:flex; justify-content:space-between; margin-top:24px;">
+          <div>
+            <div style="font-weight:700; margin-bottom:6px;">Issued By</div>
+            <div style="height:40px; border-bottom:1px solid #000; width:220px;"></div>
+          </div>
+          <div>
+            <div style="font-weight:700; margin-bottom:6px;">Received By</div>
+            <div style="height:40px; border-bottom:1px solid #000; width:220px;"></div>
+          </div>
+        </div>
+      </div>
+
       <v-card-actions class="pa-3" style="gap:8px; flex-wrap: wrap;">
-        <!-- Status + Save -->
         <v-select
           v-model="statusType"
           :items="statusOptions"
@@ -154,6 +207,15 @@
           @click="saveStatus"
         >
           <v-icon start>mdi-content-save</v-icon> Save
+        </v-btn>
+
+        <v-btn
+          variant="flat"
+          color="secondary"
+          :disabled="gatePassRows.length === 0"
+          @click="downloadGatePass"
+        >
+          <v-icon start>mdi-download-box</v-icon> Download Gate Pass
         </v-btn>
 
         <v-divider vertical class="mx-1" />
@@ -189,30 +251,24 @@ export default {
     totalTax: { type: Number, default: 0 },
     grandTotal: { type: Number, default: 0 },
     paymentType: { default: null },
-
-    /** Bulk-aware API endpoint */
     updateEndpoint: { type: String, default: process.env.VUE_APP_AGENCY_BACKEND_URL + 'updateInventoryItem' },
-
-    /** Presign endpoint (same as your image uploader) */
     presignEndpoint: { type: String, default: process.env.VUE_APP_AGENCY_BACKEND_URL + 'uploadImages' },
-
-    /** Optional single-record fallback */
     itemPk: { type: String, default: null },
     itemSk: { type: String, default: null },
   },
   emits: ['update:preview', 'exported', 'saved'],
   data () {
     return {
-      statusType: null, // UI model: we still call it statusType in UI but we send item.status
+      statusType: null,
       statusOptions: ['BIKE','SOLD','BOOKED','INTRANSIT','DELIVERED','RETURNED'],
       saving: false,
       snack: { show: false, text: '', color: 'success' },
       billFileLocation:'',
+      creating: false
     }
   },
   computed: {
     previewLocal: { get() { return this.preview }, set(v) { this.$emit('update:preview', v) } },
-
     company () {
       const v = this.selectedVendor || {}
       return {
@@ -230,7 +286,6 @@ export default {
         }
       }
     },
-
     consignee () {
       const v = this.selectedVendor || {}
       return {
@@ -242,24 +297,19 @@ export default {
         stateCode: v.shipping?.stateCode || v.billing?.stateCode || ''
       }
     },
-
     buyer () { return { ...this.consignee } },
-
     meta () { return { dated: this.invoiceDate || '', paymentTerms: this.paymentType || '' } },
 
-    /** Normalize for UI + capture chassisNumber for bulk update */
     normalizedItems () {
       const round2 = v => Number((Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2))
       return (this.items || []).map((raw, idx) => {
         const qty = Number(raw.quantity ?? raw.qty ?? 1)
-        const entered = Number(raw.price ?? raw.rate ?? 0)   // GST-inclusive price per unit
+        const entered = Number(raw.price ?? raw.rate ?? 0)
         const gross = qty * entered
-
         const cgstRate = Number(raw.cgst ?? 0)
         const sgstRate = Number(raw.sgst ?? 0)
         const igstRate = Number(raw.igst ?? 0)
         const totalGstRate = cgstRate + sgstRate + igstRate
-
         const base = totalGstRate ? gross / (1 + totalGstRate / 100) : gross
         const cgstAmt = base * cgstRate / 100
         const sgstAmt = base * sgstRate / 100
@@ -286,7 +336,6 @@ export default {
       })
     },
 
-    /** Unique chassis numbers from all items (bulk payload) */
     allChassisNumbers () {
       const s = new Set()
       for (const it of this.normalizedItems) {
@@ -316,11 +365,24 @@ export default {
 
     amountInWords () { return this.toCurrencyWords(this.sum.grand) || 'Zero' },
 
-    /** Enable Save only when a status is chosen and we have identifiers */
     canSave () {
       const hasBulk = this.allChassisNumbers.length > 0
       const hasFallback = !!(this.itemPk && this.itemSk)
       return !!this.statusType && (hasBulk || hasFallback)
+    },
+
+    gatePassRows () {
+      return (this.items || [])
+        .filter(r => (r?.chassisNumber || r?.chassis))
+        .map((raw, idx) => ({
+          key: raw.id ?? `${raw.chassisNumber || raw.chassis}-${idx}`,
+          category: raw.category || raw.type || raw.segment || '',
+          model: raw.modelNumber || raw.modelNo || raw.modelName || raw.label || '',
+          chassis: raw.chassisNumber || raw.chassis || '',
+          engine: raw.engineNumber || raw.engine || '',
+          color: raw.color || '',
+          warehouse: raw.warehouse
+        }))
     }
   },
 
@@ -330,20 +392,15 @@ export default {
     money (v) { return `₹${Number(v || 0).toFixed(2)}` },
     formatAddressPlain (a) { if (!a) return ''; return String(a).replace(/\s+/g,' ').replace(/\s*,\s*/g, ', ').trim() },
 
-    /** Save: bulk by chassisNumbers; fallback to pk/sk. Then export & upload the PDF to S3. */
     async saveStatus () {
-      if (!this.canSave) {
-        this.showSnack('Select a status first.', 'error')
-        return
-      }
+      if (!this.canSave) { this.showSnack('Select a status first.', 'error'); return }
 
       const payload = this.allChassisNumbers.length > 0
-        ? { chassisNumbers: this.allChassisNumbers, item: { status: this.statusType } } // <-- update "status" only
+        ? { chassisNumbers: this.allChassisNumbers, item: { status: this.statusType } }
         : { pk: this.itemPk, sk: this.itemSk, item: { status: this.statusType } }
 
       this.saving = true
       try {
-        // 1) Update inventory
         const res = await fetch(this.updateEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -352,7 +409,6 @@ export default {
         const data = await res.json()
         if (!res.ok) throw new Error(data?.message || 'Update failed')
 
-        // Feedback for update
         if (Array.isArray(data?.results)) {
           const ok = data.results.filter(r => r.ok).length
           const fail = data.results.length - ok
@@ -362,17 +418,12 @@ export default {
         }
         this.$emit('saved', data)
 
-        // 2) Export PDF as Blob
-        const exported = await this.renderPdf('export') // returns { blob, filename }
+        const exported = await this.renderPdf('export')
         if (!exported || !exported.blob) throw new Error('PDF export failed')
-        // 3) Upload to S3 via presigned URL
         const uploadOk = await this.uploadPdfToS3(exported.blob)
-        this.saveInvoice();
-        if (uploadOk) {
-          this.showSnack('Invoice PDF uploaded to S3.', 'success')
-        } else {
-          this.showSnack('Status saved, but PDF upload failed.', 'warning')
-        }
+        this.saveInvoice()
+        if (uploadOk) this.showSnack('Invoice PDF uploaded to S3.', 'success')
+        else this.showSnack('Status saved, but PDF upload failed.', 'warning')
       } catch (e) {
         this.showSnack(`Failed: ${e.message}`, 'error')
       } finally {
@@ -380,50 +431,38 @@ export default {
       }
     },
 
-    /** Request presigned URL then PUT the PDF blob */
     async uploadPdfToS3 (pdfBlob) {
       try {
         const vendor = (this.company?.name || 'UnknownVendor').trim()
         const folder = vendor.replace(/[^\w\-./]/g, '_') || 'UnknownVendor'
         const cleanInvoice = (this.invoiceNumber ? String(this.invoiceNumber) : 'invoice').replace(/[^\w\-./]/g, '_')
-        const objectKey = `${folder}/${cleanInvoice}.pdf` // location/vendor + file name
-        this.billFileLocation = objectKey;
-        // Step 1: get presigned URL
+        const objectKey = `${folder}/${cleanInvoice}.pdf`
+        this.billFileLocation = objectKey
+
         const presignRes = await fetch(this.presignEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ body: { fileName: objectKey, fileType: 'application/pdf' } })
         })
-        if (!presignRes.ok) {
-          console.error('Failed to get presigned URL', await presignRes.text())
-          return false
-        }
+        if (!presignRes.ok) return false
         const presignJson = await presignRes.json()
         const url = presignJson?.url
-        if (!url) {
-          console.error('Presigned URL missing in response:', presignJson)
-          return false
-        }
+        if (!url) return false
 
-        // Step 2: PUT the PDF blob
         const putRes = await fetch(url, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/pdf' },
           body: pdfBlob
         })
         return putRes.ok
-      } catch (err) {
-        console.error('PDF upload failed:', err)
+      } catch {
         return false
       }
     },
 
-    // ========== NEW: Save Invoice + Upload PDF ==========
     async saveInvoice() {
       this.creating = true
-      console.log('billFileLocation', this.billFileLocation)
       try {
-        // 1️⃣ Build the full invoice metadata
         const invoice = {
           vendorName: this.company.name,
           invoiceNumber: this.invoiceNumber,
@@ -445,25 +484,18 @@ export default {
           notes: null
         }
 
-        // 2️⃣ Create/Upsert invoice + get presigned PUT URL from backend
-        const presignRes = await fetch(`${process.env.VUE_APP_AGENCY_BACKEND_URL}bill`, {
+        await fetch(`${process.env.VUE_APP_AGENCY_BACKEND_URL}bill`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            invoice,
-            pdf: { contentType: 'application/pdf' }
-          })
+          body: JSON.stringify({ invoice, pdf: { contentType: 'application/pdf' } })
         })
         this.showSnack('Invoice saved & PDF uploaded successfully.', 'success')
-        // this.$emit('invoice-saved', patchJson.invoice)
       } catch (e) {
         this.showSnack(`Save invoice failed: ${e.message}`, 'error')
-        console.error('Invoice save failed:', e)
       } finally {
         this.creating = false
       }
     },
-
 
     showSnack (text, color = 'success') {
       this.snack.text = text
@@ -471,11 +503,6 @@ export default {
       this.snack.show = true
     },
 
-    /**
-     * Single source of truth for PDF generation.
-     * action: 'save' | 'print' | 'export'
-     * - For 'export', this returns { blob, filename } so callers can upload.
-     */
     async renderPdf (action = 'save') {
       const node = this.$refs.invoiceCard
       if (!node || typeof html2pdf === 'undefined') return null
@@ -501,7 +528,6 @@ export default {
       const pageWidth = pdf.internal.pageSize.getWidth()
       const pageHeight = pdf.internal.pageSize.getHeight()
 
-      // Watermark on each page
       for (let i = 1; i <= totalPages; i++) {
         pdf.setPage(i)
         pdf.saveGraphicsState()
@@ -513,11 +539,7 @@ export default {
         pdf.restoreGraphicsState()
       }
 
-      if (action === 'save') {
-        pdf.save(filename)
-        return null
-      }
-
+      if (action === 'save') { pdf.save(filename); return null }
       if (action === 'print') {
         pdf.autoPrint({ variant: 'non-conform' })
         const blobUrl = pdf.output('bloburl')
@@ -525,14 +547,12 @@ export default {
         if (w) w.onload = () => w.print()
         return null
       }
-
       if (action === 'export') {
         const blob = pdf.output('blob')
         const out = { blob, filename }
         this.$emit('exported', out)
         return out
       }
-
       return null
     },
 
@@ -540,7 +560,43 @@ export default {
     printPdf () { return this.renderPdf('print') },
     exportPdf () { return this.renderPdf('export') },
 
-    /* ====== Words (Indian system) ====== */
+    async downloadGatePass () {
+      const node = this.$refs.gatePassCard
+      if (!node || typeof html2pdf === 'undefined') return
+      const prev = node.style.display
+      node.style.display = 'block'
+
+      const filename = `GatePass_${this.invoiceNumber || new Date().toISOString().slice(0,10)}.pdf`
+      const opt = {
+        margin: [10, 12, 10, 12],
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: node.scrollWidth },
+        jsPDF: { unit: 'pt', format: 'a4', orientation: '' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      }
+
+      const worker = html2pdf().set(opt).from(node).toPdf()
+      const pdf = await worker.get('pdf')
+      const totalPages = pdf.internal.getNumberOfPages()
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i)
+        pdf.saveGraphicsState()
+        pdf.setGState(new pdf.GState({ opacity: 0.06 }))
+        pdf.setTextColor(150, 150, 150)
+        pdf.setFontSize(60)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Ansari Automobile', pageWidth / 2, pageHeight / 2, { align: 'center', angle: 30 })
+        pdf.restoreGraphicsState()
+      }
+
+      pdf.save(filename)
+      node.style.display = prev || 'none'
+    },
+
     toCurrencyWords (amount) {
       const n = Math.round(Number(amount || 0))
       if (!n) return ''
@@ -567,14 +623,8 @@ export default {
   justify-content: space-between;
   width: 100%;
 }
-.top-header-left{
-  width: 50%;
-}
-.top-header-right{
-  width: 50%;
-  text-align: right;
-}
-/* ===== Base ===== */
+.top-header-left{ width: 50%; }
+.top-header-right{ width: 50%; text-align: right; }
 .invoice-root{
   color:#000;
   background:#fff;
@@ -589,8 +639,6 @@ export default {
 .text-right{text-align:right}
 .text-center{text-align:center}
 .mt8{margin-top:8px}
-
-/* ===== Top strip ===== */
 .top-strip{
   border:1px solid #000;
   border-bottom:none;
@@ -598,8 +646,6 @@ export default {
   padding:4px 0;
 }
 .top-strip .label{font-weight:700;letter-spacing:.5px}
-
-/* ===== Header row (invoice no/date) ===== */
 .header-row{
   display:grid;grid-template-columns:1fr 1fr;
   border:1px solid #000;border-top:none;
@@ -610,8 +656,6 @@ export default {
 .header-row .cell.left{border-left:none}
 .header-row .row{display:flex;gap:8px}
 .header-row .cell-key{font-weight:600;min-width:95px}
-
-/* ===== Two column (Bill/Ship) ===== */
 .two-col{
   display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:none;margin-top:0;
   border-left:1px solid #000;border-right:1px solid #000;border-bottom:none;
@@ -619,11 +663,7 @@ export default {
 .two-col .col{border-bottom:1px solid #000;padding:6px 8px}
 .two-col .col + .col{border-left:1px solid #000}
 .blk-head{font-weight:700;margin-bottom:4px}
-
-/* ===== Bordered helper ===== */
 .bordered{border:1px solid #000}
-
-/* ===== Items Table ===== */
 .items{width:100%;border-collapse:collapse;margin-top:6px}
 .items th,.items td{border:1px solid #000;padding:4px 5px;vertical-align:top}
 .items thead th{background:#eee;font-weight:700;text-align:center}
@@ -640,8 +680,6 @@ export default {
 .items .w-cess{width:70px}
 .items .w-total{width:90px}
 .items .total-row td{font-weight:700}
-
-/* ===== Bottom section: flex, 50% + 50%, fixed height ===== */
 .bottom-grid{
   width: 100%;
   display: flex;
@@ -649,7 +687,6 @@ export default {
   margin-top: 6px;
   align-items: stretch;
 }
-
 .bottom-grid > .left,
 .bottom-grid > .right{
   flex: 0 0 calc(50% - 4px);
@@ -658,17 +695,13 @@ export default {
   box-sizing: border-box;
   overflow: auto;
 }
-
 .pad{ padding: 8px; }
 .row-line{ display:flex; gap:8px; align-items:center; }
 .row-line .dash{ flex:1; border-bottom:1px solid #000; height:1px; }
-
 .summary{ width:100%; border-collapse:collapse; font-size: 11px; font-weight: 700; }
 .summary td{ border-bottom:1px solid #000; padding:6px 8px; }
 .summary tr:last-child td{ border-bottom:none; }
 .summary .grand td{ background:#eee; }
-
-/* ===== Declaration + Sign ===== */
 .declare{
   height: 30px;
   width: 100%;
@@ -676,7 +709,5 @@ export default {
 }
 .declare .right{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end}
 .declare .sign{margin-top:24px;border-top:1px solid #000;padding-top:6px}
-
-/* ===== Terms ===== */
 .terms{margin-top:6px;border:1px solid #000;padding:6px 8px}
 </style>
