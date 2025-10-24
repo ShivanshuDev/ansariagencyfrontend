@@ -87,13 +87,15 @@ export default {
       return Object.keys(m).sort().map(k => ({ label: k, value: k }))
     },
 
-    // chassis list for selected model (items with unique chassis)
     chassisForModel() {
       if (!this.categoryLocal || !this.modelLocal) return []
-      // we will present array of { label: "<chassis> — warehouse — color", value: key }
-      // the `key` should be the same unique key you used in parent (we assume inventories contain __key)
-      const rows = this.inventories
-        .filter(it => (it.categoryName || '').trim() === this.categoryLocal && (it.modelName || it.label || '').trim() === this.modelLocal)
+      const rows = (this.inventories || [])
+        .filter(it => {
+          const categoryMatch = (it.categoryName || '').trim() === this.categoryLocal
+          const modelMatch = (it.modelName || it.label || '').trim() === this.modelLocal
+          const statusMatch = (it.status || '').toUpperCase() === 'ACTIVE' // ✅ Only ACTIVE items
+          return categoryMatch && modelMatch && statusMatch
+        })
         .map(it => {
           const labelParts = []
           const chassis = it.chassisNumber || it.gsisk3 || it.sk || '—'
@@ -103,14 +105,19 @@ export default {
           return { label: labelParts.join(' • '), value: it.__key }
         })
 
-      // remove duplicates if any (value uniqueness)
+      // ✅ remove duplicates (by value)
       const seen = new Set()
       const uniq = []
       for (const r of rows) {
-        if (!seen.has(r.value)) { seen.add(r.value); uniq.push(r) }
+        if (!seen.has(r.value)) {
+          seen.add(r.value)
+          uniq.push(r)
+        }
       }
+
       return uniq
     }
+
   },
   watch: {
     value(val) { this.chassisLocal = val },
