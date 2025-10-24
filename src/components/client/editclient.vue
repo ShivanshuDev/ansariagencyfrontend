@@ -713,7 +713,7 @@ input, select {
 .dlg-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 16px; background: #fafafa; }
 .dlg-list { margin: 0; padding-left: 18px; }
 .btn { border: 1px solid #ddd; background: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
-.btn.primary { background: #1976d2; border-color: #1976d2; color: #fff; }
+.btn.primary { background: #001f3f; border-color: #001f3f; color: #fff; }
 .create-btn {
   background: #aa53cb; color: #fff; border: none; padding: 8px 18px; border-radius: 5px; cursor: pointer; transition: background 0.3s ease;
 }

@@ -282,14 +282,14 @@ export default {
 /* ---- Table header background: BLUE ---- */
 /* Vuetify v2 */
 ::v-deep .v-data-table-header th {
-  background-color: #1976d2 !important; /* primary blue */
+  background-color: #001f3f !important; /* primary blue */
   color: #fff !important;
   font-weight: 600;
 }
 
 /* Vuetify v3 */
 ::v-deep th.v-data-table__th {
-  background-color: #1976d2 !important;
+  background-color: #001f3f !important;
   color: #fff !important;
   font-weight: 600;
 }
@@ -313,7 +313,7 @@ export default {
   font-size: 16px !important;
   font-weight: 600;
   color: #fff !important;
-  background-color: #1976d2 !important;
+  background-color: #001f3f !important;
   text-transform: capitalize;
 }
 

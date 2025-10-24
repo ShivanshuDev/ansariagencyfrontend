@@ -5,6 +5,16 @@
         <!-- Top Navbar -->
         <nav class="navbar">
           <div class="navbar-left">
+            <!-- Sidebar toggle button -->
+            <v-btn
+              icon
+              class="toggle-btn"
+              @click="$emit('toggle-sidebar')"
+            >
+              <v-icon>mdi-menu</v-icon>
+            </v-btn>
+
+
             <!-- Breadcrumb navigation -->
             <ul class="breadcrumb">
               <li><a href="#">Home</a></li>
@@ -316,5 +326,70 @@ export default {
 }
 .btn-logout:hover {
   transform: translateY(-2px);
+}
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #001f3f;
+  color: white;
+  padding: 10px 20px;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-btn {
+  color: white !important;
+  margin-right: 15px;
+}
+
+.breadcrumb {
+  list-style: none;
+  display: flex;
+  gap: 5px;
+  color: white;
+  margin: 0;
+  padding: 0;
+}
+
+.breadcrumb li a {
+  color: white;
+  text-decoration: none;
+}
+
+.profile-wrapper {
+  position: relative;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.profile-menu {
+  position: absolute;
+  right: 0;
+  background-color: white;
+  color: black;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  width: 200px;
+  padding: 10px;
+  z-index: 1000;
+}
+
+.btn-logout {
+  width: 100%;
+  padding: 6px;
+  background-color: #001f3f;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 </style>

@@ -401,7 +401,7 @@ export default {
   border: 1px solid #ddd; background: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer;
 }
 .btn.primary {
-  background: #1976d2; border-color: #1976d2; color: #fff;
+  background: #001f3f; border-color: #001f3f; color: #fff;
 }
 /* Layout container */
 .add-employee-form {

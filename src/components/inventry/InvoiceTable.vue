@@ -73,7 +73,7 @@ export default {
 <style scoped>
 /* ✅ Custom table header styles */
 ::v-deep(.v-data-table-header) {
-  background-color: #040891; /* deep blue header background */
+  background-color: #001f3f; /* deep blue header background */
 }
 
 ::v-deep(.v-data-table-header th) {

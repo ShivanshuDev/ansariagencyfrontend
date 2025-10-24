@@ -132,12 +132,12 @@ export default {
 
 <style scoped>
 ::v-deep .v-data-table-header {
-  background-color: #040891; /* Set to your desired color */
+  background-color: #001f3f; /* Set to your desired color */
   color: #ffffff; /* For the text */
 }
 
 ::v-deep(.v-data-table thead th) {
-  background-color: #040891 !important; /* Deep blue header */
+  background-color: #001f3f !important; /* Deep blue header */
   color: #ffffff !important;             /* White text */
 }
 

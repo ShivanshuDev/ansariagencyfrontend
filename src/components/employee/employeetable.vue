@@ -328,7 +328,7 @@ export default {
 
 /* Blue table header (Vuetify 2) */
 .tableData >>> .v-data-table-header th {
-  background: #1976D2;          /* Material Blue 700 */
+  background: #001f3f;          /* Material Blue 700 */
   color: #fff !important;
 }
 
