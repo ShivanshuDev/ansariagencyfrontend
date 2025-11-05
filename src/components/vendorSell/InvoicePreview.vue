@@ -253,6 +253,7 @@ export default {
     paymentType: { default: null },
     updateEndpoint: { type: String, default: process.env.VUE_APP_AGENCY_BACKEND_URL + 'updateInventoryItem' },
     presignEndpoint: { type: String, default: process.env.VUE_APP_AGENCY_BACKEND_URL + 'uploadImages' },
+    ledgerEndpoint: { type: String, default: process.env.VUE_APP_AGENCY_BACKEND_URL + 'addEntry' },
     itemPk: { type: String, default: null },
     itemSk: { type: String, default: null },
   },
@@ -260,11 +261,12 @@ export default {
   data () {
     return {
       statusType: null,
-      statusOptions: ['BIKE','SOLD','BOOKED','INTRANSIT','DELIVERED','RETURNED'],
+      statusOptions: ['SOLD'],
       saving: false,
       snack: { show: false, text: '', color: 'success' },
       billFileLocation:'',
-      creating: false
+      creating: false,
+      ledgering: false,
     }
   },
   computed: {
@@ -396,10 +398,11 @@ export default {
       if (!this.canSave) { this.showSnack('Select a status first.', 'error'); return }
 
       const payload = this.allChassisNumbers.length > 0
-        ? { chassisNumbers: this.allChassisNumbers, item: { status: this.statusType } }
-        : { pk: this.itemPk, sk: this.itemSk, item: { status: this.statusType } }
+        ? { chassisNumbers: this.allChassisNumbers, item: { status: this.statusType, soldType: 'VENDOR' } }
+        : { pk: this.itemPk, sk: this.itemSk, item: { status: this.statusType, soldType: 'VENDOR' } }
 
       this.saving = true
+      // replace the try block body of saveStatus() after successful status update & PDF upload
       try {
         const res = await fetch(this.updateEndpoint, {
           method: 'POST',
@@ -408,7 +411,7 @@ export default {
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data?.message || 'Update failed')
-
+    
         if (Array.isArray(data?.results)) {
           const ok = data.results.filter(r => r.ok).length
           const fail = data.results.length - ok
@@ -421,14 +424,50 @@ export default {
         const exported = await this.renderPdf('export')
         if (!exported || !exported.blob) throw new Error('PDF export failed')
         const uploadOk = await this.uploadPdfToS3(exported.blob)
-        this.saveInvoice()
+
+        const invoiceOk = await this.saveInvoice()
         if (uploadOk) this.showSnack('Invoice PDF uploaded to S3.', 'success')
         else this.showSnack('Status saved, but PDF upload failed.', 'warning')
+
+        // create ledger only if invoice saved
+        if (invoiceOk) {
+          await this.createLedgerEntry()
+        }
       } catch (e) {
         this.showSnack(`Failed: ${e.message}`, 'error')
       } finally {
         this.saving = false
       }
+
+      // try {
+      //   const res = await fetch(this.updateEndpoint, {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify(payload)
+      //   })
+      //   const data = await res.json()
+      //   if (!res.ok) throw new Error(data?.message || 'Update failed')
+
+      //   if (Array.isArray(data?.results)) {
+      //     const ok = data.results.filter(r => r.ok).length
+      //     const fail = data.results.length - ok
+      //     this.showSnack(`Status updated. Success: ${ok}${fail ? `, Failed: ${fail}` : ''}.`, fail ? 'warning' : 'success')
+      //   } else {
+      //     this.showSnack('Status updated successfully.', 'success')
+      //   }
+      //   this.$emit('saved', data)
+
+      //   const exported = await this.renderPdf('export')
+      //   if (!exported || !exported.blob) throw new Error('PDF export failed')
+      //   const uploadOk = await this.uploadPdfToS3(exported.blob)
+      //   this.saveInvoice()
+      //   if (uploadOk) this.showSnack('Invoice PDF uploaded to S3.', 'success')
+      //   else this.showSnack('Status saved, but PDF upload failed.', 'warning')
+      // } catch (e) {
+      //   this.showSnack(`Failed: ${e.message}`, 'error')
+      // } finally {
+      //   this.saving = false
+      // }
     },
 
     async uploadPdfToS3 (pdfBlob) {
@@ -460,6 +499,44 @@ export default {
       }
     },
 
+    // async saveInvoice() {
+    //   this.creating = true
+    //   try {
+    //     const invoice = {
+    //       vendorName: this.company.name,
+    //       invoiceNumber: this.invoiceNumber,
+    //       invoiceDate: this.invoiceDate,
+    //       paymentType: this.paymentType,
+    //       billFileLocation: this.billFileLocation,
+    //       buyer: this.buyer,
+    //       consignee: this.consignee,
+    //       items: this.normalizedItems,
+    //       totals: {
+    //         taxable: this.sum.taxable,
+    //         cgst: this.sum.cgst,
+    //         sgst: this.sum.sgst,
+    //         igst: this.sum.igst,
+    //         grand: this.sum.grand,
+    //         discount: this.totalDiscountComputed
+    //       },
+    //       status: this.statusType,
+    //       notes: null
+    //     }
+
+    //     await fetch(`${process.env.VUE_APP_AGENCY_BACKEND_URL}bill`, {
+    //       method: 'POST',
+    //       headers: { 'Content-Type': 'application/json' },
+    //       body: JSON.stringify({ invoice, pdf: { contentType: 'application/pdf' } })
+    //     })
+    //     this.showSnack('Invoice saved & PDF uploaded successfully.', 'success')
+    //   } catch (e) {
+    //     this.showSnack(`Save invoice failed: ${e.message}`, 'error')
+    //   } finally {
+    //     this.creating = false
+    //   }
+    // },
+
+    // replace your current saveInvoice() with this version
     async saveInvoice() {
       this.creating = true
       try {
@@ -484,16 +561,66 @@ export default {
           notes: null
         }
 
-        await fetch(`${process.env.VUE_APP_AGENCY_BACKEND_URL}bill`, {
+        const res = await fetch(`${process.env.VUE_APP_AGENCY_BACKEND_URL}bill`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ invoice, pdf: { contentType: 'application/pdf' } })
         })
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}))
+          throw new Error(j?.message || 'Save invoice failed')
+        }
         this.showSnack('Invoice saved & PDF uploaded successfully.', 'success')
+        return true
       } catch (e) {
         this.showSnack(`Save invoice failed: ${e.message}`, 'error')
+        return false
       } finally {
         this.creating = false
+      }
+    },
+
+    // add inside methods: { ... }
+    async createLedgerEntry() {
+      this.ledgering = true
+      try {
+        const clientId =
+          (this.buyer?.gstin && String(this.buyer.gstin).trim()) ||
+          (this.buyer?.phone && String(this.buyer.phone).trim()) ||
+          (this.buyer?.name && String(this.buyer.name).trim()) ||
+          'UNKNOWN'
+
+        const payload = {
+          clientId,
+          clientName: this.buyer?.name || null,
+          amount: Number(this.sum.grand || 0),
+          entryType: 'DEBIT',                                // customer owes after sale
+          narration: `Invoice ${this.invoiceNumber} - ${this.company.name}`,
+          date: new Date().toISOString(),
+          sourceType: 'INVOICE',
+          sourceId: this.invoiceNumber || `INV-${Date.now()}`,
+          status: this.statusType,
+          link: this.billFileLocation || null,
+          extra: { paymentType: this.paymentType }
+        }
+
+        const res = await fetch(this.ledgerEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok || json?.ok === false) {
+          throw new Error(json?.message || 'Ledger entry failed')
+        }
+
+        this.showSnack('Ledger entry created.', 'success')
+        return true
+      } catch (e) {
+        this.showSnack(`Ledger entry error: ${e.message}`, 'warning')
+        return false
+      } finally {
+        this.ledgering = false
       }
     },
 

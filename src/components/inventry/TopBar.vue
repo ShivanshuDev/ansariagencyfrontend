@@ -77,7 +77,7 @@
           <v-skeleton-loader v-if="loadingChassis" type="table" />
           <div v-else>
             <v-simple-table dense>
-              <thead style="background-color:#0581f5; color:white;">
+              <thead style="background-color:#dff3f79c; color:white;">
                 <tr style="color:white;">
                   <!-- checkbox header -->
                   <th style="width:48px; text-align:center;">

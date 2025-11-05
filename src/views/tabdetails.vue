@@ -13,8 +13,6 @@
             >
               <v-icon>mdi-menu</v-icon>
             </v-btn>
-
-
             <!-- Breadcrumb navigation -->
             <ul class="breadcrumb">
               <li><a href="#">Home</a></li>
@@ -23,17 +21,6 @@
           </div>
 
           <div class="navbar-right" ref="navbarRight">
-            <!-- <input
-              type="text"
-              class="search-bar"
-              placeholder="Search"
-            /> -->
-
-            <!-- Language, Notifications, Theme Icons -->
-            <!-- <i class="fas fa-flag-usa navbar-icon"></i>
-            <i class="fas fa-cog navbar-icon"></i>
-            <i class="fas fa-moon navbar-icon"></i> -->
-
             <!-- Profile Avatar (click opens small dropdown) -->
             <div class="profile-wrapper" ref="profileWrapper">
               <img
@@ -83,6 +70,12 @@ import ADDSPARES from '@/components/spares/addSpares.vue';
 import SPARESTABLE from '@/components/spares/sparesTable.vue';
 import SellToVendor from '@/components/vendorSell/sellToVendor.vue';
 import LEDGER from '@/components/ledger/ledgerComponent.vue'
+import LEDGERENTRY from '@/components/ledger/AllEntriesTable.vue'
+import ADDENTRY from '@/components/ledger/AddEntryForm.vue'
+import CLIENTSUMMERY from '@/components/ledger/ClientSummaryCard.vue'
+import DAYBOOK from '@/components/ledger/DayBook.vue'
+import QUICKINVOICE from '@/components/sales/QuickInvoice.vue'
+import AllCustomerInvoices from '@/components/sales/CustomerInvoiceTable.vue'
 
 export default {
   components:{
@@ -97,7 +90,13 @@ export default {
     ADDSPARES,
     SPARESTABLE,
     SellToVendor,
-    LEDGER
+    LEDGER,
+    LEDGERENTRY,
+    ADDENTRY,
+    CLIENTSUMMERY,
+    DAYBOOK,
+    QUICKINVOICE,
+    AllCustomerInvoices
   },
   props: {
     selectedTab: {
@@ -126,6 +125,12 @@ export default {
       if(this.selectedTab === 'sparesTable') return 'SPARESTABLE';
       if(this.selectedTab === 'SellToVendor') return 'SellToVendor';
       if(this.selectedTab === 'LEDGER') return 'LEDGER';
+      if(this.selectedTab === 'LEDGERENTRY') return 'LEDGERENTRY';
+      if(this.selectedTab === 'ADDENTRY') return 'ADDENTRY';
+      if(this.selectedTab === 'CLIENTSUMMERY') return 'CLIENTSUMMERY';
+      if(this.selectedTab === 'DAYBOOK') return 'DAYBOOK';
+      if(this.selectedTab === 'QUICKINVOICE') return 'QUICKINVOICE';
+      if(this.selectedTab === 'AllCustomerInvoices') return 'AllCustomerInvoices';
       return null;
     },
     displayName() {
@@ -187,13 +192,13 @@ export default {
 
 <style scoped>
 .topBar{
-  height: 7vh;
-  padding: 2px;
+  height: 6vh;
+  /* padding: 2px; */
   width: 100%;
   background-color: #f3efef;
 }
 .bodyDetails{
-  height: 93vh;
+  height: 94vh;
   padding: 2px;
   width: 100%;
   background-color: #d6e9e9;
@@ -228,12 +233,12 @@ export default {
 }
 .breadcrumb li {
   font-size: 16px;
-  color: #393e46;
+  color: #fff;
 }
 .breadcrumb li + li:before {
   content: ">";
   margin: 0 8px;
-  color: #a0a0a0;
+  color: #fff;
 }
 .breadcrumb a {
   color: #2e49fa;
@@ -331,7 +336,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #001f3f;
+  background-color: #1a237e;
   color: white;
   padding: 10px 20px;
 }

@@ -328,8 +328,8 @@ export default {
 
 /* Blue table header (Vuetify 2) */
 .tableData >>> .v-data-table-header th {
-  background: #001f3f;          /* Material Blue 700 */
-  color: #fff !important;
+  background: #dff3f79c;          /* Material Blue 700 */
+  color: Black !important;
 }
 
 /* Make sort icon & header text white too */

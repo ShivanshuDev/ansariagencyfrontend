@@ -43,13 +43,13 @@ export default {
 }
 
 .left {
-  width: 350px;
+  width: 300px;
   height: 100vh;
   transition: all 0.3s ease;
 }
 
 .right {
-  width: calc(100% - 350px);
+  width: calc(100% - 300px);
   height: 100vh;
   transition: all 0.3s ease;
 }

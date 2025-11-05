@@ -7,7 +7,7 @@
 
     <!-- Search & Filter Inputs -->
     <v-row class="px-4 py-2" align="center">
-      <v-col cols="12" md="3">
+      <v-col cols="12" md="2">
         <v-text-field
           v-model="searchPartNumber"
           label="Search by Part Number"
@@ -20,7 +20,7 @@
         />
       </v-col>
 
-      <v-col cols="12" md="3">
+      <v-col cols="12" md="2">
         <v-text-field
           v-model="searchInvoiceNumber"
           label="Search by Invoice Number"
@@ -66,6 +66,7 @@
             scrollable
           />
         </v-menu>
+        
       </v-col>
 
       <v-col cols="12" md="2">
@@ -103,15 +104,16 @@
         </v-menu>
       </v-col>
 
-       <v-col cols="12" md="1" style="display:flex; flex-direction:row;">
+      <v-col cols="12" md="1" style="display:flex; flex-direction:row;">
         <v-btn color="black" style="color:white; margin-right:20px;" @click="filterByDate">Filter</v-btn>
         <v-btn color="red" @click="fetchSparesParts">Reset</v-btn>
-       </v-col>
+        <div style="margin-left:20px;">
+          <DownloadPdf :items="selectedItems" :headers="headers" />
+        </div>
+      </v-col>
     </v-row>
 
-    <div>
-        <DownloadPdf :items="selectedItems" :headers="headers" />
-    </div>
+    <br />
 
     <!-- Inventory Data Table -->
     <v-data-table
@@ -121,11 +123,17 @@
       item-key="partNumber"
       class="elevation-1"
       dense
-      :items-per-page="10"
+      :items-per-page="options.itemsPerPage"
       show-select
       v-model="selectedItems"
+      :options.sync="options"
       @click:row="onRowClick"
     >
+      <!-- Serial number column cells (after checkbox) -->
+      <template v-slot:item.sno="{ index }">
+        {{ (options.page - 1) * options.itemsPerPage + index + 1 }}
+      </template>
+
       <template v-slot:item.quantity="{ item }">{{ item.quantity || '-' }}</template>
       <template v-slot:item.invoiceNumber="{ item }">{{ item.invoiceNumber || '-' }}</template>
       <template v-slot:item.invoiceDate="{ item }">{{ item.invoiceDate || '-' }}</template>
@@ -137,17 +145,11 @@
 
       <!-- Actions column with Show button -->
       <template v-slot:item.actions="{ item }">
-        <v-btn
-          small
-          text
-          @click.stop="showDetails(item)"
-        >
-          Show
-        </v-btn>
+        <v-btn small text @click.stop="showDetails(item)">Show</v-btn>
       </template>
     </v-data-table>
 
-    <!-- Dialog fallback: if router not available or you prefer inline details -->
+    <!-- Dialog fallback -->
     <v-dialog v-model="showDialog" max-width="900px">
       <template v-slot:activator="{ on }"></template>
       <v-card>
@@ -157,19 +159,16 @@
           <v-btn icon @click="showDialog = false"><v-icon>mdi-close</v-icon></v-btn>
         </v-card-title>
         <v-card-text>
-          <!-- SparesDetails component should accept prop `item` and optionally emit `close` -->
           <SparesDetailspage :item="detailItem" @close="showDialog = false" />
         </v-card-text>
       </v-card>
     </v-dialog>
-
   </v-card>
 </template>
 
 <script>
 import axios from 'axios';
 import DownloadPdf from '../../views/DownloadPdf.vue';
-// Import your details component - change path if needed
 import SparesDetailspage from './sparesDetailspage.vue';
 
 export default {
@@ -179,8 +178,8 @@ export default {
       sparesParts: [],
       selectedItems: [],
       search: '',
-      searchPartNumber:'',
-      searchInvoiceNumber:'',
+      searchPartNumber: '',
+      searchInvoiceNumber: '',
       filters: {
         partNumber: '',
         invoiceNumber: '',
@@ -189,9 +188,25 @@ export default {
       invoiceDateTo: null,
       menuFrom: false,
       menuTo: false,
-      showDialog: false,      // dialog toggle for inline details
-      detailItem: null,       // item passed to details component
+      showDialog: false,
+      detailItem: null,
+
+      // Keep pagination in one place (used for S.No calculation)
+      options: {
+        page: 1,
+        itemsPerPage: 10,
+        sortBy: [],
+        sortDesc: [],
+        groupBy: [],
+        groupDesc: [],
+        multiSort: false,
+        mustSort: false,
+      },
+
       headers: [
+        // Selection checkboxes are injected as the very first column.
+        // This S.No column will therefore appear right after the checkbox.
+        { text: 'S.No', value: 'sno', sortable: false, width: 80 },
         { text: 'Part Number', value: 'partNumber' },
         { text: 'Part Name', value: 'partName' },
         { text: 'Quantity', value: 'quantity' },
@@ -205,30 +220,27 @@ export default {
     };
   },
   methods: {
-
-    async filterByDate(){
+    async filterByDate() {
       this.searchPartNumber = '';
       try {
         let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}partsRangeFilter/${this.invoiceDateFrom}/${this.invoiceDateTo}`;
-        console.log('url', url)
         const res = await axios.get(url);
         this.sparesParts = Array.isArray(res.data.items) ? res.data.items : [res.data.items];
-        console.log('this.sparesParts', this.sparesParts);
       } catch (error) {
         console.error('Failed to fetch inventory:', error);
         this.sparesParts = [];
       }
     },
+
     async getByPartNumber() {
       this.searchInvoiceNumber = '';
       try {
-        if(!this.searchPartNumber){
-          this.fetchSparesPart()
+        if (!this.searchPartNumber) {
+          this.fetchSparesPart();
         } else {
           let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}parts/${this.searchPartNumber}`;
           const res = await axios.get(url);
           this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
-          console.log('this.sparesParts', this.sparesParts);
         }
       } catch (error) {
         console.error('Failed to fetch inventory:', error);
@@ -239,13 +251,12 @@ export default {
     async getByInvoiceNumber() {
       this.searchPartNumber = '';
       try {
-        if(!this.searchInvoiceNumber){
-          this.fetchSparesPart()
+        if (!this.searchInvoiceNumber) {
+          this.fetchSparesPart();
         } else {
           let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}invoice/${this.searchInvoiceNumber}`;
           const res = await axios.get(url);
           this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
-          console.log('this.sparesParts', this.sparesParts);
         }
       } catch (error) {
         console.error('Failed to fetch inventory:', error);
@@ -268,21 +279,18 @@ export default {
         const queryString = new URLSearchParams(params).toString();
         const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}Spares${queryString ? '?' + queryString : ''}`;
 
-        console.log('url', url)
         const res = await axios.get(url);
-
         this.sparesParts = Array.isArray(res.data) ? res.data : [];
-        console.log('this.sparesParts', this.sparesParts)
       } catch (error) {
         console.error('Failed to fetch inventory:', error);
       }
     },
-    async fetchSparesParts(){
+
+    async fetchSparesParts() {
       try {
         let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}Spares`;
         const res = await axios.get(url);
         this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
-        console.log('this.sparesParts', this.sparesParts);
       } catch (error) {
         console.error('Failed to fetch inventory:', error);
         this.sparesParts = [];
@@ -290,9 +298,9 @@ export default {
     },
 
     onRowClick(item) {
-      // You can handle row clicks here
       console.log('Row clicked:', item);
     },
+
     clearDateFrom() {
       this.filters.invoiceDateFrom = null;
       this.fetchSparesPart();
@@ -302,30 +310,18 @@ export default {
       this.fetchSparesPart();
     },
 
-    /**
-     * Called when user clicks "Show".
-     * Behavior:
-     *  - If Vue Router is available and you have a route named 'SparesDetails', it navigates to it.
-     *  - Otherwise it opens an inline dialog and renders the SparesDetails component.
-     */
     showDetails(item) {
-      console.log('item', item)
       this.detailItem = item || null;
 
-      // If you prefer navigation to a details route — ensure you have a route named 'SparesDetails'
-      // Example route: { name: 'SparesDetails', path: '/spares/:partNumber', component: SparesDetails }
       if (this.$router && this.$router.options && this.$router.options.routes) {
         const routeExists = this.$router.options.routes.some(r => r.name === 'SparesDetails');
         if (routeExists) {
-          // navigate with param (adjust to your route's param name)
           this.$router.push({ name: 'SparesDetails', params: { partNumber: item.partNumber }});
           return;
         }
       }
-
-      // Fallback: use dialog with inline component
       this.showDialog = true;
-    }
+    },
   },
   watch: {
     'filters.partNumber': 'fetchSparesPart',
@@ -343,12 +339,23 @@ export default {
   font-size: 14px;
   color: #222;
 }
-.tableData {
-  margin: 9px;
+
+/* Header background + text color + header height */
+.v-data-table-header th {
+  background: #dff3f79c !important;
+  color: #000 !important;
+  height: 50px !important;
+  font-weight: 600;
 }
-.v-data-table__wrapper {
-  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-  font-size: 14px;
-  color: #222;
+
+/* Row height */
+.v-data-table .v-data-table__wrapper tr > td {
+  height: 50px !important;
+  vertical-align: middle;
+}
+
+/* Optional: slightly larger checkbox for better alignment */
+.v-data-table .v-simple-checkbox {
+  transform: scale(1.05);
 }
 </style>

@@ -135,8 +135,7 @@ export default {
       ],
 
       headers: [
-        { text: 'Invoice Number', value: 'invoiceNumber' },
-        { text: 'Invoice Date', value: 'invoiceDate' },
+        
         { text: 'Model Name', value: 'modelName' },
         { text: 'Category Name', value: 'categoryName' },
         { text: 'Color', value: 'color' },

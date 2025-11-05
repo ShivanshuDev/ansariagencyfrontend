@@ -1,0 +1,542 @@
+<template>
+  <div class="pa-3">
+    <v-card class="rounded-lg elevation-2">
+      <!-- Header -->
+      <v-sheet class="daybook-header rounded-t-lg" color="indigo darken-4" dark>
+        <div class="d-flex align-center">
+          <div class="d-flex align-center">
+            <v-avatar size="36" class="mr-3" v-if="brandLogo">
+              <img :src="brandLogo" :alt="brandName">
+            </v-avatar>
+            <div>
+              <div class="text-h6 font-weight-bold">{{ brandName }}</div>
+              <div class="caption">{{ brandSubtitle }}</div>
+            </div>
+          </div>
+          <v-spacer/>
+          <div class="text-right">
+            <div class="overline">Day Book</div>
+            <div class="caption">Updated {{ fmtDateTime(nowIso) }}</div>
+          </div>
+        </div>
+      </v-sheet>
+
+      <!-- Controls -->
+      <div class="px-4 pt-4">
+        <div class="d-flex align-center flex-wrap">
+          <!-- Presets -->
+          <v-btn-toggle v-model="preset" class="mr-3 mb-2" mandatory rounded>
+            <v-btn class="preset-btn" value="today">Today</v-btn>
+            <v-btn class="preset-btn" value="week">Week</v-btn>
+            <v-btn class="preset-btn" value="month">Month</v-btn>
+            <v-btn class="preset-btn" value="custom">Custom</v-btn>
+          </v-btn-toggle>
+
+          <!-- From -->
+          <v-menu v-model="fromMenu" :close-on-content-click="false" transition="scale-transition" offset-y max-width="290" min-width="290">
+            <template v-slot:activator="{ on, attrs }">
+              <v-text-field v-bind="attrs" v-on="on" v-model="from" label="From" dense outlined hide-details readonly
+                prepend-inner-icon="mdi-calendar" class="mr-2 mb-2" style="max-width:170px" clearable @click:clear="from=''" />
+            </template>
+            <v-date-picker v-model="from" :max="to || undefined" @input="fromMenu=false" scrollable no-title/>
+          </v-menu>
+
+          <!-- To -->
+          <v-menu v-model="toMenu" :close-on-content-click="false" transition="scale-transition" offset-y max-width="290" min-width="290">
+            <template v-slot:activator="{ on, attrs }">
+              <v-text-field v-bind="attrs" v-on="on" v-model="to" label="To" dense outlined hide-details readonly
+                prepend-inner-icon="mdi-calendar" class="mr-2 mb-2" style="max-width:170px" clearable @click:clear="to=''" />
+            </template>
+            <v-date-picker v-model="to" :min="from || undefined" @input="toMenu=false" scrollable no-title/>
+          </v-menu>
+
+          <!-- Type -->
+          <v-select
+            v-model="type"
+            :items="typeItems"
+            item-text="text"
+            item-value="value"
+            dense outlined hide-details clearable
+            class="mr-2 mb-2"
+            label="Type"
+            style="max-width:150px"
+          />
+
+          <!-- Mode -->
+          <v-select
+            v-model="mode"
+            :items="modeItems"
+            item-text="text"
+            item-value="value"
+            dense outlined hide-details clearable
+            class="mr-2 mb-2"
+            label="Mode"
+            style="max-width:170px"
+          />
+
+          <!-- Source -->
+          <v-select
+            v-model="source"
+            :items="sourceItems"
+            item-text="text"
+            item-value="value"
+            dense outlined hide-details clearable
+            class="mr-2 mb-2"
+            label="Source"
+            style="max-width:170px"
+          />
+
+          <!-- Search -->
+          <v-text-field
+            v-model="q"
+            label="Search (client/ref/narration)"
+            dense outlined hide-details clearable
+            prepend-inner-icon="mdi-magnify"
+            class="mr-2 mb-2"
+            style="max-width:260px"
+          />
+
+          <v-btn color="primary" class="mb-2 mr-2" :loading="loading" @click="load(true)">
+            <v-icon left>mdi-refresh</v-icon>Load
+          </v-btn>
+
+          <v-spacer/>
+
+          <!-- Export buttons -->
+          <v-btn class="mb-2 mr-2" @click="exportCsv" :disabled="!rows.length">
+            <v-icon left>mdi-download</v-icon>CSV
+          </v-btn>
+          <v-btn color="deep-purple accent-4" dark class="mb-2 mr-2" @click="downloadPdf" :disabled="!rows.length">
+            <v-icon left>mdi-file-pdf-box</v-icon>PDF
+          </v-btn>
+
+          <!-- (Optional) Lock day hook -->
+          <v-btn outlined color="indigo darken-2" class="mb-2" @click="$emit('lock-day', { from, to })">
+            <v-icon left>mdi-lock-check</v-icon>Mark As Verified
+          </v-btn>
+        </div>
+
+        <!-- Status line -->
+        <div class="mt-1 mb-3 grey--text text--darken-1">
+          <v-chip small label class="mr-2">Range: <b class="ml-1">{{ from || '—' }}</b> — <b>{{ to || '—' }}</b></v-chip>
+          <v-chip small label class="mr-2">Preset: <b class="ml-1">{{ presetLabel }}</b></v-chip>
+          <v-chip v-if="type" small label class="mr-2">Type: <b class="ml-1">{{ type }}</b></v-chip>
+          <v-chip v-if="mode" small label class="mr-2">Mode: <b class="ml-1">{{ mode }}</b></v-chip>
+          <v-chip v-if="source" small label>Source: <b class="ml-1">{{ source }}</b></v-chip>
+        </div>
+      </div>
+
+      <!-- Summary stats -->
+      <div class="px-4">
+        <div class="d-flex flex-wrap">
+          <v-card outlined class="pa-1 mr-1 mb-2 stat-card" style="height:50px;">
+            <div class="caption grey--text text--darken-1">Opening</div>
+            <div :class="opening>=0 ? 'green--text text--darken-2' : 'red--text text--darken-2'">{{ money(opening) }}</div>
+          </v-card>
+          <v-card outlined class="pa-1 mr-1 mb-2 stat-card" style="height:50px;">
+            <div class="caption grey--text text--darken-1">Debit</div>
+            <div class="debit-cell">{{ money(totals.debit) }}</div>
+          </v-card>
+          <v-card outlined class="pa-1 mr-1 mb-2 stat-card" style="height:50px;">
+            <div class="caption grey--text text--darken-1">Credit</div>
+            <div class="credit-cell">{{ money(totals.credit) }}</div>
+          </v-card>
+          <v-card outlined class="pa-1 mr-1 mb-2 stat-card" style="height:50px;">
+            <div class="caption grey--text text--darken-1">Closing</div>
+            <div :class="closing>=0 ? 'green--text text--darken-2' : 'red--text text--darken-2'">{{ money(closing) }}</div>
+          </v-card>
+          <!-- Mode splits -->
+          <v-card outlined class="pa-3 mb-3 stat-card">
+            <div class="caption grey--text text--darken-1">Mode Splits</div>
+            <div class="d-flex flex-wrap mt-1">
+              <v-chip v-for="m in modeKeys" :key="m" small class="mr-2 mb-1" label>
+                {{ m }}: <b class="ml-1">{{ money(modeTotals[m] || 0) }}</b>
+              </v-chip>
+            </div>
+          </v-card>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="px-2 pb-4">
+        <v-data-table
+          :headers="headers"
+          :items="rows"
+          :items-per-page="15"
+          :loading="loading"
+          dense
+          class="elevation-1 rounded-lg ledger-table"
+          item-key="sk"
+        >
+          <template #loading>
+            <div class="pa-6 grey--text text--darken-1">Fetching entries…</div>
+          </template>
+
+          <template #item.debit="{ item }">
+            <span v-if="item.entryType==='DEBIT'" class="debit-cell">{{ money(item.amount) }}</span>
+            <span v-else>—</span>
+          </template>
+
+          <template #item.credit="{ item }">
+            <span v-if="item.entryType==='CREDIT'" class="credit-cell">{{ money(item.amount) }}</span>
+            <span v-else>—</span>
+          </template>
+
+          <template #item.createdAt="{ item }">
+            {{ fmtDateTime(item.createdAt) }}
+          </template>
+
+          <template #item.flags="{ item }">
+            <v-chip v-if="item._dupRef" x-small color="red lighten-4" class="mr-1">Duplicate Ref</v-chip>
+            <v-chip v-if="item._large" x-small color="amber lighten-4">Large</v-chip>
+          </template>
+
+          <template #no-data>
+            <div class="pa-6 grey--text text--darken-1">No entries for this day/range.</div>
+          </template>
+        </v-data-table>
+      </div>
+    </v-card>
+
+
+  </div>
+</template>
+
+<script>
+// npm i html2pdf.js
+import html2pdf from 'html2pdf.js'
+import { ledgerApi } from '@/services/ledgerApi'
+
+export default {
+  name: 'DayBook',
+  props: {
+    brandName: { type: String, default: 'ANSARI AUTOMOBILES' },
+    brandSubtitle: { type: String, default: 'Daily Cash & Journal' },
+    brandLogo: { type: String, default: '' }
+  },
+  data () {
+    return {
+      // filters
+      preset: 'today',
+      from: '',
+      to: '',
+      type: '',
+      mode: '',
+      source: '',
+      q: '',
+
+      fromMenu: false,
+      toMenu: false,
+
+      loading: false,
+      rows: [],
+      opening: 0,
+      totals: { debit: 0, credit: 0 },
+      modeTotals: {},
+
+      // selects
+      typeItems: [
+        { text: 'All', value: '' },
+        { text: 'DEBIT', value: 'DEBIT' },
+        { text: 'CREDIT', value: 'CREDIT' }
+      ],
+      modeItems: [
+        { text: 'All', value: '' },
+        { text: 'CASH', value: 'CASH' },
+        { text: 'UPI', value: 'UPI' },
+        { text: 'CARD', value: 'CARD' },
+        { text: 'BANK TRANSFER', value: 'BANK_TRANSFER' },
+        { text: 'CHEQUE', value: 'CHEQUE' },
+        { text: 'OTHER', value: 'OTHER' }
+      ],
+      sourceItems: [
+        { text: 'All', value: '' },
+        { text: 'INVOICE', value: 'INVOICE' },
+        { text: 'PAYMENT', value: 'PAYMENT' }
+      ],
+
+      headers: [
+        { text: 'Time', value: 'createdAt' },
+        { text: 'Client', value: 'clientId' },
+        { text: 'Narration', value: 'narration' },
+        { text: 'Type', value: 'entryType' },
+        { text: 'Debit (₹)', value: 'debit', align: 'end' },
+        { text: 'Credit (₹)', value: 'credit', align: 'end' },
+        { text: 'Mode', value: 'mode' },
+        { text: 'Ref', value: 'ref' },
+        { text: 'Flags', value: 'flags' }
+      ],
+
+      _debounceT: null,
+      _lastSig: '',
+      nowIso: new Date().toISOString()
+    }
+  },
+
+  computed: {
+    presetLabel () {
+      return { today:'Today', week:'This Week', month:'This Month', custom:'Custom' }[this.preset] || 'Custom'
+    },
+    closing () {
+      return Number((this.opening + this.totals.debit - this.totals.credit).toFixed(2))
+    },
+    modeKeys () {
+      return Object.keys(this.modeTotals)
+    }
+  },
+
+  created () {
+    this.applyPreset('today')
+    this.load(true)
+    this._tick = setInterval(() => { this.nowIso = new Date().toISOString() }, 30_000)
+  },
+  beforeDestroy () {
+    clearInterval(this._tick)
+  },
+
+  watch: {
+    from () { this.load() },
+    to () { this.load() },
+    type () { this.load() },
+    mode () { this.load() },
+    source () { this.load() },
+    q () { this.load() },
+    preset (n) { this.applyPreset(n); this.load(true) }
+  },
+
+  methods: {
+    // --- date helpers ---
+    toStr (d) {
+      const p = n => String(n).padStart(2, '0')
+      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`
+    },
+    applyPreset (key) {
+      const today = new Date()
+      if (key === 'today') {
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+        this.from = this.toStr(d); this.to = this.toStr(d)
+      } else if (key === 'week') {
+        const start = new Date(today)
+        const dow = start.getDay() === 0 ? 6 : start.getDay() - 1
+        start.setDate(start.getDate() - dow)
+        const end = new Date(start); end.setDate(start.getDate() + 6)
+        this.from = this.toStr(start); this.to = this.toStr(end)
+      } else if (key === 'month') {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1)
+        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+        this.from = this.toStr(start); this.to = this.toStr(end)
+      }
+    },
+
+    // --- formatters ---
+    money (v) {
+      const n = Number(v || 0)
+      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
+    },
+    fmtDateTime (iso) {
+      if (!iso) return ''
+      const d = new Date(iso)
+      return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    },
+
+    // --- data loaders ---
+    debounced (fn, delay=350) { clearTimeout(this._debounceT); this._debounceT = setTimeout(fn, delay) },
+
+    async load (immediate=false) {
+      const exec = async () => {
+        const sig = JSON.stringify({ from:this.from, to:this.to, type:this.type, mode:this.mode, source:this.source, q:this.q })
+        if (!immediate && sig === this._lastSig) return
+        this._lastSig = sig
+
+        this.loading = true
+        try {
+          // 1) Opening (everything strictly before from 00:00)
+          const fromDate = this.from ? new Date(this.from) : new Date()
+          const openingTo = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0, 0, 0, 0)
+          const openingEnd = new Date(openingTo.getTime() - 1000) // 1s before day start
+          const resOpen = await ledgerApi.getAllEntries({
+            to: this.toYmdTime(openingEnd), // YYYY-MM-DDTHH:mm:ss.sssZ (server can treat as ISO)
+          })
+          const openItems = Array.isArray(resOpen.items) ? resOpen.items : []
+          // Sum latest client runningBalance (per client) strictly before day start
+          const perClientLatest = new Map()
+          for (const it of openItems) {
+            const cid = it.clientId || 'UNKNOWN'
+            const t = new Date(it.createdAt || 0).getTime()
+            if (!perClientLatest.has(cid) || t > perClientLatest.get(cid).t) {
+              perClientLatest.set(cid, { t, bal: Number(it.runningBalance || 0) })
+            }
+          }
+          let opening = 0
+          for (const v of perClientLatest.values()) opening += Number(v.bal || 0)
+          this.opening = Number(opening.toFixed(2))
+
+          // 2) Entries within range
+          const res = await ledgerApi.getAllEntries({
+            from: this.from || undefined,
+            to: this.to || undefined,
+            type: this.type || undefined
+          })
+          let items = Array.isArray(res.items) ? res.items : []
+
+          // Client-side filters: mode, source, q
+          if (this.mode) items = items.filter(r => (r.extra && r.extra.paymentType) === this.mode)
+          if (this.source) items = items.filter(r => (r.sourceType || '') === this.source)
+          if (this.q && this.q.trim()) {
+            const ql = this.q.trim().toLowerCase()
+            items = items.filter(r =>
+              String(r.clientId || '').toLowerCase().includes(ql) ||
+              String(r.narration || '').toLowerCase().includes(ql) ||
+              String(r.sourceId || '').toLowerCase().includes(ql)
+            )
+          }
+
+          // Chronological
+          items.sort((a,b)=> new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+
+          // Flags (duplicate ref & large amounts)
+          const refSeen = new Set()
+          for (const it of items) {
+            const ref = `${it.sourceType || ''}#${it.sourceId || ''}`
+            if (it.sourceType && it.sourceId) {
+              it._dupRef = refSeen.has(ref)
+              refSeen.add(ref)
+            }
+            it._large = Number(it.amount || 0) >= 100000 // tweak threshold
+          }
+
+          this.rows = items
+
+          // 3) Totals and mode splits (for the *day range*, not opening)
+          const totals = items.reduce((acc, r) => {
+            if (r.entryType === 'DEBIT') acc.debit += Number(r.amount || 0)
+            else if (r.entryType === 'CREDIT') acc.credit += Number(r.amount || 0)
+            return acc
+          }, { debit: 0, credit: 0 })
+          this.totals = totals
+
+          const modeTotals = {}
+          for (const r of items) {
+            const m = r?.extra?.paymentType
+            if (m) modeTotals[m] = (modeTotals[m] || 0) + Number(r.amount || 0)
+          }
+          this.modeTotals = modeTotals
+        } catch (e) {
+          this.$emit('notify', { text: e.message || 'Failed to load day book', color: 'error' })
+        } finally {
+          this.loading = false
+        }
+      }
+      if (immediate) return exec()
+      this.debounced(exec)
+    },
+
+    toYmdTime (d) {
+      const pad = n => String(n).padStart(2, '0')
+      const yyyy = d.getFullYear(); const mm = pad(d.getMonth()+1); const dd = pad(d.getDate())
+      const HH = pad(d.getHours()); const MM = pad(d.getMinutes()); const SS = pad(d.getSeconds())
+      // return ISO-like; your backend already parses ISO strings
+      return `${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}.000Z`
+    },
+
+    // --- export CSV ---
+    exportCsv () {
+      const headers = ['Time','Client','Type','Debit','Credit','Mode','Narration','SourceType','SourceId']
+      const lines = [headers.join(',')]
+      for (const r of this.rows) {
+        const debit = r.entryType === 'DEBIT' ? r.amount : ''
+        const credit = r.entryType === 'CREDIT' ? r.amount : ''
+        lines.push([
+          this.csv(this.fmtDateTime(r.createdAt)),
+          this.csv(r.clientId),
+          this.csv(r.entryType),
+          this.csv(debit),
+          this.csv(credit),
+          this.csv(r?.extra?.paymentType || ''),
+          this.csv(r.narration || ''),
+          this.csv(r.sourceType || ''),
+          this.csv(r.sourceId || '')
+        ].join(','))
+      }
+      const name = `daybook_${this.from||'na'}_${this.to||'na'}.csv`
+      this.downloadCsv(lines.join('\n'), name)
+    },
+    csv (v) { const s = (v==null) ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s },
+    downloadCsv (content, filename) {
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = filename
+      document.body.appendChild(a); a.click()
+      document.body.removeChild(a); URL.revokeObjectURL(url)
+    },
+
+    // --- PDF ---
+    async downloadPdf () {
+      if (!this.$refs.pdfArea) return
+      const filename = `daybook_${this.from||'na'}_${this.to||'na'}.pdf`
+      const opt = {
+        margin: [16, 18, 16, 18],
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      }
+      await html2pdf().set(opt).from(this.$refs.pdfArea).save()
+    }
+  }
+}
+</script>
+
+<style scoped>
+.daybook-header {
+  background: linear-gradient(135deg, #1a237e, #283593);
+}
+.preset-btn { text-transform: none; }
+.stat-card { min-width: 150px; }
+
+.ledger-table >>> thead th {
+  background: #f4f6fb;
+  color: #2a2a2a;
+  font-weight: 700 !important;
+}
+.ledger-table >>> tbody tr:hover { background: #f9fbff !important; }
+
+.debit-cell { color: #c62828; font-weight: 600; }
+.credit-cell { color: #2e7d32; font-weight: 600; }
+
+/* PDF */
+.pdf-root {
+  background:#fff; color:#000; font-family: Inter, Arial, Helvetica, sans-serif;
+  border:1px solid #e8eaf0; border-radius: 10px; padding: 16px;
+}
+.pdf-header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #111; padding-bottom:8px; margin-bottom:10px; }
+.pdf-brand { display:flex; align-items:center; gap:10px; }
+.pdf-logo { width:38px; height:38px; object-fit:contain; }
+.pdf-brand-title { font-weight:800; font-size:16px; }
+.pdf-brand-sub { font-size:11px; color:#666; }
+.pdf-meta { text-align:right; font-size:11px; }
+.pdf-summary { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px; }
+.pill { padding:6px 10px; border-radius:16px; background:#f6f7fb; border:1px solid #e6e8f3; font-size:11px; }
+.pill.debit { background:#ffebee; border-color:#ffcdd2; }
+.pill.credit { background:#e8f5e9; border-color:#c8e6c9; }
+.plus { color:#2e7d32; } .minus { color:#c62828; }
+
+.pdf-table { width:100%; border-collapse:separate; border-spacing:0; font-size:11px; }
+.pdf-table thead th { background:#f0f2f8; border:1px solid #aeb7c6; padding:6px; text-align:left; font-weight:700; }
+.pdf-table tbody td { border:1px solid #cfd6e2; padding:6px; }
+.pdf-table tfoot td { border:1px solid #aeb7c6; padding:6px; background:#f6f7fb; font-weight:700; }
+.bg-debit  { background:#ffebee; }
+.bg-credit { background:#e8f5e9; }
+.text-center { text-align:center; }
+.text-right  { text-align:right; }
+.w-when { width: 120px; } .w-client { width: 110px; } .w-narration { width: 220px; } .w-type { width: 60px; }
+.w-money { width: 110px; } .w-mode { width: 110px; } .w-ref { width: 170px; }
+
+.pdf-modes { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.pdf-sign { display:flex; justify-content:space-between; gap:18px; margin-top:18px; }
+.sig { flex:1; }
+.sig-line { border-bottom:1px solid #000; height:38px; }
+.sig-label { text-align:center; font-size:11px; margin-top:4px; color:#333; }
+</style>

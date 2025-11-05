@@ -14,12 +14,57 @@
         />
         <v-spacer />
         <div style="margin-right:12px;"><small>Invoice Date: {{ invoice?.invoiceDate || '-' }}</small></div>
-        <v-btn icon @click="$emit('close')"><v-icon>mdi-close</v-icon></v-btn>
+        <v-btn icon @click="onCloseClick"><v-icon>mdi-close</v-icon></v-btn>
       </v-card-title>
 
       <v-divider class="my-2"></v-divider>
 
       <v-card-text style="height:660px;">
+
+        <!-- Bulk action bar -->
+        <div v-if="internalSelected.length > 0" class="mb-3">
+          <v-sheet class="pa-3" elevation="1" rounded>
+            <div class="d-flex align-center flex-wrap">
+              <div class="mr-4">
+                <strong>{{ internalSelected.length }}</strong> selected
+              </div>
+
+              <v-select
+                dense
+                outlined
+                hide-details
+                class="mr-3"
+                style="max-width: 240px;"
+                label="Set status"
+                :items="statusOptions"
+                v-model="bulkStatus"
+                :disabled="bulkUpdating"
+                clearable
+              />
+
+              <v-btn
+                color="primary"
+                class="mr-2"
+                :loading="bulkUpdating"
+                :disabled="!bulkStatus || bulkUpdating || selectedChassisNumbers.length === 0"
+                @click="applyBulkStatus"
+              >
+                Apply
+              </v-btn>
+
+              <v-btn text :disabled="bulkUpdating" @click="clearSelection">
+                Clear selection
+              </v-btn>
+
+              <v-spacer></v-spacer>
+
+              <div v-if="bulkMessage" class="ml-auto">
+                <small>{{ bulkMessage }}</small>
+              </div>
+            </div>
+          </v-sheet>
+        </div>
+
         <div v-if="loading" style="text-align:center; padding:18px;">
           <v-progress-circular indeterminate />
         </div>
@@ -28,17 +73,25 @@
           <v-data-table
             :headers="tableHeaders"
             :items="items"
-            dense
             show-select
-            v-model="localSelected"
+            v-model="internalSelected"
+            @input="onSelectionChange"
             item-key="chassisNumber"
             class="elevation-0"
-            :items-per-page="invoiceItemsPerPage"
+            :page="page"
+            @update:page="page = $event"
+            :items-per-page="itemsPerPageLocal"
+            @update:items-per-page="itemsPerPageLocal = $event"
             :footer-props="{
               'items-per-page-options': [10, 25, 50, { text: 'All', value: -1 }],
               'items-per-page-text': 'Rows per page'
             }"
           >
+            <!-- ✅ Dedicated Serial Number column -->
+            <template v-slot:item.serial="{ index }">
+              <span class="font-weight-medium mono">{{ serialStart + index + 1 }}</span>
+            </template>
+
             <!-- field templates -->
             <template v-slot:item.chassisNumber="{ item }">{{ item.chassisNumber || '-' }}</template>
             <template v-slot:item.engineNumber="{ item }">{{ item.engineNumber || '-' }}</template>
@@ -69,6 +122,12 @@
         <v-spacer />
         <v-btn text @click="$emit('close')">Close</v-btn>
       </v-card-actions>
+
+      <!-- Feedback snackbars -->
+      <v-snackbar v-model="snack.show" :timeout="4000" :color="snack.color">
+        {{ snack.text }}
+        <v-btn text @click="snack.show = false">Dismiss</v-btn>
+      </v-snackbar>
     </v-card>
   </v-dialog>
 </template>
@@ -77,6 +136,7 @@
 import DownloadPdf from '@/views/DownloadPdf.vue';
 import DownloadXlsx from '@/views/DownloadXlsx.vue';
 import DownloadPdfInventory from '@/views/DownloadInvoiveInventory.vue';
+
 export default {
   name: 'InvoiceDetailDialog',
   components: { DownloadPdf, DownloadXlsx, DownloadPdfInventory },
@@ -90,33 +150,92 @@ export default {
     invoiceItemsPerPage: { type: Number, default: 10 },
     value: { type: Array, default: () => [] }
   },
-  computed: {
-    localSelected: {
-      get() { return this.value; },
-      set(v) { this.$emit('update:selected', v); }
+  data() {
+    return {
+      statusOptions: ['ACTIVE', 'INACTIVE', 'REVIEW'],
+      bulkStatus: null,
+      bulkUpdating: false,
+      bulkMessage: '',
+      snack: { show: false, text: '', color: 'success' },
+
+      internalSelected: [],
+
+      // pagination for serial number continuity across pages
+      page: 1,
+      itemsPerPageLocal: this.invoiceItemsPerPage
+    };
+  },
+  watch: {
+    open(newVal) {
+      if (!newVal) this.clearSelection();
     },
-
-    // append Actions column to provided headers (keeps order) and filter out inventoryHoldDays if present
+    value: {
+      immediate: true,
+      handler(v) {
+        const incoming = Array.isArray(v) ? v : [];
+        if (this._differentArrays(this.internalSelected, incoming)) {
+          this.internalSelected = incoming.slice();
+        }
+      }
+    },
+    invoiceItemsPerPage(nv) {
+      if (typeof nv === 'number' && nv > 0) this.itemsPerPageLocal = nv;
+    }
+  },
+  computed: {
     tableHeaders() {
-      const base = Array.isArray(this.invoiceDetailHeaders) ? JSON.parse(JSON.stringify(this.invoiceDetailHeaders)) : [];
-      // optional: remove inventoryHoldDays column if you don't want it here
-      const filtered = base.filter(h => h && h.value !== 'inventoryHoldDays');
+      // clone & filter existing headers
+      const base = Array.isArray(this.invoiceDetailHeaders)
+        ? JSON.parse(JSON.stringify(this.invoiceDetailHeaders))
+        : [];
 
-      // add actions header at the end
-      filtered.push({ text: 'Actions', value: '__actions', sortable: false });
-      return filtered;
+      // insert a dedicated Serial column right after the selection checkbox (i.e., as the first data column)
+      const serialHeader = { text: 'S.No', value: 'serial', sortable: false, width: 72, align: 'start' };
+
+      // If you want it as the VERY first visible column (after checkbox), put it at the front:
+      const filtered = base.filter(h => h && h.value !== 'inventoryHoldDays');
+      const withSerial = [serialHeader, ...filtered];
+
+      // keep Actions at the end
+      withSerial.push({ text: 'Actions', value: '__actions', sortable: false });
+      return withSerial;
+    },
+    selectedChassisNumbers() {
+      if (!Array.isArray(this.internalSelected)) return [];
+      return this.internalSelected
+        .map(r => r && (r.chassisNumber || r.chassis))
+        .filter(Boolean)
+        .map(String);
+    },
+    serialStart() {
+      const p = Number(this.page) || 1;
+      const ipp = Number(this.itemsPerPageLocal) || 0;
+      if (ipp <= 0) return 0; // "All" case
+      return (p - 1) * ipp;
     }
   },
   methods: {
-    // convert seconds or ms to ms
+    onCloseClick() {
+      this.clearSelection();
+      this.$emit('close');
+    },
+    _differentArrays(a, b) {
+      if (a === b) return false;
+      if (!Array.isArray(a) || !Array.isArray(b)) return true;
+      if (a.length !== b.length) return true;
+      for (let i = 0; i < a.length; i++) {
+        const ax = a[i]?.chassisNumber || a[i]?.chassis || JSON.stringify(a[i]);
+        const bx = b[i]?.chassisNumber || b[i]?.chassis || JSON.stringify(b[i]);
+        if (ax !== bx) return true;
+      }
+      return false;
+    },
     _epochToMs(v) {
       if (v == null) return null;
       const n = Number(v);
       if (Number.isNaN(n)) return null;
       return n < 1e12 ? n * 1000 : n;
     },
-
-    // format date as dd/mm/yyyy
     formatDate(v) {
       const ms = this._epochToMs(v);
       if (ms == null) return '-';
@@ -125,20 +244,92 @@ export default {
       } catch (e) {
         return new Date(ms).toLocaleDateString();
       }
+    },
+    onSelectionChange(val) {
+      this.internalSelected = Array.isArray(val) ? val : [];
+      this.$emit('update:selected', this.internalSelected);
+      this.$emit('update:value', this.internalSelected);
+      this.$emit('input', this.internalSelected);
+    },
+    clearSelection() {
+      this.internalSelected = [];
+      this.bulkStatus = null;
+      this.bulkMessage = '';
+      this.$emit('update:selected', []);
+      this.$emit('update:value', []);
+      this.$emit('input', []);
+    },
+    async applyBulkStatus() {
+      if (!this.bulkStatus || this.selectedChassisNumbers.length === 0) return;
+
+      this.bulkUpdating = true;
+      this.bulkMessage = '';
+      try {
+        const res = await fetch(process.env.VUE_APP_AGENCY_BACKEND_URL + 'updateInventoryItem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chassisNumbers: this.selectedChassisNumbers,
+            item: { status: this.bulkStatus }
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || 'Bulk update failed');
+
+        const okCount = Array.isArray(data?.results) ? data.results.filter(r => r.ok).length : 0;
+        const failCount = Array.isArray(data?.results) ? data.results.length - okCount : 0;
+
+        this.snack = {
+          show: true,
+          text: `Updated ${okCount} item(s). ${failCount ? failCount + ' failed.' : 'All good!'}`,
+          color: failCount ? 'warning' : 'success'
+        };
+
+        this.bulkMessage = data?.message || '';
+        this.$emit('bulk-updated', data);
+        this.bulkStatus = null;
+        this.$emit('close');
+      } catch (err) {
+        this.snack = { show: true, text: String(err?.message || err), color: 'error' };
+      } finally {
+        this.bulkUpdating = false;
+      }
     }
   }
 };
 </script>
 
 <style scoped>
+/* Header color you already set */
 ::v-deep .v-data-table-header {
-  background-color: #001f3f; /* Set to your desired color */
-  color: #ffffff; /* For the text */
+  background-color: #dff3f79c;
+  color: black;
 }
-
 ::v-deep(.v-data-table thead th) {
-  background-color: #001f3f !important; /* Deep blue header */
-  color: #ffffff !important;             /* White text */
+  background-color: #dff3f79c !important;
+  color: black !important;
 }
 
+/* Force row + header height to ~50px */
+::v-deep .v-data-table__wrapper thead tr > th,
+::v-deep .v-data-table__wrapper tbody tr > td {
+  height: 50px !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  vertical-align: middle !important;
+}
+
+/* Optional: narrow S.No column */
+::v-deep .v-data-table__wrapper td[data-label="S.No"],
+::v-deep .v-data-table__wrapper th[aria-label="S.No"] {
+  width: 72px;
+  max-width: 72px;
+  white-space: nowrap;
+}
+
+/* Serial number font */
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
 </style>
