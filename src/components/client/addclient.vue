@@ -606,7 +606,7 @@ export default {
   overflow: hidden;
   margin: 0 auto 10px;
   font-size: 28px;
-  color: #aa53cb;
+  color: #283593;
 }
 .form-image-upload img {
   width: 100%;
@@ -615,7 +615,7 @@ export default {
 }
 .form-image-upload button {
   margin-top: 8px;
-  background: #aa53cb;
+  background: #283593;
   color: #fff;
   border: none;
   padding: 4px 16px;
@@ -676,7 +676,7 @@ select {
 }
 .address-header a {
   font-size: 13px;
-  color: #aa53cb;
+  color: #283593;
   cursor: pointer;
   text-decoration: none;
 }
@@ -693,7 +693,7 @@ select {
   background: #555;
 }
 .create-btn {
-  background: #aa53cb;
+  background: #283593;
   color: #fff;
   border: none;
   padding: 8px 18px;

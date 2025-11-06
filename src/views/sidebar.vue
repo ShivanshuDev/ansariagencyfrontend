@@ -141,6 +141,18 @@
           
           <v-list-item 
             link 
+            @click="$emit('tab-selected', 'SellToVendorDetails')"
+            class="nav-item"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Vendor Bill Detail</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          <v-list-item 
+            link 
             @click="$emit('tab-selected', 'SellToVendor')"
             class="nav-item"
           >

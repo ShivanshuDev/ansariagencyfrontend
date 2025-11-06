@@ -13,11 +13,6 @@
             >
               <v-icon>mdi-menu</v-icon>
             </v-btn>
-            <!-- Breadcrumb navigation -->
-            <ul class="breadcrumb">
-              <li><a href="#">Home</a></li>
-              <li>Dashboard</li>
-            </ul>
           </div>
 
           <div class="navbar-right" ref="navbarRight">
@@ -69,6 +64,7 @@ import BILL from '@/components/bill/addbill.vue';
 import ADDSPARES from '@/components/spares/addSpares.vue';
 import SPARESTABLE from '@/components/spares/sparesTable.vue';
 import SellToVendor from '@/components/vendorSell/sellToVendor.vue';
+import SellToVendorDetails from '@/components/vendorSell/SellToVendorTable.vue';
 import LEDGER from '@/components/ledger/ledgerComponent.vue'
 import LEDGERENTRY from '@/components/ledger/AllEntriesTable.vue'
 import ADDENTRY from '@/components/ledger/AddEntryForm.vue'
@@ -90,6 +86,7 @@ export default {
     ADDSPARES,
     SPARESTABLE,
     SellToVendor,
+    SellToVendorDetails,
     LEDGER,
     LEDGERENTRY,
     ADDENTRY,
@@ -124,6 +121,7 @@ export default {
       if(this.selectedTab === 'ADDSPARES') return 'ADDSPARES';
       if(this.selectedTab === 'sparesTable') return 'SPARESTABLE';
       if(this.selectedTab === 'SellToVendor') return 'SellToVendor';
+      if(this.selectedTab === 'SellToVendorDetails') return 'SellToVendorDetails';
       if(this.selectedTab === 'LEDGER') return 'LEDGER';
       if(this.selectedTab === 'LEDGERENTRY') return 'LEDGERENTRY';
       if(this.selectedTab === 'ADDENTRY') return 'ADDENTRY';

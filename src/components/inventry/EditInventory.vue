@@ -19,16 +19,6 @@
 
               <div class="field-detail">
                 <label>Model Name *</label>
-                <!-- <v-select
-                  v-model="local.modelName"
-                  :items="models"
-                  :item-text="modelLabel"
-                  :item-value="modelValue"
-                  outlined
-                  dense
-                  hide-details
-                  @change="onModelChange"
-                /> -->
                 <v-autocomplete
                   v-model="local.modelName"
                   :items="models"
@@ -59,16 +49,6 @@
 
               <div class="field-detail">
                 <label>Color *</label>
-                <!-- <v-select
-                  v-model="local.color"
-                  :items="colors"
-                  outlined
-                  dense
-                  hide-details
-                  :item-text="colorLabel"
-                  :item-value="colorValue"
-                  return-object="false"
-                /> -->
                 <v-autocomplete
                   v-model="local.color"
                   :items="colors"
@@ -89,14 +69,6 @@
 
               <div class="field-detail">
                 <label>Status</label>
-                <!-- <v-select
-                  v-model="local.status"
-                  :items="actionStatus"
-                  outlined
-                  dense
-                  hide-details
-                  clearable="false"
-                /> -->
                 <v-autocomplete
                   v-model="local.status"
                   :items="actionStatus"
@@ -110,13 +82,6 @@
               </div>
               <div class="field-detail">
                 <label>Warehouse</label>
-                <!-- <v-select
-                  v-model="local.warehouse"
-                  :items="warehouses"
-                  outlined
-                  dense
-                  hide-details
-                /> -->
                 <!-- Warehouse -->
                 <v-autocomplete
                   v-model="local.warehouse"

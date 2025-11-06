@@ -19,18 +19,6 @@
             </div>
           </div>
         </v-col>
-
-        <!-- <v-col cols="auto" class="actions-col">
-          <v-btn icon @click="refresh" :title="'Refresh'">
-            <v-icon>mdi-refresh</v-icon>
-          </v-btn>
-          <v-btn icon @click="onEdit" :title="'Edit client'">
-            <v-icon>mdi-pencil</v-icon>
-          </v-btn> -->
-          <!-- <v-btn icon @click="downloadJSON" :title="'Export JSON'">
-            <v-icon>mdi-download</v-icon>
-          </v-btn> -->
-        <!-- </v-col> -->
       </v-row>
 
       <v-divider class="my-4"></v-divider>

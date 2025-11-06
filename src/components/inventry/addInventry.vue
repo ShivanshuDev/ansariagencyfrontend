@@ -692,7 +692,7 @@ textarea {
 .create-btn,
 .add-btn,
 .remove-btn {
-  background: #aa53cb;
+  background: #283593;
   color: #fff;
   border: none;
   padding: 8px 18px;

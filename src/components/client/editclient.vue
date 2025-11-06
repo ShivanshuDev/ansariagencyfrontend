@@ -371,17 +371,6 @@ export default {
       this.customer.shipping = this._deepClone(this.customer.billing);
     },
 
-    // keep same validations, but return messages instead of calling alert/confirm
-    // validateAccountNumbers() {
-    //   const bank = this.customer.bank;
-    //   const errs = [];
-    //   if (!bank.accountNumber || !bank.confirmAccountNumber) {
-    //     errs.push('Please enter and confirm your account number.');
-    //   } else if (bank.accountNumber !== bank.confirmAccountNumber) {
-    //     errs.push('Account numbers do not match.');
-    //   }
-    //   return errs;
-    // },
     validateAccountNumbers() {
       const bank = this.customer.bank || {};
       const acc = (bank.accountNumber || '').trim();

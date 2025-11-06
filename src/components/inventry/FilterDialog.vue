@@ -13,27 +13,6 @@
               <v-col cols="12" sm="12">
                 <v-select v-model="localFilters.invoiceDate" :items="uniqueInvoiceDates" label="Invoice Date" multiple clearable outlined dense />
               </v-col>
-              <v-col cols="12" sm="12">
-                <v-select v-model="localFilters.addedBy" :items="uniqueAddedBy" label="Added By" multiple clearable outlined dense />
-              </v-col>
-            </v-row>
-
-            <v-row>
-              <v-col cols="12">
-                <v-select v-model="localFilters.modelName" :items="uniqueModelNames" label="Model Name" multiple clearable outlined dense />
-              </v-col>
-              <v-col cols="12">
-                <v-select v-model="localFilters.status" :items="uniqueStatus" label="Status" multiple clearable outlined dense />
-              </v-col>
-            </v-row>
-
-            <v-row>
-              <v-col cols="12">
-                <v-select v-model="localFilters.color" :items="uniqueColors" label="Color" multiple clearable outlined dense />
-              </v-col>
-            </v-row>
-
-            <v-row>
               <v-col cols="12" sm="6">
                 <v-text-field v-model="localFilters.createdAtFromDate" type="date" label="Created At (From)" dense outlined clearable />
               </v-col>

@@ -19,13 +19,24 @@
         @open-filter="filterDialog = true"
       />
 
-      <invoice-table
-        :headers="invoiceListHeaders"
-        :rows="filteredInvoiceRows"
-        v-model="selectedInvoices"
-        :loading="loadingInvoices"
-        @show-invoice="onShowInvoice"
-      />
+      <transition name="fade">
+        <div v-if="loadingInvoices" key="invoice-skeleton" class="pa-4">
+          <v-skeleton-loader
+            type="table"
+            class="elevation-1 rounded"
+            :loading="true"
+          />
+        </div>
+        <invoice-table
+          v-else
+          key="invoice-table"
+          :headers="invoiceListHeaders"
+          :rows="filteredInvoiceRows"
+          v-model="selectedInvoices"
+          :loading="loadingInvoices"
+          @show-invoice="onShowInvoice"
+        />
+      </transition>
 
       <v-divider class="my-4"></v-divider>
     </v-card>
@@ -119,7 +130,7 @@ export default {
       invoiceListHeaders: [
         { text: 'Invoice Number', value: 'invoiceNumber' },
         { text: 'Invoice Date', value: 'invoiceDate' },
-        { text: 'QTY', value: 'invoiceDate' },
+        { text: 'QTY', value: 'inventoryCount' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
 
@@ -135,7 +146,6 @@ export default {
       ],
 
       headers: [
-        
         { text: 'Model Name', value: 'modelName' },
         { text: 'Category Name', value: 'categoryName' },
         { text: 'Color', value: 'color' },
@@ -196,29 +206,44 @@ export default {
   },
 
   computed: {
+    // === Filter dropdown options built from invoiceRows (plus nested items where it makes sense) ===
     uniqueInvoiceDates() {
-      const dates = this.inventoryItems.map(i => i.invoiceDate).filter(Boolean);
+      const src = this.invoiceRows || [];
+      const dates = src.map(i => i.invoiceDate).filter(Boolean);
       return [...new Set(dates)].sort();
     },
     uniqueAddedBy() {
-      const vals = this.inventoryItems.map(i => i.addedBy).filter(Boolean);
+      const src = this.invoiceRows || [];
+      const vals = src.map(i => i.addedBy).filter(Boolean);
       return [...new Set(vals)].sort();
     },
     uniqueModelNames() {
-      const vals = this.inventoryItems.map(i => i.modelName).filter(Boolean);
-      return [...new Set(vals)].sort();
+      const src = this.invoiceRows || [];
+      const topLevel = src.map(i => i.modelName).filter(Boolean);
+      const nested = src.flatMap(inv =>
+        Array.isArray(inv.items) ? inv.items.map(it => it && it.modelName).filter(Boolean) : []
+      );
+      return [...new Set([...topLevel, ...nested])].sort();
     },
     uniqueStatus() {
-      const vals = this.inventoryItems.map(i => (i.status || '').toUpperCase()).filter(s => s);
-      return [...new Set(vals)].sort();
+      const src = this.invoiceRows || [];
+      const topLevel = src.map(i => (i.status || '').toUpperCase()).filter(Boolean);
+      const nested = src.flatMap(inv =>
+        Array.isArray(inv.items) ? inv.items.map(it => (it && it.status ? String(it.status).toUpperCase() : '')).filter(Boolean) : []
+      );
+      return [...new Set([...topLevel, ...nested])].sort();
     },
     uniqueColors() {
-      const vals = this.inventoryItems.map(i => i.color).filter(Boolean);
-      return [...new Set(vals)].sort();
+      const src = this.invoiceRows || [];
+      const topLevel = src.map(i => i.color).filter(Boolean);
+      const nested = src.flatMap(inv =>
+        Array.isArray(inv.items) ? inv.items.map(it => it && it.color).filter(Boolean) : []
+      );
+      return [...new Set([...topLevel, ...nested])].sort();
     },
 
+    // (kept intact; operates on inventoryItems for other UI parts)
     filteredRows() {
-      // (existing filteredRows kept intact for other UI parts that rely on inventoryItems)
       const searchLower = this.search ? String(this.search).toLowerCase() : '';
 
       let selectedRaw = 'ALL';
@@ -300,16 +325,95 @@ export default {
     },
 
     /**
-     * Filter invoiceRows (the table's top-level invoices) by invoice / engine / general search.
-     * Priority: searchInvoice -> searchEngine -> searchGeneral
-     * Also attempts to match nested `items` arrays for chassis/engine numbers.
+     * Filter invoiceRows (the table's top-level invoices) by filter dialog + invoice/engine/general search.
+     * Priority for search: invoice -> engine -> general
+     * Filters apply on both invoice-level fields and nested items (when needed).
      */
     filteredInvoiceRows() {
+      const rows = this.invoiceRows || [];
+
+      // ----------------- APPLY FILTERS FIRST -----------------
+      const f = this.appliedFilters || {};
+
+      const toLowerArray = arr =>
+        Array.isArray(arr) ? arr.map(v => (v == null ? '' : String(v).toLowerCase().trim())).filter(Boolean) : [];
+
+      const filterInvoiceDates = toLowerArray(f.invoiceDate);
+      const filterAddedBy      = toLowerArray(f.addedBy);
+      const filterModelNames   = toLowerArray(f.modelName);
+      const filterColors       = toLowerArray(f.color);
+      const filterStatuses     = Array.isArray(f.status)
+        ? f.status.map(s => String(s || '').toUpperCase().trim()).filter(Boolean)
+        : [];
+
+      const createdAtFrom = f.createdAtFrom != null ? Number(f.createdAtFrom) : null;
+      const createdAtTo   = f.createdAtTo   != null ? Number(f.createdAtTo)   : null;
+
+      // Helper: check if invoice matches picklist filters (invoice-level first; if blank, try nested items)
+      const matchesPicklists = inv => {
+        const invInvoiceDate = inv.invoiceDate == null ? '' : String(inv.invoiceDate).toLowerCase().trim();
+        const invAddedBy     = inv.addedBy == null ? '' : String(inv.addedBy).toLowerCase().trim();
+        const invModelName   = inv.modelName == null ? '' : String(inv.modelName).toLowerCase().trim();
+        const invColor       = inv.color == null ? '' : String(inv.color).toLowerCase().trim();
+        const invStatusU     = (inv.status || '').toUpperCase().trim();
+
+        // date-range (createdAt) on invoice
+        const createdMsRaw = inv.createdAt == null ? null : Number(inv.createdAt);
+        const createdMs = this._normalizeEpochToMs(createdMsRaw);
+        if ((createdAtFrom != null || createdAtTo != null)) {
+          if (createdMs == null) return false;
+          if (createdAtFrom != null && createdMs < createdAtFrom) return false;
+          if (createdAtTo   != null && createdMs > createdAtTo)   return false;
+        }
+
+        // Quick pass: invoice-level properties must satisfy selected filters if present
+        const quickPass =
+          (!filterInvoiceDates.length || filterInvoiceDates.includes(invInvoiceDate)) &&
+          (!filterAddedBy.length      || filterAddedBy.includes(invAddedBy)) &&
+          (!filterModelNames.length   || filterModelNames.includes(invModelName)) &&
+          (!filterColors.length       || filterColors.includes(invColor)) &&
+          (!filterStatuses.length     || filterStatuses.includes(invStatusU));
+
+        if (quickPass) return true;
+
+        // If invoice-level didn’t match and any filter is set, try nested items as a fallback
+        const anyFilterSelected =
+          filterInvoiceDates.length || filterAddedBy.length || filterModelNames.length ||
+          filterColors.length || filterStatuses.length || createdAtFrom != null || createdAtTo != null;
+
+        if (!anyFilterSelected) return true; // no filters selected -> pass
+
+        const items = Array.isArray(inv.items) ? inv.items : [];
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i] || {};
+          const mName = (it.modelName == null ? '' : String(it.modelName)).toLowerCase().trim();
+          const color = (it.color == null ? '' : String(it.color)).toLowerCase().trim();
+          const statU = (it.status ? String(it.status).toUpperCase().trim() : '');
+
+          const ok =
+            (!filterModelNames.length || filterModelNames.includes(mName)) &&
+            (!filterColors.length     || filterColors.includes(color)) &&
+            (!filterStatuses.length   || filterStatuses.includes(statU));
+
+          if (ok) {
+            // If the only remaining blockers were invoiceDate/addedBy (which don't live on items),
+            // allow pass only when those filters aren’t set.
+            const needsInvoiceLevelOnly =
+              filterInvoiceDates.length || filterAddedBy.length;
+            if (!needsInvoiceLevelOnly) return true;
+          }
+        }
+
+        return false;
+      };
+
+      const filtered = rows.filter(inv => matchesPicklists(inv));
+
+      // ----------------- THEN APPLY SEARCH (PRIORITY) -----------------
       const rawInvoiceQuery = (this.searchInvoice || '').toString().trim();
-      const rawEngineQuery = (this.searchEngine || '').toString().trim();
+      const rawEngineQuery  = (this.searchEngine  || '').toString().trim();
       const rawGeneralQuery = (this.searchGeneral || '').toString().trim();
 
-      // choose the highest-priority non-empty query
       let query = '';
       if (rawInvoiceQuery) query = rawInvoiceQuery;
       else if (rawEngineQuery) query = rawEngineQuery;
@@ -317,21 +421,19 @@ export default {
 
       const q = query ? query.toLowerCase() : '';
 
-      // no query -> return original rows (fast path)
-      if (!q) return this.invoiceRows || [];
+      if (!q) return filtered;
 
-      // fields to search at invoice level
-      const invoiceLevelFields = ['invoiceNumber', 'invoiceNo', 'number', 'invoiceDate', 'addedBy', 'modelName', 'color', 'pk', 'sk', 'status'];
+      const invoiceLevelFields = [
+        'invoiceNumber', 'invoiceNo', 'number', 'invoiceDate',
+        'addedBy', 'modelName', 'color', 'pk', 'sk', 'status'
+      ];
 
-      // iterate once per invoice row
-      const rows = this.invoiceRows || [];
       const out = [];
-
-      for (let i = 0; i < rows.length; i++) {
-        const inv = rows[i];
+      for (let i = 0; i < filtered.length; i++) {
+        const inv = filtered[i];
         let matched = false;
 
-        // check invoice-level fields
+        // invoice-level fields
         for (let j = 0; j < invoiceLevelFields.length; j++) {
           const f = invoiceLevelFields[j];
           if (inv && Object.prototype.hasOwnProperty.call(inv, f)) {
@@ -342,54 +444,18 @@ export default {
             }
           }
         }
+        if (matched) { out.push(inv); continue; }
 
-        if (matched) {
-          out.push(inv);
-          continue;
-        }
-
-        // check common top-level text fields that may exist but with different keys
-        const altCandidates = [inv && inv.invoiceNumber, inv && inv.invoiceNo, inv && inv.number, inv && inv.addedBy, inv && inv.modelName];
-        for (let k = 0; k < altCandidates.length && !matched; k++) {
-          const v = altCandidates[k];
+        // common alternates
+        const alt = [inv && inv.invoiceNumber, inv && inv.invoiceNo, inv && inv.number, inv && inv.addedBy, inv && inv.modelName];
+        for (let k = 0; k < alt.length && !matched; k++) {
+          const v = alt[k];
           if (v != null && String(v).toLowerCase().includes(q)) matched = true;
         }
-        if (matched) {
-          out.push(inv);
-          continue;
-        }
+        if (matched) { out.push(inv); continue; }
 
-        // If invoice contains nested `items` array, check each item's chassisNumber/engineNumber/modelName/color
-        if (Array.isArray(inv && inv.items) && inv.items.length) {
-          const items = inv.items;
-          for (let it = 0; it < items.length && !matched; it++) {
-            const item = items[it];
-            if (!item) continue;
-            const potential = [
-              item.chassisNumber,
-              item.engineNumber,
-              item.modelName,
-              item.color,
-              item.invoiceNumber,
-              item.invoiceNo,
-              item.number
-            ];
-            for (let p = 0; p < potential.length; p++) {
-              const pv = potential[p];
-              if (pv != null && String(pv).toLowerCase().includes(q)) {
-                matched = true;
-                break;
-              }
-            }
-          }
-          if (matched) {
-            out.push(inv);
-            continue;
-          }
-        }
-
-        // As a last attempt: some API responses may put inventory items under `inventory` or `rows`
-        const nestedKeys = ['inventory', 'rows', 'items'];
+        // nested arrays (items/inventory/rows)
+        const nestedKeys = ['items', 'inventory', 'rows'];
         for (let nk = 0; nk < nestedKeys.length && !matched; nk++) {
           const key = nestedKeys[nk];
           const arr = inv && inv[key];
@@ -397,7 +463,10 @@ export default {
           for (let a = 0; a < arr.length && !matched; a++) {
             const it = arr[a];
             if (!it) continue;
-            const candidates = [it.chassisNumber, it.engineNumber, it.modelName, it.color];
+            const candidates = [
+              it.chassisNumber, it.engineNumber, it.modelName, it.color,
+              it.invoiceNumber, it.invoiceNo, it.number
+            ];
             for (let c = 0; c < candidates.length; c++) {
               const cand = candidates[c];
               if (cand != null && String(cand).toLowerCase().includes(q)) {
@@ -406,11 +475,8 @@ export default {
               }
             }
           }
-          if (matched) {
-            out.push(inv);
-            break;
-          }
         }
+        if (matched) out.push(inv);
       }
 
       return out;
@@ -418,31 +484,8 @@ export default {
   },
 
   methods: {
-    // --- Fetch invoices (existing) ---
-    // async fetchInvoice() {
-    //   this.loadingInvoices = true;
-    //   try {
-    //     const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInvoice');
-    //     if (res && res.data) {
-    //       if (Array.isArray(res.data)) this.invoiceRows = res.data;
-    //       else if (Array.isArray(res.data.items)) this.invoiceRows = res.data.items;
-    //       else if (Array.isArray(res.data.rows)) this.invoiceRows = res.data.rows;
-    //       else if (Array.isArray(res.data.invoices)) this.invoiceRows = res.data.invoices;
-    //       else this.invoiceRows = [];
-    //     } else {
-    //       this.invoiceRows = [];
-    //     }
-    //   } catch (err) {
-    //     console.error('Failed to fetch invoices:', err);
-    //     this.invoiceRows = [];
-    //   } finally {
-    //     this.loadingInvoices = false;
-    //   }
-    // },
-
     async fetchInvoice() {
       this.loadingInvoices = true;
-      console.log('process.env.VUE_APP_AGENCY_BACKEND_URL', )
       try {
         const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInvoice');
         let rows = [];
@@ -468,8 +511,6 @@ export default {
       }
     },
 
-
-    // --- Fetch inventory records for a single invoice number (used by Show) ---
     async fetchInvoiceItems(invoiceNumber) {
       this.selectedItemsData = [];
       this.loadingInvoiceItems = true;
@@ -512,7 +553,6 @@ export default {
       }
     },
 
-    // When user clicks "Show" on invoice - fetch related inventory items and show dialog
     onShowInvoice(invoice) {
       this.selectedItemsData = [];
       if (!invoice) return;
@@ -525,7 +565,6 @@ export default {
         return;
       }
 
-      // Fetch then open dialog
       this.fetchInvoiceItems(invNum).then(() => {
         this.invoiceDetailDialog = true;
       }).catch(() => {
@@ -555,7 +594,6 @@ export default {
 
     async onInventorySaved(payload) {
       this.closeEdit();
-      // after save, optionally re-fetch invoices
       await this.fetchInvoice();
       let updated = null;
       if (payload && payload.item) updated = payload.item;
@@ -578,8 +616,7 @@ export default {
     _normalizeEpochToMs(v) {
       if (v == null || Number.isNaN(Number(v))) return null;
       const n = Number(v);
-      // if seconds (10-digit) -> convert to ms
-      if (n < 1e12) return n * 1000;
+      if (n < 1e12) return n * 1000; // seconds -> ms
       return n;
     },
 
@@ -655,7 +692,6 @@ export default {
           return;
         }
 
-        // parallel calls
         const requests = invoiceNumbers.map(invNum =>
           axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventryByInvoice/' + encodeURIComponent(invNum))
         );
@@ -734,4 +770,7 @@ export default {
 .tableData .v-card-title {
   align-items: center;
 }
+.fade-enter-active, .fade-leave-active { transition: opacity .15s ease; }
+.fade-enter, .fade-leave-to { opacity: 0; }
+
 </style>

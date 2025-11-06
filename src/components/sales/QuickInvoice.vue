@@ -328,7 +328,7 @@
                   dense outlined hide-details="auto"
                 />
               </v-col>
-              <v-col cols="12" sm="8">
+              <v-col cols="12" sm="6">
                 <v-text-field
                   v-model.trim="form.ids.value"
                   :label="idInputLabel"
@@ -341,6 +341,58 @@
                   @input="coerceIdValue"
                   dense outlined hide-details="auto"
                 />
+              </v-col>
+              <v-col cols="12" sm="6">
+                <div class="uploader">
+                    <label class="choose-file">
+                      <v-icon v-if="false"></v-icon> <!-- noop to avoid lint about empty label -->
+                      <span class="btn">Select files</span>
+                      <input
+                        ref="fileInput"
+                        type="file"
+                        :accept="accept"
+                        :multiple="multiple"
+                        @change="onFilesChange"
+                      />
+                    </label>
+
+                    <!-- File list -->
+                    <div v-if="files.length" class="files-wrap">
+                      <div class="list-head">
+                        <div><strong>{{ files.length }}</strong> file(s) selected</div>
+                        <div class="actions">
+                          <button class="btn ghost" @click="clearAll" :disabled="uploading">Clear all</button>
+                          <button class="btn primary" @click="uploadAll" :disabled="uploading">Upload</button>
+                        </div>
+                      </div>
+
+                      <!-- Thumbnails for images -->
+                      <div class="thumbs" v-if="imageItems.length">
+                        <div v-for="f in imageItems" :key="f.id" class="thumb">
+                          <img :src="f.previewUrl" :alt="f.name">
+                          <div class="thumb-meta">
+                            <div class="name" :title="f.name">{{ f.name }}</div>
+                            <div class="size">{{ formatSize(f.size) }}</div>
+                          </div>
+                          <button class="remove" @click="removeFile(f.id)" title="Remove">&times;</button>
+                        </div>
+                      </div>
+
+                      <!-- Non-image files as list -->
+                      <div class="list" v-if="otherItems.length">
+                        <div v-for="f in otherItems" :key="f.id" class="row">
+                          <div class="col grow">
+                            <div class="name" :title="f.name">{{ f.name }}</div>
+                            <div class="muted">{{ f.type || 'unknown' }} · {{ formatSize(f.size) }}</div>
+                          </div>
+                          <button class="remove small" @click="removeFile(f.id)" title="Remove">Remove</button>
+                        </div>
+                      </div>
+
+                      <!-- Progress (optional simple) -->
+                      <div v-if="uploading" class="progress">Uploading… {{ progress }}%</div>
+                    </div>
+                </div>
               </v-col>
             </v-row>
 
@@ -383,6 +435,39 @@
                   dense outlined hide-details="auto"
                 />
               </v-col>
+
+              <!-- Nominee photo -->
+                <v-col cols="12" sm="4">
+                 
+                  <v-file-input
+                    :key="form.nominee.inputKey"
+                    accept="image/*"
+                    dense
+                    outlined
+                    hide-details="auto"
+                    label="Choose nominee image"
+                    append-inner-icon="mdi-image"
+                    show-size
+                    truncate-length="22"
+                    @change="onNomineeFileChange"
+                    @click:append-inner="$refs.nomineeInput.click()"
+                    ref="nomineeInput"
+                  />
+
+
+                  <!-- Preview -->
+                  <div v-if="form.nominee.previewUrl" class="nominee-thumb mt-2">
+                    <img :src="form.nominee.previewUrl" alt="Nominee photo" />
+                    <div class="thumb-meta">
+                      <div class="name" :title="form.nominee.file?.name">{{ form.nominee.file?.name }}</div>
+                      <div class="size">{{ formatSize(form.nominee.file?.size || 0) }}</div>
+                    </div>
+                    <v-btn class="remove" icon small @click="clearNomineeImage" title="Remove">
+                      <v-icon small>mdi-close</v-icon>
+                    </v-btn>
+                  </div>
+                </v-col>
+
             </v-row>
           </section>
 
@@ -676,11 +761,82 @@
               <v-btn small outlined @click="addPaymentRow"><v-icon left small>mdi-plus</v-icon>Add Row</v-btn>
             </div>
             <v-divider class="mb-2"/>
-            <v-row v-for="(p, idx) in form.payments" :key="p.key" dense>
+            <!-- <v-row v-for="(p, idx) in form.payments" :key="p.key" dense>
               <v-col cols="12" sm="3"><v-select v-model="p.mode" :items="payModes" item-text="text" item-value="value" :rules="[rReq]" label="Mode" dense outlined hide-details="auto"/></v-col>
               <v-col cols="12" sm="5"><v-text-field v-model="p.reference" label="Reference (UPI/Bank/Cheque)" dense outlined hide-details="auto"/></v-col>
               <v-col cols="12" sm="3"><v-text-field v-model.number="p.amount" :rules="[rNumNonNeg]" type="number" prefix="₹" label="Amount" dense outlined hide-details="auto"/></v-col>
               <v-col cols="12" sm="1" class="d-flex align-center"><v-btn icon :disabled="form.payments.length===1" @click="removePaymentRow(idx)"><v-icon color="red">mdi-delete</v-icon></v-btn></v-col>
+            </v-row> -->
+            <v-row v-for="(p, idx) in form.payments" :key="p.key" dense>
+              <v-col cols="12" sm="2">
+                <v-select
+                  v-model="p.mode"
+                  :items="payModes"
+                  item-text="text"
+                  item-value="value"
+                  :rules="[rReq]"
+                  label="Mode"
+                  dense outlined hide-details="auto"
+                />
+              </v-col>
+
+              <v-col cols="12" sm="3">
+                <v-text-field
+                  v-model="p.reference"
+                  label="Reference (UPI/Bank/Cheque)"
+                  dense outlined hide-details="auto"
+                />
+              </v-col>
+
+              <v-col cols="12" sm="2">
+                <v-text-field
+                  v-model.number="p.amount"
+                  :rules="[rNumNonNeg]"
+                  type="number"
+                  prefix="₹"
+                  label="Amount"
+                  dense outlined hide-details="auto"
+                />
+              </v-col>
+
+              <!-- Image Upload (per-row) -->
+              <v-col cols="12" sm="4">
+                <v-file-input
+                  :key="p.inputKey"
+                  accept="image/*"
+                  multiple
+                  dense
+                  outlined
+                  hide-details="auto"
+                  prepend-icon="mdi-image-multiple"
+                  label="Choose images (invoice slip, cheque photo, etc.)"
+                  @change="onPaymentFilesChange(idx, $event)"
+                  show-size
+                  chips
+                  counter
+                />
+
+                <!-- Thumbnails -->
+                <div v-if="p.previews && p.previews.length" class="thumb-grid mt-2">
+                  <div v-for="img in p.previews" :key="img.id" class="thumb">
+                    <img :src="img.url" :alt="img.name">
+                    <div class="thumb-meta">
+                      <div class="name" :title="img.name"><span style="font-size:10px;">{{ img.name }}</span></div>
+                      <div class="size">{{ formatSize(img.size) }}</div>
+                    </div>
+                    <v-btn class="remove" icon small @click="removePaymentImage(idx, img.id)">
+                      <v-icon small>mdi-close</v-icon>
+                    </v-btn>
+                  </div>
+                </div>
+              </v-col>
+
+              <v-col cols="12" sm="1">
+                <v-btn dence style="border:1px solid red;" icon :disabled="form.payments.length===1" @click="removePaymentRow(idx)">
+                  <v-icon color="red">mdi-delete</v-icon>
+                </v-btn>
+              </v-col>
+
             </v-row>
           </section>
 
@@ -1042,11 +1198,24 @@
 <script>
 import html2pdf from 'html2pdf.js'
 import jsPDF from 'jspdf';
+let uid = 1;
+let _imgUid = 1;  
 
 export default {
   name: 'QuickInvoiceCustomerPro',
   data () {
     return {
+      nomineeImageMaxBytes: 5 * 1024 * 1024, // 5 MB
+      accept: ".png,.jpg,.jpeg,.gif,.webp,.pdf",
+      multiple: true,
+      maxBytes: 10 * 1024 * 1024, // 10 MB per file
+      maxFiles: 20,
+      uploadEndpoint: (process.env.VUE_APP_API_BASE || "") + "/upload",
+      fieldName: "files[]",
+
+      files: [], // internal state
+      uploading: false,
+      progress: 0,
       currentStep: 1, // Add this for step management
       valid: false,
       submitting: false,
@@ -1091,7 +1260,17 @@ export default {
         permanentAddress: { line1:'', line2:'', village:'', postOffice:'', tahsil:'', pincode:'', district:'', state:'' },
         // ID Proof
         ids: { type:'', value:'', custom:[], aadhaar:'', voter:'', pan:'', dl:'' },
-        nominee: { name:'', relation:'', age:'', mobile:'' },
+        // nominee: { name:'', relation:'', age:'', mobile:'' },
+        nominee: {
+          name: '',
+          relation: '',
+          age: null,
+          mobile: '',
+          // NEW:
+          file: null,
+          previewUrl: null,
+          inputKey: Date.now()
+        },
         salesMode:'CASH',
         finance: { company:'', financerName:'', loanAmount:'', disbursementAmount:'', downPayment:'', emi:'', tenureMonths:'', agreementNumber:'' },
         registration: { number:'', rcAppliedDate:null, paymentDate:null, hsrpAppliedDate:null, hsrpCourier:'', rcPrintDate:null },
@@ -1110,7 +1289,7 @@ export default {
           downPayment:0, 
           offerName:'' 
         },
-        payments: [ { key: 1, mode: 'CASH', reference: '', amount: 0 } ],
+        payments: [ { key: 'p1', mode: '', reference: '', amount: 0, files: [], previews: [], inputKey: Date.now() } ],
         // due plan
         duePayments: [],
         // bill options (added mode)
@@ -1123,9 +1302,16 @@ export default {
       relations: ['Father','Mother','Husband','Wife','Brother','Sister','Son','Daughter','Other'],
       insuranceTypes: ['THIRD PARTY','ZERO DEP','BASIC'],
       financeCompanies: [
-        'HDFC Bank','ICICI Bank','Axis Bank','State Bank of India',
-        'Bajaj Finance','Tata Capital','Kotak Mahindra','IndusInd Bank',
-        'IDFC First Bank','TVS Credit'
+        'TVS CREDIT SERVICES LIMITED',
+        'HDB FINANCIAL SERVICES LIMITED',
+        'MUTHOOT CAPITAL FINANCE LIMITED',
+        'BAJAJ FINANCE LIMITED',
+        'L&T FINANCE LIMITED',
+        'IDFC FIRST BANK',
+        'HDFC FINNACE LLIMITED',
+        'SHRIRAM FINANCE',
+        'PUNJAB NATIONAL BANK',
+        'UNION BANK OF INDIA'
       ],
       payModes: [
         { text: 'CASH', value: 'CASH' },
@@ -1170,6 +1356,12 @@ export default {
     hasDiscounts () {
       return this.totalDiscount > 0
     },
+    imageItems() {
+      return this.files.filter(f => f.type && f.type.startsWith("image/") && f.previewUrl);
+    },
+    otherItems() {
+      return this.files.filter(f => !f.type || !f.type.startsWith("image/"));
+    },
 
     vehiclePriceLabel () {
       return this.form.billOptions.billPriceMode === 'ON_ROAD'
@@ -1198,14 +1390,14 @@ export default {
       return Number(this.unitVehicleExRtoIns) * Number(this.form.qty || 1)
     },
 
-  discountBreakdown () {
-    return {
-      discount: Number(this.form.priceStructure.discount || 0),
-      offerDiscount: Number(this.form.priceStructure.offerDiscount || 0),
-      seasonalDiscount: Number(this.form.priceStructure.seasonalDiscount || 0),
-      finalSettlement: Number(this.form.priceStructure.finalSettlement || 0)
-    }
-  },
+    discountBreakdown () {
+      return {
+        discount: Number(this.form.priceStructure.discount || 0),
+        offerDiscount: Number(this.form.priceStructure.offerDiscount || 0),
+        seasonalDiscount: Number(this.form.priceStructure.seasonalDiscount || 0),
+        finalSettlement: Number(this.form.priceStructure.finalSettlement || 0)
+      }
+    },
 
 
     // Total RTO and Insurance charges
@@ -1353,8 +1545,168 @@ export default {
       this.form.ids.value = ''
     }
   },
+  beforeDestroy() {
+    for (const f of this.files) {
+      if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
+    }
+    (this.form.payments || []).forEach(this.revokeRowPreviews);
+  },
 
   methods: {
+
+    //nominee
+
+    onNomineeFileChange(fileOrFiles) {
+      // v-file-input passes a single File when multiple is NOT set
+      const f = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
+      if (!f) { this.clearNomineeImage(); return; }
+
+      // type/size checks
+      if (!f.type || !f.type.startsWith('image/')) {
+        this.$nextTick(() => this.clearNomineeImage());
+        this.$toast ? this.$toast.error('Please choose an image file.') : alert('Please choose an image file.');
+        return;
+      }
+      if (f.size > this.nomineeImageMaxBytes) {
+        this.$nextTick(() => this.clearNomineeImage());
+        const max = this.formatSize(this.nomineeImageMaxBytes);
+        this.$toast ? this.$toast.error(`Max size ${max}`) : alert(`Max size ${max}`);
+        return;
+      }
+
+      // cleanup old preview
+      if (this.form.nominee.previewUrl) {
+        URL.revokeObjectURL(this.form.nominee.previewUrl);
+      }
+
+      // set new
+      this.form.nominee.file = f;
+      this.form.nominee.previewUrl = URL.createObjectURL(f);
+
+      // reset v-file-input so same file can be reselected later
+      this.form.nominee.inputKey = Date.now() + Math.random();
+    },
+
+    clearNomineeImage() {
+      if (this.form.nominee.previewUrl) {
+        URL.revokeObjectURL(this.form.nominee.previewUrl);
+      }
+      this.form.nominee.file = null;
+      this.form.nominee.previewUrl = null;
+      this.form.nominee.inputKey = Date.now() + Math.random();
+    },
+
+    formatSize(bytes) {
+      if (!bytes) return '0 B';
+      if (bytes < 1024) return `${bytes} B`;
+      const kb = bytes / 1024;
+      if (kb < 1024) return `${kb.toFixed(1)} KB`;
+      return `${(kb / 1024).toFixed(2)} MB`;
+    },
+
+    // If you submit with FormData:
+    appendNomineeToFormData(fd) {
+      // append other nominee fields as you do already…
+      fd.append('nominee[name]', this.form.nominee.name || '');
+      fd.append('nominee[relation]', this.form.nominee.relation || '');
+      fd.append('nominee[age]', this.form.nominee.age != null ? this.form.nominee.age : '');
+      fd.append('nominee[mobile]', this.form.nominee.mobile || '');
+      // append image if present
+      if (this.form.nominee.file) {
+        fd.append('nomineeImage', this.form.nominee.file, this.form.nominee.file.name);
+      }
+      return fd;
+    },
+
+    onFilesChange(e) {
+      const list = Array.from(e.target.files || []);
+      if (!list.length) return;
+
+      if (this.maxFiles && (this.files.length + list.length) > this.maxFiles) {
+        alert(`You can upload up to ${this.maxFiles} files.`);
+        const allowed = this.maxFiles - this.files.length;
+        list.splice(allowed);
+      }
+
+      const next = [];
+      for (const f of list) {
+        if (this.maxBytes && f.size > this.maxBytes) {
+          alert(`"${f.name}" is too large. Max ${this.formatSize(this.maxBytes)}.`);
+          continue;
+        }
+        const item = {
+          id: uid++,
+          file: f,
+          name: f.name,
+          size: f.size,
+          type: f.type,
+          previewUrl: f.type && f.type.startsWith("image/")
+            ? URL.createObjectURL(f)
+            : null
+        };
+        next.push(item);
+      }
+
+      this.files = this.files.concat(next);
+      this.resetNativeInput();
+    },
+
+    removeFile(id) {
+      const idx = this.files.findIndex(f => f.id === id);
+      if (idx === -1) return;
+      const [removed] = this.files.splice(idx, 1);
+      if (removed && removed.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+      this.resetNativeInput();
+    },
+
+    clearAll() {
+      for (const f of this.files) {
+        if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
+      }
+      this.files = [];
+      this.progress = 0;
+      this.uploading = false;
+      this.resetNativeInput();
+    },
+
+    resetNativeInput() {
+      const el = this.$refs.fileInput;
+      if (el) el.value = "";
+    },
+
+    async uploadAll() {
+      if (!this.files.length) return;
+
+      const form = new FormData();
+      for (const f of this.files) form.append(this.fieldName, f.file, f.name);
+
+      this.uploading = true;
+      this.progress = 0;
+
+      try {
+        const res = await axios.post(this.uploadEndpoint, form, {
+          onUploadProgress: e => {
+            if (e.total) this.progress = Math.round((e.loaded / e.total) * 100);
+          }
+        });
+        alert("Upload successful!");
+        console.log("Response:", res.data);
+      } catch (err) {
+        console.error(err);
+        alert("Upload failed.");
+      } finally {
+        this.uploading = false;
+      }
+    },
+
+    formatSize(bytes) {
+      if (bytes < 1024) return `${bytes} B`;
+      const kb = bytes / 1024;
+      if (kb < 1024) return `${kb.toFixed(1)} KB`;
+      const mb = kb / 1024;
+      return `${mb.toFixed(2)} MB`;
+    },
+
     convertRelation(relation, personGender = null) {
     /**
      * Convert relationship to abbreviated format (S/O, D/O, W/O, etc.)
@@ -1471,8 +1823,162 @@ export default {
     addIdKV () { this.form.ids.custom.push({ key: Date.now(), k:'', v:'' }) },
     removeIdKV (i) { this.form.ids.custom.splice(i,1) },
     // payments
-    addPaymentRow () { this.form.payments.push({ key: Date.now(), mode:'CASH', reference:'', amount: 0 }) },
-    removePaymentRow (idx) { if (this.form.payments.length>1) this.form.payments.splice(idx,1) },
+    // addPaymentRow () { this.form.payments.push({ key: Date.now(), mode:'CASH', reference:'', amount: 0 }) },
+    // removePaymentRow (idx) { if (this.form.payments.length>1) this.form.payments.splice(idx,1) },
+    // onPaymentFilesChange(idx, files) {
+    //   const row = this.form.payments[idx];
+    //   if (!row) return;
+
+    //   const list = Array.from(files || []);
+    //   // append to existing (allows selecting again to add more)
+    //   for (const f of list) {
+    //     // only images
+    //     if (!f.type || !f.type.startsWith('image/')) continue;
+
+    //     // keep original File
+    //     row.files.push(f);
+
+    //     // create preview URL
+    //     const url = URL.createObjectURL(f);
+    //     row.previews.push({
+    //       id: `img_${_imgUid++}`,
+    //       url,
+    //       name: f.name,
+    //       size: f.size,
+    //       type: f.type
+    //     });
+    //   }
+
+    //   // reset native input by flipping a key (so same file can be reselected)
+    //   row.inputKey = Date.now() + Math.random();
+    // },
+    onPaymentFilesChange(idx, payload) {
+  const row = this.form.payments[idx];
+  if (!row) return;
+
+  // Normalize to an array of File
+  let files = [];
+  if (payload instanceof File) {
+    files = [payload];
+  } else if (Array.isArray(payload)) {
+    files = payload;
+  } else if (payload && payload.target && payload.target.files) {
+    files = Array.from(payload.target.files);
+  } else if (payload && payload.length !== undefined) {
+    // some Vuetify builds pass a FileList-like object
+    files = Array.from(payload);
+  } else {
+    files = [];
+  }
+
+  // Helper: image check (handles empty type)
+  const isImage = (f) => {
+    if (f.type && f.type.startsWith('image/')) return true;
+    const name = (f.name || '').toLowerCase();
+    return /\.(png|jpe?g|gif|webp|bmp|heic|heif|tiff?)$/.test(name);
+  };
+
+  for (const f of files) {
+    if (!(f instanceof File)) continue;
+    if (!isImage(f)) continue;
+
+    row.files.push(f);
+
+    const url = URL.createObjectURL(f);
+    row.previews.push({
+      id: `img_${_imgUid++}`,
+      url,
+      name: f.name,
+      size: f.size,
+      type: f.type || 'image/*'
+    });
+  }
+
+  // reset input so same file can be picked again
+  row.inputKey = Date.now() + Math.random();
+},
+
+    // removePaymentImage(idx, imgId) {
+    //   const row = this.form.payments[idx];
+    //   if (!row) return;
+
+    //   const pvIdx = row.previews.findIndex(p => p.id === imgId);
+    //   if (pvIdx !== -1) {
+    //     const [pv] = row.previews.splice(pvIdx, 1);
+    //     if (pv && pv.url) URL.revokeObjectURL(pv.url);
+    //   }
+
+    //   // also remove the corresponding File (match by name+size to keep it simple)
+    //   const fIdx = row.files.findIndex(f => f.name === (pv?.name) && f.size === (pv?.size));
+    //   if (fIdx !== -1) row.files.splice(fIdx, 1);
+    // },
+
+removePaymentImage(idx, imgId) {
+  const row = this.form.payments[idx];
+  if (!row) return;
+
+  const pvIdx = row.previews.findIndex(p => p.id === imgId);
+  if (pvIdx === -1) return;
+
+  const [pv] = row.previews.splice(pvIdx, 1);
+  if (pv && pv.url) URL.revokeObjectURL(pv.url);
+
+  // remove matching File (by name+size) if present
+  const fIdx = row.files.findIndex(f => f && f.name === pv.name && f.size === pv.size);
+  if (fIdx !== -1) row.files.splice(fIdx, 1);
+
+  // reset the per-row file input so the same file can be picked again
+  row.inputKey = Date.now() + Math.random();
+},
+
+
+    revokeRowPreviews(row) {
+      if (!row?.previews) return;
+      for (const p of row.previews) {
+        if (p.url) URL.revokeObjectURL(p.url);
+      }
+      row.previews = [];
+    },
+
+    // --- YOUR EXISTING ROW ADD/REMOVE, extended to initialize/cleanup images ---
+    addPaymentRow() {
+      const n = this.form.payments.length + 1;
+      this.form.payments.push({
+        key: `p${Date.now()}_${n}`,
+        mode: '',
+        reference: '',
+        amount: 0,
+        files: [],
+        previews: [],
+        inputKey: Date.now() + Math.random()
+      });
+    },
+
+    removePaymentRow(idx) {
+      if (this.form.payments.length === 1) return;
+      const row = this.form.payments[idx];
+      this.revokeRowPreviews(row);
+      this.form.payments.splice(idx, 1);
+    },
+
+    async buildPaymentsFormData(fd) {
+      // call this when constructing your payload
+      // append basic fields
+      fd.append('payments', JSON.stringify(
+        this.form.payments.map(({ files, previews, inputKey, ...rest }) => rest)
+      ));
+
+      // append images per row with a conventional naming
+      this.form.payments.forEach((row, i) => {
+        row.files.forEach((f, j) => {
+          fd.append(`paymentImages[${i}][]`, f, f.name);
+          // or fd.append(`payments[${i}][images][${j}]`, f, f.name)
+        });
+      });
+
+      return fd;
+    },
+
     // due plan
     addDueRow () { this.form.duePayments.push({ key: Date.now(), date:null, amount:0, note:'', menu:false }) },
     removeDueRow (i) { this.form.duePayments.splice(i,1) },
@@ -1903,6 +2409,129 @@ export default {
 </script>
 
 <style scoped>
+/* nominee*/
+.nominee-thumb {
+  position: relative;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.nominee-thumb img {
+  width: 120px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.nominee-thumb .thumb-meta .name {
+  font-size: 12px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nominee-thumb .thumb-meta .size { font-size: 11px; color: #666; margin-top: 2px; }
+.nominee-thumb .remove {
+  position: absolute; top: 6px; right: 6px;
+  background: #ff4d4f; color: #fff; border-radius: 14px;
+}
+
+/* ************************/
+.uploader {
+  border: 1px dashed #d6d6d6;
+  padding: 12px;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+/* File choose button */
+.choose-file {
+  display: inline-block;
+  position: relative;
+}
+.choose-file input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.btn {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #0d6efd;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+}
+.btn:hover { filter: brightness(0.95); }
+.btn.ghost {
+  background: transparent;
+  color: #333;
+  border: 1px solid #d0d0d0;
+}
+.btn.primary { background: #0d6efd; color: #fff; }
+.btn.small { padding: 6px 10px; font-weight: 500; }
+
+/* Files area */
+.files-wrap { margin-top: 12px; }
+.list-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.actions .btn + .btn { margin-left: 8px; }
+
+/* Thumbnails grid */
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.thumb {
+  position: relative;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.thumb img {
+  width: 100%; height: 100px; object-fit: cover; display: block;
+}
+.thumb-meta { padding: 8px; }
+.thumb-meta .name {
+  font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.thumb-meta .size { font-size: 11px; color: #666; margin-top: 2px; }
+.thumb .remove {
+  position: absolute; top: 6px; right: 6px;
+  background: #ff4d4f; color: #fff; border: none; border-radius: 14px;
+  width: 22px; height: 22px; line-height: 20px; cursor: pointer;
+}
+.thumb .remove:hover { filter: brightness(0.95); }
+
+/* Non-image list */
+.list .row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff; border: 1px solid #eee; border-radius: 8px;
+  padding: 8px 10px; margin-bottom: 8px;
+}
+.list .row .name { font-weight: 600; }
+.list .row .muted { font-size: 12px; color: #666; margin-top: 2px; }
+.grow { flex: 1; }
+
+/* Progress */
+.progress {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #333;
+}
 .elevated-panels .v-expansion-panel { border:1px solid #e5e7eb; border-radius:10px; margin-bottom:12px; overflow:hidden; }
 .panel-title { font-weight:700; color:#0b5aa2; background:#eef6ff; }
 .section-wrap { border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:12px; background:#fff; }

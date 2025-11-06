@@ -25,7 +25,7 @@
     </template>
 
     <template v-slot:item.invoiceDate="{ item }">
-      <span>{{ item.invoiceDate || '-' }}</span>
+       <span>{{ formatDate(item.invoiceDate) }}</span>
     </template>
 
     <template v-slot:item.actions="{ item }">
@@ -77,7 +77,19 @@ export default {
       if (ipp <= 0) return 0; // "All" case
       return (this.page - 1) * ipp;
     }
+  },
+  methods: {
+    formatDate(dateStr) {
+      if (!dateStr) return "-";
+      const date = new Date(dateStr);
+      if (isNaN(date)) return "-";
+      const dd = String(date.getDate()).padStart(2, "0");
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const yyyy = date.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
   }
+
 };
 </script>
 

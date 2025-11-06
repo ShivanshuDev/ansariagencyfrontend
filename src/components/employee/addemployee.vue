@@ -597,11 +597,11 @@ select:focus {
   background: #e6e9ee;
 }
 .create-btn {
-  background: linear-gradient(90deg,#7c3aed,#5b21b6);
+  background: #283593;
   color: #fff;
   border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
+  padding: 7px 16px;
+  border-radius: 4px;
   cursor: pointer;
   font-weight: 700;
   box-shadow: 0 6px 18px rgba(91,33,182,0.12);
