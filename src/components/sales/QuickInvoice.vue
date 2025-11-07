@@ -761,12 +761,6 @@
               <v-btn small outlined @click="addPaymentRow"><v-icon left small>mdi-plus</v-icon>Add Row</v-btn>
             </div>
             <v-divider class="mb-2"/>
-            <!-- <v-row v-for="(p, idx) in form.payments" :key="p.key" dense>
-              <v-col cols="12" sm="3"><v-select v-model="p.mode" :items="payModes" item-text="text" item-value="value" :rules="[rReq]" label="Mode" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="5"><v-text-field v-model="p.reference" label="Reference (UPI/Bank/Cheque)" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="3"><v-text-field v-model.number="p.amount" :rules="[rNumNonNeg]" type="number" prefix="₹" label="Amount" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="1" class="d-flex align-center"><v-btn icon :disabled="form.payments.length===1" @click="removePaymentRow(idx)"><v-icon color="red">mdi-delete</v-icon></v-btn></v-col>
-            </v-row> -->
             <v-row v-for="(p, idx) in form.payments" :key="p.key" dense>
               <v-col cols="12" sm="2">
                 <v-select
@@ -955,6 +949,9 @@
       <v-card style="width:900px; max-width:100%;">
         <v-toolbar flat dense>
           <v-spacer/>
+          <v-btn small outlined class="mr-2" :disabled="!canPreview" @click="$refs.gatePass.show(form, selectedChassisInfo, billGrandTotal)">
+            <v-icon left small>mdi-file-eye</v-icon> Gate Pass
+          </v-btn>
           <v-btn small outlined class="mr-2" @click="downloadPdf"><v-icon left small>mdi-file-pdf-box</v-icon>Download</v-btn>
           <v-btn icon @click="invoiceDialog=false"><v-icon>mdi-close</v-icon></v-btn>
         </v-toolbar>
@@ -1192,12 +1189,14 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+    <GatePass ref="gatePass" />
   </v-card>
 </template>
 
 <script>
 import html2pdf from 'html2pdf.js'
 import jsPDF from 'jspdf';
+import GatePass from './GatePass.vue'
 let uid = 1;
 let _imgUid = 1;  
 
@@ -1351,7 +1350,7 @@ export default {
         val => (!val && !other) || (val && String(val).trim().length>0) || 'Required when other filled',
     }
   },
-
+  components:{GatePass},
   computed: {
     hasDiscounts () {
       return this.totalDiscount > 0
@@ -1822,114 +1821,69 @@ export default {
     // ID custom KV
     addIdKV () { this.form.ids.custom.push({ key: Date.now(), k:'', v:'' }) },
     removeIdKV (i) { this.form.ids.custom.splice(i,1) },
-    // payments
-    // addPaymentRow () { this.form.payments.push({ key: Date.now(), mode:'CASH', reference:'', amount: 0 }) },
-    // removePaymentRow (idx) { if (this.form.payments.length>1) this.form.payments.splice(idx,1) },
-    // onPaymentFilesChange(idx, files) {
-    //   const row = this.form.payments[idx];
-    //   if (!row) return;
-
-    //   const list = Array.from(files || []);
-    //   // append to existing (allows selecting again to add more)
-    //   for (const f of list) {
-    //     // only images
-    //     if (!f.type || !f.type.startsWith('image/')) continue;
-
-    //     // keep original File
-    //     row.files.push(f);
-
-    //     // create preview URL
-    //     const url = URL.createObjectURL(f);
-    //     row.previews.push({
-    //       id: `img_${_imgUid++}`,
-    //       url,
-    //       name: f.name,
-    //       size: f.size,
-    //       type: f.type
-    //     });
-    //   }
-
-    //   // reset native input by flipping a key (so same file can be reselected)
-    //   row.inputKey = Date.now() + Math.random();
-    // },
     onPaymentFilesChange(idx, payload) {
-  const row = this.form.payments[idx];
-  if (!row) return;
+      const row = this.form.payments[idx];
+      if (!row) return;
 
-  // Normalize to an array of File
-  let files = [];
-  if (payload instanceof File) {
-    files = [payload];
-  } else if (Array.isArray(payload)) {
-    files = payload;
-  } else if (payload && payload.target && payload.target.files) {
-    files = Array.from(payload.target.files);
-  } else if (payload && payload.length !== undefined) {
-    // some Vuetify builds pass a FileList-like object
-    files = Array.from(payload);
-  } else {
-    files = [];
-  }
+      // Normalize to an array of File
+      let files = [];
+      if (payload instanceof File) {
+        files = [payload];
+      } else if (Array.isArray(payload)) {
+        files = payload;
+      } else if (payload && payload.target && payload.target.files) {
+        files = Array.from(payload.target.files);
+      } else if (payload && payload.length !== undefined) {
+        // some Vuetify builds pass a FileList-like object
+        files = Array.from(payload);
+      } else {
+        files = [];
+      }
 
-  // Helper: image check (handles empty type)
-  const isImage = (f) => {
-    if (f.type && f.type.startsWith('image/')) return true;
-    const name = (f.name || '').toLowerCase();
-    return /\.(png|jpe?g|gif|webp|bmp|heic|heif|tiff?)$/.test(name);
-  };
+      // Helper: image check (handles empty type)
+      const isImage = (f) => {
+        if (f.type && f.type.startsWith('image/')) return true;
+        const name = (f.name || '').toLowerCase();
+        return /\.(png|jpe?g|gif|webp|bmp|heic|heif|tiff?)$/.test(name);
+      };
 
-  for (const f of files) {
-    if (!(f instanceof File)) continue;
-    if (!isImage(f)) continue;
+      for (const f of files) {
+        if (!(f instanceof File)) continue;
+        if (!isImage(f)) continue;
 
-    row.files.push(f);
+        row.files.push(f);
 
-    const url = URL.createObjectURL(f);
-    row.previews.push({
-      id: `img_${_imgUid++}`,
-      url,
-      name: f.name,
-      size: f.size,
-      type: f.type || 'image/*'
-    });
-  }
+        const url = URL.createObjectURL(f);
+        row.previews.push({
+          id: `img_${_imgUid++}`,
+          url,
+          name: f.name,
+          size: f.size,
+          type: f.type || 'image/*'
+        });
+      }
 
-  // reset input so same file can be picked again
-  row.inputKey = Date.now() + Math.random();
-},
+      // reset input so same file can be picked again
+      row.inputKey = Date.now() + Math.random();
+    },
 
-    // removePaymentImage(idx, imgId) {
-    //   const row = this.form.payments[idx];
-    //   if (!row) return;
+    removePaymentImage(idx, imgId) {
+      const row = this.form.payments[idx];
+      if (!row) return;
 
-    //   const pvIdx = row.previews.findIndex(p => p.id === imgId);
-    //   if (pvIdx !== -1) {
-    //     const [pv] = row.previews.splice(pvIdx, 1);
-    //     if (pv && pv.url) URL.revokeObjectURL(pv.url);
-    //   }
+      const pvIdx = row.previews.findIndex(p => p.id === imgId);
+      if (pvIdx === -1) return;
 
-    //   // also remove the corresponding File (match by name+size to keep it simple)
-    //   const fIdx = row.files.findIndex(f => f.name === (pv?.name) && f.size === (pv?.size));
-    //   if (fIdx !== -1) row.files.splice(fIdx, 1);
-    // },
+      const [pv] = row.previews.splice(pvIdx, 1);
+      if (pv && pv.url) URL.revokeObjectURL(pv.url);
 
-removePaymentImage(idx, imgId) {
-  const row = this.form.payments[idx];
-  if (!row) return;
+      // remove matching File (by name+size) if present
+      const fIdx = row.files.findIndex(f => f && f.name === pv.name && f.size === pv.size);
+      if (fIdx !== -1) row.files.splice(fIdx, 1);
 
-  const pvIdx = row.previews.findIndex(p => p.id === imgId);
-  if (pvIdx === -1) return;
-
-  const [pv] = row.previews.splice(pvIdx, 1);
-  if (pv && pv.url) URL.revokeObjectURL(pv.url);
-
-  // remove matching File (by name+size) if present
-  const fIdx = row.files.findIndex(f => f && f.name === pv.name && f.size === pv.size);
-  if (fIdx !== -1) row.files.splice(fIdx, 1);
-
-  // reset the per-row file input so the same file can be picked again
-  row.inputKey = Date.now() + Math.random();
-},
+      // reset the per-row file input so the same file can be picked again
+      row.inputKey = Date.now() + Math.random();
+    },
 
 
     revokeRowPreviews(row) {
@@ -2556,7 +2510,7 @@ removePaymentImage(idx, imgId) {
 .bill-a4-landscape{ width: 1122px; max-width: 100%; margin: 0 auto; background:#fff; color:#000; padding:12px 18px; font-family: "Inter", Arial, Helvetica, sans-serif; font-size:12px; box-sizing:border-box; }
 .muted{ color:#666; font-size:11px; }
 .meta-row{ display:flex; justify-content:space-between; margin:6px 0 12px; }
-.addr-wrap-landscape{ display:flex; gap:12px; margin-bottom:12px; }
+/* .addr-wrap-landscape{ display:flex; gap:12px; margin-bottom:12px; } */
 .addr-land{ flex:1; border:1px solid #000; padding:8px; min-height:86px; box-sizing:border-box; }
 .grid-land{ width:100%; border-collapse:collapse; margin-top:6px; }
 .grid-land th, .grid-land td{ border:1px solid #000; padding:8px; font-size:12px; }
@@ -2631,7 +2585,7 @@ removePaymentImage(idx, imgId) {
 .meta-row{ display:flex; justify-content:space-between; margin:8px 0 10px; }
 
 /* Bill to block */
-.addr-wrap{ display:flex; gap:10px; margin-bottom:8px; }
+.addr-wrap{ display:flex; margin:0px; }
 .addr{ flex:1; border:1px solid #000; padding:8px; min-height:86px; }
 .b{ font-weight:700; }
 .c{ text-align:center; }

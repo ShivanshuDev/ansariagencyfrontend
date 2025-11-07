@@ -78,25 +78,15 @@
           </v-card-title>
 
           <v-data-table
+            class="elevation-1 fixed-rows"
             :headers="headers"
             :items="filteredModels"
-            :items-per-page="17"
+            :items-per-page="10"
             dense
-            class="elevation-1"
             item-key="modelName"
+            :item-class="rowClass"
             @click:row="selectModel"
           >
-            <!-- <template v-slot:item.modelName="{ item }">
-              <div class="d-flex align-center justify-space-between">
-                <div>
-                  <div class="font-weight-medium">{{ item.modelName }}</div>
-                  <div class="caption text--secondary">{{ item.category }}</div>
-                </div>
-                <div class="text-right">
-                  <v-chip small v-if="item.colors && item.colors.length">{{ item.colors.length }} colors</v-chip>
-                </div>
-              </div>
-            </template> -->
             <template v-slot:item.modelName="{ item }">
               <div class="d-flex align-center justify-space-between">
                 <div style="max-width: 380px; overflow: hidden;">
@@ -147,13 +137,7 @@
               </div>
             </template>
 
-
-            <!-- <template v-slot:item.color="{ item }">
-              <div>
-                <span v-for="(c,i) in (item.colors||[]).slice(0,3)" :key="`c-${item.modelName}-${i}`">{{ c }}<span v-if="i < Math.min((item.colors||[]).length,3)-1">, </span></span>
-                <span v-if="item.colors && item.colors.length > 3">…</span>
-              </div>
-            </template> -->
+            <!-- HSN appears automatically via headers/value=hsn -->
 
             <!-- COLORS (chips, truncated text, tooltip, +N more) -->
             <template v-slot:item.color="{ item }">
@@ -189,9 +173,7 @@
               </div>
             </template>
 
-
             <template v-slot:item.actions="{ item }">
-              <!-- NEW: details icon -->
               <v-btn icon small @click.stop="openDetails(item)">
                 <v-icon>mdi-eye</v-icon>
               </v-btn>
@@ -237,7 +219,7 @@
 
         <v-card-text>
           <v-form ref="modelDialogForm" v-model="modelDialog.valid" lazy-validation>
-             <v-select
+            <v-select
               v-model="form.category"
               :items="categoriesData.map(c => c.category || c.name)"
               label="Category"
@@ -258,6 +240,19 @@
               dense
             />
 
+            <!-- HSN (required) -->
+            <v-text-field
+              v-model.trim="form.hsn"
+              :rules="[rules.required, rules.hsnDigits]"
+              label="HSN (4–8 digits)"
+              outlined
+              dense
+              name="hsn"
+              hide-details="auto"
+              maxlength="8"
+              @input="form.hsn = (form.hsn || '').replace(/[^0-9]/g,'')"
+            />
+
             <div class="mt-3">
               <div class="d-flex align-center justify-space-between mb-2">
                 <div class="subtitle-1">Colors</div>
@@ -269,7 +264,7 @@
               <div v-if="form.colorInputs.length === 0" class="text--secondary mb-2">No color fields — click "Add color field".</div>
 
               <div style="max-height:220px; overflow:auto;">
-                  <br />
+                <br />
                 <v-row v-for="(c, idx) in form.colorInputs" :key="`fci-${idx}`" class="mb-2" align="center">
                   <v-col cols="10">
                     <v-text-field
@@ -396,6 +391,15 @@
                 <div class="value">{{ modelDetailsDialog.data?.category || '—' }}</div>
               </v-col>
 
+              <!-- HSN -->
+              <v-col cols="12" md="6" class="mb-3">
+                <div class="label">HSN</div>
+                <div class="value">
+                  {{ modelDetailsDialog.data?.hsn || '—' }}
+                  <v-btn text x-small class="ml-1" @click="copyText(modelDetailsDialog.data?.hsn)">Copy</v-btn>
+                </div>
+              </v-col>
+
               <v-col cols="12" md="6" class="mb-3">
                 <div class="label">Status</div>
                 <div class="value d-flex align-center">
@@ -465,10 +469,10 @@ export default {
   name: "AddModelManager",
   data() {
     return {
-    modelDetailsDialog: {
-      visible: false,
-      data: null,     // { modelName, category, colors, active, ... }
-    },
+      modelDetailsDialog: {
+        visible: false,
+        data: null,     // { modelName, category, hsn, colors, active, ... }
+      },
 
       loading: false,
       valid: false,
@@ -480,6 +484,7 @@ export default {
       // form
       form: {
         modelName: "",
+        hsn: "",                 // ⬅️ HSN at model level
         colorInputs: [],
         active: true,
         category: null,
@@ -496,13 +501,15 @@ export default {
       headers: [
         { text: "Category", value: "category", sortable: true },
         { text: "Model Name", value: "modelName", sortable: true },
+        { text: "HSN", value: "hsn", sortable: true },        // ⬅️ HSN column
         { text: "Color", value: "color", sortable: false },
         { text: "Actions", value: "actions", sortable: false, align: "end" }
       ],
 
       rules: {
         required: v => !!v || "This field is required",
-        min3: v => (v && v.length >= 3) || "Minimum 3 characters"
+        min3: v => (v && v.length >= 3) || "Minimum 3 characters",
+        hsnDigits: v => /^\d{4,8}$/.test(String(v || '')) || "Enter 4–8 digits", // ⬅️ HSN rule
       },
 
       endpoints: {
@@ -530,14 +537,24 @@ export default {
   },
 
   computed: {
+    tableItems() {
+      const size = 10;
+      const arr = [...this.filteredModels];
+      const need = Math.max(0, size - arr.length);
+      for (let i = 0; i < need; i++) {
+        arr.push({ _placeholder: true, modelName: '', category: '', hsn: '', colors: [] });
+      }
+      return arr;
+    },
     displayModels() {
       return (this.models || []).map(m => {
-        if (!m) return { modelName: "", colors: [], active: true, category: null, __raw: m };
+        if (!m) return { modelName: "", colors: [], active: true, category: null, hsn: null, __raw: m };
         const modelName = typeof m === "string" ? m : (m.modelName ?? m.name ?? m.label ?? m.model ?? "");
         const colors = Array.isArray(m.colors) ? m.colors : (Array.isArray(m.color) ? m.color : (m.colors ? [m.colors] : []));
         const active = typeof m.active !== "undefined" ? !!m.active : true;
         const category = m.category ?? m.cat ?? m.categoryName ?? null;
-        return { modelName, colors, active, category, __raw: m };
+        const hsn = m.hsn ?? m.HSN ?? null;              // ⬅️ capture HSN from API item
+        return { modelName, colors, active, category, hsn, __raw: m };
       });
     },
 
@@ -547,7 +564,8 @@ export default {
       return this.displayModels.filter(m =>
         (m.modelName && m.modelName.toLowerCase().includes(q)) ||
         (m.category && m.category.toString().toLowerCase().includes(q)) ||
-        (m.colors && m.colors.join(", ").toLowerCase().includes(q))
+        (m.colors && m.colors.join(", ").toLowerCase().includes(q)) ||
+        (m.hsn && String(m.hsn).toLowerCase().includes(q))       // ⬅️ include HSN in search
       );
     },
 
@@ -569,6 +587,9 @@ export default {
   },
 
   methods: {
+    rowClass(item) {
+      return item?._placeholder ? 'placeholder-row' : '';
+    },
     copyText(text) {
       if (!text) return;
       try {
@@ -610,10 +631,11 @@ export default {
     },
 
     openDetails(item) {
-  // Normalize the row payload (same way you normalize elsewhere)
+      // Normalize the row payload
       const normalized = {
         modelName: item?.modelName ?? '',
         category: item?.category ?? null,
+        hsn: item?.hsn ?? null,            // ⬅️ include HSN in details
         colors: Array.isArray(item?.colors) ? [...item.colors] : [],
         active: !!item?.active,
         __raw: item,
@@ -631,10 +653,11 @@ export default {
       const item = this.modelDetailsDialog.data;
       this.modelDetailsDialog.visible = false;
       if (!item) return;
-      // Reuse your existing edit flow with pre-filled data
+      // Reuse existing edit flow with pre-filled data
       this.openModelDialog({
         modelName: item.modelName,
         category: item.category,
+        hsn: item.hsn || "",               // ⬅️ pass HSN into edit
         colors: item.colors,
         active: item.active,
       });
@@ -672,7 +695,6 @@ export default {
       return t.length > maxLength ? t.slice(0, maxLength) + '…' : t;
     },
 
-
     openCategoryDialog(mode = "add", item = null) {
       this.categoryDialog.mode = mode;
       this.categoryDialog.editingItem = item;
@@ -688,6 +710,7 @@ export default {
       this.editing = false;
       this.originalModelName = "";
       this.form.modelName = "";
+      this.form.hsn = "";                 // ⬅️ reset HSN
       this.form.colorInputs = [];
       this.form.active = true;
       this.form.category = name;   // preselect category
@@ -802,25 +825,23 @@ export default {
       return res.data;
     },
 
-    // UPDATED: send pk/sk in payload (no oldName/newName)
+    // UPDATED: include HSN in payload
     async updateModel(oldName, payload) {
-      // build pk/sk from payload.modelName (v-model bound)
       const model = (payload.modelName || "").toString().trim();
       if (!model) throw new Error("modelName missing in payload");
       const pk = `MODEL#${model}`;
       const sk = 'MODEL#INFO';
 
-      // ensure payload contains pk/sk and only allowed fields
       const body = {
         pk,
         sk,
         modelName: model,
         category: payload.category ?? null,
+        hsn: payload.hsn ?? null,                                                // ⬅️ include HSN
         colors: Array.isArray(payload.colors) ? payload.colors : (payload.colors ? [payload.colors] : []),
         active: typeof payload.active === 'boolean' ? payload.active : undefined
       };
 
-      // remove undefined entries
       Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
 
       const url = `${this.endpoints.updateModelBase}`;
@@ -839,6 +860,7 @@ export default {
         this.editing = true;
         this.originalModelName = item.modelName;
         this.form.modelName = item.modelName;
+        this.form.hsn = item.hsn || "";                    // ⬅️ prefill HSN
         this.form.colorInputs = Array.isArray(item.colors) ? [...item.colors] : [];
         this.form.active = !!item.active;
         this.form.category = item.category || null;
@@ -848,6 +870,7 @@ export default {
         this.editing = false;
         this.originalModelName = "";
         this.form.modelName = "";
+        this.form.hsn = "";                                 // ⬅️ reset HSN
         this.form.colorInputs = [];
         this.form.active = true;
         this.form.category = null;
@@ -910,6 +933,7 @@ export default {
 
     resetForm(keepActive = false) {
       this.form.modelName = "";
+      this.form.hsn = "";                                  // ⬅️ clear HSN
       this.form.colorInputs = [];
       this.form.active = keepActive ? true : false;
       this.form.category = null;
@@ -934,12 +958,14 @@ export default {
       const modelName = (this.form.modelName || "").toString().trim();
       if (!modelName) { this.showSnackbar("Model name is required"); return; }
       if (!this.form.category) { this.showSnackbar("Category is required"); return; }
+      if (!/^\d{4,8}$/.test(String(this.form.hsn || ''))) { this.showSnackbar("Enter valid HSN (4–8 digits)"); return; }
 
       const colors = (this.form.colorInputs || []).map(c => (c || "").toString().trim()).filter(Boolean);
       const uniqueColors = Array.from(new Set(colors));
 
       const payload = {
         modelName,
+        hsn: this.form.hsn,                  // ⬅️ include HSN
         colors: uniqueColors,
         active: !!this.form.active,
         category: this.form.category || null,
@@ -950,7 +976,6 @@ export default {
         const loadingKey = this.getKey(oldName);
         this.$set(this.itemLoading, loadingKey, true);
         try {
-          // updateModel now expects payload with pk/sk built inside it
           await this.updateModel(null, payload);
           this.showSnackbar("Model updated");
 
@@ -961,13 +986,20 @@ export default {
           });
 
           if (idx !== -1) {
-            this.$set(this.models, idx, { modelName: payload.modelName, colors: payload.colors, active: payload.active, category: payload.category });
+            this.$set(this.models, idx, {
+              modelName: payload.modelName,
+              hsn: payload.hsn,                  // keep HSN
+              colors: payload.colors,
+              active: payload.active,
+              category: payload.category
+            });
           } else {
             await this.fetchModels();
           }
 
           if (this.selectedModel && this.selectedModel.modelName === oldName) {
             this.selectedModel.modelName = payload.modelName;
+            this.selectedModel.hsn = payload.hsn;
             this.selectedModel.colors = Array.from(payload.colors);
             this.selectedModel.category = payload.category;
             this.selectedModel.active = payload.active;
@@ -986,7 +1018,13 @@ export default {
           this.loading = true;
           await this.addModel(payload);
           this.showSnackbar("Model added");
-          this.models.unshift({ modelName: payload.modelName, colors: payload.colors, active: payload.active, category: payload.category });
+          this.models.unshift({
+            modelName: payload.modelName,
+            hsn: payload.hsn,                    // include HSN
+            colors: payload.colors,
+            active: payload.active,
+            category: payload.category
+          });
           await this.fetchCategories();
           this.resetForm(true);
         } catch (err) {
@@ -1034,7 +1072,13 @@ export default {
     },
 
     selectModel(item) {
-      this.selectedModel = { modelName: item.modelName, colors: Array.isArray(item.colors) ? [...item.colors] : [], active: !!item.active, category: item.category || null};
+      this.selectedModel = {
+        modelName: item.modelName,
+        hsn: item.hsn || null,                     // ⬅️ track HSN in selection
+        colors: Array.isArray(item.colors) ? [...item.colors] : [],
+        active: !!item.active,
+        category: item.category || null
+      };
     },
 
     clearSelection() {
@@ -1088,6 +1132,7 @@ export default {
       try {
         const payload = {
           modelName: this.selectedModel.modelName,
+          hsn: this.selectedModel.hsn || null,                 // ⬅️ keep HSN when saving from panel
           colors: Array.isArray(this.selectedModel.colors) ? this.selectedModel.colors : [],
           active: !!this.selectedModel.active,
           category: this.selectedModel.category || null,
@@ -1102,7 +1147,13 @@ export default {
           return name === this.selectedModel.modelName;
         });
         if (idx !== -1) {
-          this.$set(this.models, idx, { modelName: payload.modelName, colors: payload.colors, active: payload.active, category: payload.category });
+          this.$set(this.models, idx, {
+            modelName: payload.modelName,
+            hsn: payload.hsn,                   // keep HSN
+            colors: payload.colors,
+            active: payload.active,
+            category: payload.category
+          });
         } else {
           await this.fetchModels();
         }
@@ -1172,6 +1223,38 @@ export default {
 }
 .color-chip {
   max-width: 160px; /* keeps chips tidy in table cells */
+}
+
+/* same height rows for Vuetify 2 */
+.fixed-rows .v-data-table__wrapper table tbody tr {
+  height: 48px;              /* tweak to 44/52 as you like */
+}
+.fixed-rows .v-data-table__wrapper td,
+.fixed-rows .v-data-table__wrapper th {
+  padding: 8px 12px;
+  vertical-align: middle;
+}
+
+/* force single-line with ellipsis inside cells */
+.fixed-rows .v-data-table__wrapper td > *,
+.fixed-rows .v-data-table__wrapper td div,
+.fixed-rows .v-data-table__wrapper td span {
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* no chip wrapping; keep them compact */
+.fixed-rows .v-chip {
+  max-width: 160px;
+  white-space: nowrap;
+}
+
+/* make placeholder rows invisible but keep height for consistent table height */
+.fixed-rows .placeholder-row td {
+  color: transparent !important;
+  border-color: transparent !important;
+  pointer-events: none;
 }
 
 

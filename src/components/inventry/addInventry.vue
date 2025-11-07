@@ -35,6 +35,15 @@
       </div>
 
       <div class="actions" style="align-items:flex-end;">
+         <div style="flex:1; display:flex; align-items:flex-end; justify-content:flex-end; padding-top:9px;">
+            <button
+              class="create-btn"
+              @click="saveBikeToTable"
+              :disabled="isSavingBike || chassisCheck.loading || chassisCheck.available === false"
+            >
+              {{ isSavingBike ? 'Saving...' : 'Add More' }}
+            </button>
+          </div>
         <button type="button" class="add-btn" @click="onReset">Reset Form</button>
       </div>
     </div>
@@ -69,6 +78,12 @@
               hide-details
             />
             <div v-if="singleBikeErrors.modelName" class="error-msg">{{ singleBikeErrors.modelName }}</div>
+          </div>
+
+          <!-- ✨ Read-only HSN (auto from selected model) -->
+          <div style="width:50px;" class="field-detail">
+            <label>HSN (Auto)</label>
+            <input type="text" v-model="bikeForm.hsn" placeholder="HSN" readonly />
           </div>
 
           <div class="field-detail" :class="{'field-error': singleBikeErrors.color}">
@@ -119,16 +134,6 @@
             <input type="text" v-model="bikeForm.source" placeholder="Source *" />
             <div v-if="singleBikeErrors.source" class="error-msg">{{ singleBikeErrors.source }}</div>
           </div>
-
-          <div style="flex:1; display:flex; align-items:flex-end; justify-content:flex-end; padding-top:9px;">
-            <button
-              class="create-btn"
-              @click="saveBikeToTable"
-              :disabled="isSavingBike || chassisCheck.loading || chassisCheck.available === false"
-            >
-              {{ isSavingBike ? 'Saving...' : 'Add More' }}
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -151,6 +156,7 @@
               <th>Invoice Date</th>
               <th>Category</th>
               <th>Model</th>
+              <th>HSN</th> <!-- ✨ optional display -->
               <th>Color</th>
               <th>Chassis</th>
               <th>Engine</th>
@@ -167,6 +173,7 @@
               <td>{{ formatDate(b.invoiceDate) }}</td>
               <td>{{ b.categoryName }}</td>
               <td>{{ b.modelName }}</td>
+              <td>{{ b.hsn || '-' }}</td> <!-- ✨ -->
               <td>{{ b.color }}</td>
               <td>{{ b.chassisNumber }}</td>
               <td>{{ b.engineNumber }}</td>
@@ -197,7 +204,6 @@
       </button>
     </section>
 
-    <!-- Confirmation Dialog for Submit All -->
     <v-dialog persistent v-model="showConfirmation" max-width="520px">
       <v-card>
         <v-card-title>
@@ -216,25 +222,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- Chassis Available Popup -->
-    <!-- <v-dialog v-model="dialogs.chassisAvailable" max-width="420px">
-      <v-card>
-        <v-card-title class="text-h6">
-          Chassis Available
-          <v-spacer />
-          <v-btn icon @click="dialogs.chassisAvailable = false"><v-icon>mdi-close</v-icon></v-btn>
-        </v-card-title>
-        <v-card-text>
-          Chassis number <strong>{{ dialogs.chassisNumber }}</strong> is available.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn color="primary" @click="dialogs.chassisAvailable = false">OK</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog> -->
-
-    <!-- Snackbar -->
     <v-snackbar
       v-model="snackbar.show"
       :timeout="snackbar.timeout"
@@ -292,7 +279,6 @@ export default {
       },
       chassisDebounce: null,
       debounceDelayMs: 3000,
-      // dialogs
       dialogs: {
         chassisAvailable: false,
         chassisNumber: ""
@@ -333,11 +319,19 @@ export default {
     'bikeForm.categoryName': function (newVal) {
       this.bikeForm.modelName = "";
       this.bikeForm.color = "";
+      this.bikeForm.hsn = ""; // ✨ reset HSN on category change
       if (newVal) {
         this.fetchModels(newVal);
       } else {
         this.models = [];
       }
+    },
+    // ✨ When model changes, auto-fill HSN from the matched model object
+    'bikeForm.modelName': function (newVal) {
+      const m = this.findModelByName(newVal);
+      this.bikeForm.hsn = m && m.hsn ? String(m.hsn) : "";
+      // also clear color if model changes
+      this.bikeForm.color = "";
     },
     // Debounced chassis check (3s after last keystroke)
     'bikeForm.chassisNumber': function (val) {
@@ -373,7 +367,8 @@ export default {
         addedBy: this.userName || "",
         notes: "",
         statusType: "DRAFT",
-        source: "TVS Company"
+        source: "TVS Company",
+        hsn: "" // ✨ new field captured from model
       };
     },
     formatDate(d) {
@@ -393,6 +388,7 @@ export default {
       try {
         const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + "getCategoryModel/" + categoryName);
         if (res.data && Array.isArray(res.data.models)) {
+          // models contain objects like { modelName, colors, category, hsn }
           this.models = res.data.models;
         } else {
           this.models = [];
@@ -415,8 +411,13 @@ export default {
         this.categories = [];
       }
     },
+    // ✨ helper: find the full model object by name
+    findModelByName(modelName) {
+      if (!modelName) return null;
+      return this.models.find((m) => m.modelName === modelName) || null;
+    },
     getColorsForModel(modelName) {
-      const model = this.models.find((m) => m.modelName === modelName);
+      const model = this.findModelByName(modelName);
       return model && Array.isArray(model.colors) ? model.colors : [];
     },
     // Run check immediately when field loses focus
@@ -453,7 +454,6 @@ export default {
 
         this.chassisCheck.available = exists ? false : true;
 
-        // 🔔 Show popup when available
         if (!exists) {
           this.dialogs.chassisNumber = chassis;
           this.dialogs.chassisAvailable = true;
@@ -513,9 +513,11 @@ export default {
 
       this.isSavingBike = true;
       try {
+        // ✨ hsn already inside this.bikeForm; include it in the pushed copy
         const payloadBike = { ...this.bikeForm, _localId: Date.now() + Math.floor(Math.random() * 1000) };
         this.addedBikes.push(payloadBike);
 
+        // reset form
         this.bikeForm = this.getEmptyBikeForm();
         this.bikeForm.addedBy = this.userName || "";
         this.bikeForm.invoiceNumber = this.commonInvoiceNumber || "";
@@ -580,7 +582,7 @@ export default {
           bikes: this.addedBikes.map((b) => {
             const copy = { ...b };
             delete copy._localId;
-            return copy;
+            return copy; // ✨ includes copy.hsn
           }),
         };
 
@@ -606,6 +608,7 @@ export default {
   },
 };
 </script>
+
 
 
 <style scoped>

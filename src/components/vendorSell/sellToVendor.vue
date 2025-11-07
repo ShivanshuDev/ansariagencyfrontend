@@ -828,7 +828,8 @@ export default {
           chassis: raw.chassisNumber || raw.chassis || '',
           engine: raw.engineNumber || raw.engine || '',
           color: raw.color || '',
-          warehouse: raw.warehouse
+          // prefer explicit warehouse; fallback to location strings if provided by API
+          warehouse: raw.warehouse || raw.location || raw.locationName || ''
         }))
     },
 
@@ -1079,6 +1080,8 @@ export default {
 
       if (this.isEditing && this.editingBackup) {
         // --- UPDATE existing row in place ---
+        // const inv = this.resolveSelectedInventory()
+        // if (!inv) return
         const inv = this.resolveSelectedInventory()
         if (!inv) return
         const updated = {
@@ -1086,16 +1089,26 @@ export default {
           inventoryId: inv.__key ?? this.selectedModelKey,
           label: inv.label || inv.modelName || inv.name || this.editingBackup.label,
           hsn: (this.itemForm.hsn && String(this.itemForm.hsn).trim()) ? String(this.itemForm.hsn).trim() : (inv.hsn || ''),
+
+          // specs
           chassisNumber: inv.chassisNumber || inv.gsisk3 || inv.chassisNo || inv.chassis || this.editingBackup.chassisNumber || '',
           engineNumber: inv.engineNumber || inv.engineNo || inv.engine || this.editingBackup.engineNumber || '',
           color: inv.color || this.editingBackup.color || '',
+
+          // NEW: persist Category & Location
+          category: inv.categoryName || inv.category || inv.type || inv.segment || this.editingBackup.category || '',
+          warehouse: inv.warehouse || inv.location || inv.locationName || inv.store || this.editingBackup.warehouse || '',
+
+          // pricing/tax
           price: Number(this.itemForm.price || 0),
           quantity: Number(this.itemForm.quantity || 1),
           discount: Number(this.itemForm.discount || 0),
           cgst: Number(this.itemForm.cgst || 0),
           sgst: Number(this.itemForm.sgst || 0),
+
           kitGiven: !!this.itemForm.kitGiven
         }
+
         this.computeRowTotals(updated)
 
         const idx = this.selectedItems.findIndex(i => i.id === this.editingBackup.id)
@@ -1150,27 +1163,49 @@ export default {
     },
 
     buildItemFromForm() {
-      const inv = this.resolveSelectedInventory()
-      if (!inv) return null
-      const hsnVal = (this.itemForm.hsn && String(this.itemForm.hsn).trim()) ? String(this.itemForm.hsn).trim() : (inv.hsn || '')
-      return {
-        id: `${inv.__key ?? this.selectedModelKey}-${Date.now()}`,
-        inventoryId: inv.__key ?? this.selectedModelKey,
-        label: inv.label || inv.modelName || inv.name || 'Item',
-        hsn: hsnVal,
-        unit: inv.unit || '',
-        image: inv.image || '',
-        chassisNumber: inv.chassisNumber || inv.gsisk3 || inv.chassisNo || inv.chassis || '',
-        engineNumber: inv.engineNumber || inv.engineNo || inv.engine || '',
-        color: inv.color || '',
-        price: Number(this.itemForm.price || 0),
-        quantity: Number(this.itemForm.quantity || 1),
-        discount: Number(this.itemForm.discount || 0),
-        cgst: Number(this.itemForm.cgst || 0),
-        sgst: Number(this.itemForm.sgst || 0),
-        kitGiven: !!this.itemForm.kitGiven
-      }
-    },
+  const inv = this.resolveSelectedInventory()
+  if (!inv) return null
+
+  const hsnVal = (this.itemForm.hsn && String(this.itemForm.hsn).trim())
+    ? String(this.itemForm.hsn).trim()
+    : (inv.hsn || '')
+
+  // Pull category & location/warehouse from inventory
+  const category =
+    inv.categoryName || inv.category || inv.type || inv.segment || ''
+  const warehouse =
+    inv.warehouse || inv.location || inv.locationName || inv.store || ''
+
+  return {
+    id: `${inv.__key ?? this.selectedModelKey}-${Date.now()}`,
+    inventoryId: inv.__key ?? this.selectedModelKey,
+
+    // descriptive
+    label: inv.label || inv.modelName || inv.name || 'Item',
+    hsn: hsnVal,
+    unit: inv.unit || '',
+    image: inv.image || '',
+
+    // specs
+    chassisNumber: inv.chassisNumber || inv.gsisk3 || inv.chassisNo || inv.chassis || '',
+    engineNumber: inv.engineNumber || inv.engineNo || inv.engine || '',
+    color: inv.color || '',
+
+    // NEW: keep for Gate Pass
+    category,
+    warehouse,
+
+    // pricing/tax
+    price: Number(this.itemForm.price || 0),
+    quantity: Number(this.itemForm.quantity || 1),
+    discount: Number(this.itemForm.discount || 0),
+    cgst: Number(this.itemForm.cgst || 0),
+    sgst: Number(this.itemForm.sgst || 0),
+
+    kitGiven: !!this.itemForm.kitGiven
+  }
+}
+,
 
     computeRowTotals(row) {
       const price = Number(row.price || 0)            // GST-inclusive per unit
@@ -1588,7 +1623,7 @@ export default {
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: node.scrollWidth },
-        jsPDF: { unit: 'pt', format: 'a4', orientation: '' },
+        jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }, // ⬅️ force landscape
         pagebreak: { mode: ['css', 'legacy'] }
       }
 
