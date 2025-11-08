@@ -38,10 +38,15 @@
         </div>
 
         <div class="header-right">
+          <InventoryHistoryDialog
+            :invoiceNumber="item?.invoiceNumber"
+            :chassisNumber="item?.chassisNumber"
+            :baseUrl="base"
+          />
           <div class="kpi-row">
             <div class="kpi">
               <div class="kpi-label">Invoice Date</div>
-              <div class="kpi-value">{{ item?.invoiceDate }}</div>
+              <div class="kpi-value">{{ item?.invoiceDate || '-' }}</div>
             </div>
 
             <div class="kpi">
@@ -66,90 +71,58 @@
       <!-- Content -->
       <v-card-text class="content-area">
         <v-row>
-          <!-- Left: Details card -->
+          <!-- Left: Details (now two-per-row) -->
           <v-col cols="12" md="7">
             <v-card flat class="detail-panel pa-4">
-              <v-row>
-                <v-col cols="12" class="mb-2">
+              <div class="panel-title mb-2">Details</div>
+
+              <v-row dense class="detail-grid">
+                <v-col cols="12" sm="6" class="mb-2">
                   <div class="field-label">Chassis Number</div>
                   <div class="field-value">{{ item?.chassisNumber || '-' }}</div>
                 </v-col>
 
-                <v-col cols="12" class="mb-2">
+                <v-col cols="12" sm="6" class="mb-2">
                   <div class="field-label">Engine Number</div>
                   <div class="field-value">{{ item?.engineNumber || '-' }}</div>
                 </v-col>
 
-                <v-col cols="12" class="mb-2">
-                  <div class="two-col">
-                    <div>
-                      <div class="field-label">Model</div>
-                      <div class="field-value">{{ item?.modelName || '-' }}</div>
-                    </div>
-                  </div>
-                </v-col>
-                <v-col cols="12" class="mb-2">
-                    <div>
-                      <div class="field-label">Color</div>
-                      <div class="field-value">
-                        <v-chip small outlined>{{ item?.color || '-' }}</v-chip>
-                      </div>
-                    </div>
+                <v-col cols="12" sm="6" class="mb-2">
+                  <div class="field-label">Model</div>
+                  <div class="field-value">{{ item?.modelName || '-' }}</div>
                 </v-col>
 
-                <v-col cols="12" class="mb-2">
+                <v-col cols="12" sm="6" class="mb-2">
+                  <div class="field-label">Color</div>
+                  <div class="field-value">
+                    <v-chip small outlined>{{ item?.color || '-' }}</v-chip>
+                  </div>
+                </v-col>
+
+                <v-col cols="12" sm="6" class="mb-2">
                   <div class="field-label">Status</div>
                   <div class="field-value">{{ item?.status || '-' }}</div>
                 </v-col>
 
-                <v-col cols="12" class="mt-1">
-                    <div class="kpi-grid">
-                        <!-- Added Date -->
-                        <v-hover v-slot="{ hover }">
-                        <div class="kpi-card" :class="{ 'kpi-hover': hover }">
-                            <div class="kpi-left">
-                            <div class="kpi-icon-wrap"><v-icon large>mdi-calendar-plus</v-icon></div>
-                            </div>
-                            <div class="kpi-right">
-                            <div class="kpi-label">Added</div>
-                            <div class="kpi-value">{{ formatDate(item?.createdAt) }}</div>
-                            </div>
-                        </div>
-                        </v-hover>
-
-                        <!-- Last Modified -->
-                        <v-hover v-slot="{ hover }">
-                        <div class="kpi-card" :class="{ 'kpi-hover': hover }" >
-                            <div class="kpi-left">
-                            <div class="kpi-icon-wrap"><v-icon large>mdi-calendar-edit</v-icon></div>
-                            </div>
-                            <div class="kpi-right">
-                            <div class="kpi-label">Last Modified</div>
-                            <div class="kpi-value">{{ formatDate(item?.lastModified || item?.updatedAt) }}</div>
-                            </div>
-                        </div>
-                        </v-hover>
-
-                        <!-- Hold Days -->
-                        <v-hover v-slot="{ hover }">
-                        <div class="kpi-card" :class="{ 'kpi-hover': hover }" v-tooltip.bottom="'Days since added'">
-                            <div class="kpi-left">
-                            <div class="kpi-icon-wrap"><v-icon large>mdi-timer-sand</v-icon></div>
-                            </div>
-                            <div class="kpi-right">
-                            <div class="kpi-label">Hold Days</div>
-                            <div class="kpi-value">{{ item?.inventoryHoldDays ?? '-' }}</div>
-                            </div>
-                        </div>
-                        </v-hover>
-                    </div>
+                <v-col cols="12" sm="6" class="mb-2">
+                  <div class="field-label">Hold Days</div>
+                  <div class="field-value">{{ item?.inventoryHoldDays ?? '-' }}</div>
                 </v-col>
 
+                <v-col cols="12" sm="6" class="mb-2">
+                  <div class="field-label">Added</div>
+                  <div class="field-value">{{ formatDate(item?.createdAt) }}</div>
+                </v-col>
+
+                <v-col cols="12" sm="6" class="mb-2">
+                  <div class="field-label">Last Modified</div>
+                  <div class="field-value">{{ formatDate(item?.lastModified || item?.updatedAt) }}</div>
+                </v-col>
               </v-row>
             </v-card>
           </v-col>
 
-          <!-- Right: Documents & actions -->
+          <!-- Right: Documents -->
           <v-col cols="12" md="5">
             <v-card flat class="meta-panel pa-4">
               <div class="panel-title">Documents</div>
@@ -187,23 +160,11 @@
               </div>
 
               <div v-else class="no-docs small-muted">No documents uploaded</div>
-
-              <v-divider class="my-3"></v-divider>
-
-              <div class="quick-actions">
-                <v-btn block color="primary" @click="$emit('edit')">
-                  <v-icon left small>mdi-pencil</v-icon>Edit Inventory
-                </v-btn>
-
-                <!-- <v-btn block outlined class="mt-2" @click="downloadSummary">
-                  <v-icon left small>mdi-download</v-icon> Download Summary
-                </v-btn> -->
-              </div>
             </v-card>
           </v-col>
         </v-row>
 
-        <!-- small timeline / notes -->
+        <!-- Notes -->
         <v-row class="mt-4">
           <v-col cols="12">
             <v-card flat class="notes-card pa-3">
@@ -215,15 +176,40 @@
         </v-row>
       </v-card-text>
 
-      <!-- Footer -->
+      <!-- Footer: Edit button moved here -->
       <v-divider></v-divider>
+      <v-card-actions class="dialog-footer">
+        <div class="footer-left">
+          <v-btn variant="text" @click="downloadSummary">
+            <v-icon left small>mdi-download</v-icon>
+            Download Summary
+          </v-btn>
+        </div>
+        <v-spacer />
+        <div class="footer-right">
+          <v-btn class="mr-2" variant="outlined" @click="$emit('close')">
+            Close
+          </v-btn>
+          <v-btn color="primary" @click="$emit('edit')">
+            <v-icon left small>mdi-pencil</v-icon>
+            Edit Inventory
+          </v-btn>
+        </div>
+      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script>
+import InventoryHistoryDialog from './InventoryHistoryDialog.vue'
 export default {
   name: 'ItemDetailDialog',
+  components:{InventoryHistoryDialog},
+  data(){
+    return{
+      base:''
+    }
+  },
   props: {
     open: { type: Boolean, default: false },
     item: { type: Object, default: null }
@@ -245,14 +231,12 @@ export default {
     }
   },
   methods: {
-    // convert seconds or ms to ms
     _toMs(v) {
       if (v == null) return null;
       const n = Number(v);
       if (Number.isNaN(n)) return null;
       return n < 1e12 ? n * 1000 : n;
     },
-    // dd/mm/yyyy
     formatDate(v) {
       if (!v) return '-';
       const ms = this._toMs(v);
@@ -270,7 +254,6 @@ export default {
         navigator.clipboard.writeText(val);
         this.$root?.$emit?.('show-snackbar', { text: 'Invoice copied', color: 'success' });
       } catch {
-        // fallback
         const ta = document.createElement('textarea');
         ta.value = val;
         document.body.appendChild(ta);
@@ -281,7 +264,6 @@ export default {
       }
     },
     downloadSummary() {
-      // simple client-side CSV summary download (demo)
       const row = this.item || {};
       const cols = [
         ['Invoice Number', row.invoiceNumber || ''],
@@ -334,27 +316,11 @@ export default {
   border-radius: 10px;
   box-shadow: 0 6px 18px rgba(25, 118, 210, 0.16);
 }
-.avatar-text {
-  font-weight: 700;
-  font-size: 20px;
-}
+.avatar-text { font-weight: 700; font-size: 20px; }
 .header-meta { min-width: 260px; }
-.invoice-title {
-  font-size: 16px;
-  color: #0f1724;
-  font-weight: 600;
-}
-.invoice-number {
-  color: #001f3f;
-  margin-left: 8px;
-  font-weight: 700;
-}
-.subtitle-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-}
+.invoice-title { font-size: 16px; color: #0f1724; font-weight: 600; }
+.invoice-number { color: #001f3f; margin-left: 8px; font-weight: 700; }
+.subtitle-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .model-name { font-weight: 600; color: #374151; }
 .small-muted { color: #6b7280; font-size: 13px; }
 
@@ -382,11 +348,11 @@ export default {
   background: #fff;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
 }
+
+/* Detail grid: two per row */
+.detail-grid .v-col { display: flex; flex-direction: column; }
 .field-label { font-size:12px; color:#6b7280; margin-bottom:4px; }
 .field-value { font-weight:700; color:#0f1724; font-size:15px; }
-
-/* two-col layout inside details */
-.two-col { display:flex; gap:12px; justify-content:space-between; align-items:center; }
 
 /* meta / docs */
 .panel-title { font-weight:700; margin-bottom:8px; color:#111827; }
@@ -396,21 +362,23 @@ export default {
 .thumb-wrap { width:56px; height:56px; display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:#f7fafc; }
 .doc-thumb { width:56px; height:56px; object-fit:cover; border-radius:6px; }
 .thumb-fallback { width:56px; height:56px; display:flex; align-items:center; justify-content:center; color:#6b7280; }
-
-/* doc text */
 .doc-title { font-weight:600; color:#111827; }
 .doc-sub { font-size:12px; color:#6b7280; }
-
-/* quick actions */
-.quick-actions { margin-top:12px; }
 
 /* notes card */
 .notes-card { border-radius:8px; background:#fff; box-shadow: 0 4px 10px rgba(2,6,23,0.03); }
 .notes-title { font-weight:700; margin-bottom:8px; }
 .notes-body { color:#374151; }
 
-/* footer */
-.footer-row { padding:12px 20px; }
+/* Footer */
+.dialog-footer {
+  position: sticky;      /* stays visible when content scrolls */
+  bottom: 0;
+  background: #fff;
+  z-index: 1;
+  padding: 10px 16px;
+}
+.footer-left, .footer-right { display:flex; align-items:center; }
 
 /* responsive tweaks */
 @media (max-width: 960px) {

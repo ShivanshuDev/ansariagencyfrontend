@@ -570,36 +570,81 @@ export default {
     noConfirmation() {
       this.showConfirmation = false;
     },
+    // async submitAll() {
+    //   this.showConfirmation = false;
+    //   this.isSubmitting = true;
+
+    //   try {
+    //     const payload = {
+    //       invoiceDate: this.commonInvoiceDate || this.bikeForm.invoiceDate,
+    //       invoiceNumber: this.commonInvoiceNumber || this.bikeForm.invoiceNumber,
+    //       warehouse: this.bikeForm.warehouse,
+    //       bikes: this.addedBikes.map((b) => {
+    //         const copy = { ...b };
+    //         delete copy._localId;
+    //         return copy; // ✨ includes copy.hsn
+    //       }),
+    //     };
+
+    //     const response = await axios.post(process.env.VUE_APP_AGENCY_BACKEND_URL + "addInventry", payload);
+    //     console.log("✅ Bike details submitted:", response.data);
+
+    //     this.addedBikes = [];
+    //     this.onReset();
+    //     this.showSnackbar("success", "Bikes submitted successfully.");
+    //   } catch (error) {
+    //     console.error("❌ Error saving bikes:", error);
+    //     const msg = (error && error.response && error.response.data && error.response.data.message) || "Failed to save bikes. Check console.";
+    //     this.showSnackbar("error", msg);
+    //   } finally {
+    //     this.isSubmitting = false;
+    //   }
+    // },
+    
     async submitAll() {
-      this.showConfirmation = false;
-      this.isSubmitting = true;
+  this.showConfirmation = false;
+  this.isSubmitting = true;
 
-      try {
-        const payload = {
-          invoiceDate: this.commonInvoiceDate || this.bikeForm.invoiceDate,
-          invoiceNumber: this.commonInvoiceNumber || this.bikeForm.invoiceNumber,
-          warehouse: this.bikeForm.warehouse,
-          bikes: this.addedBikes.map((b) => {
-            const copy = { ...b };
-            delete copy._localId;
-            return copy; // ✨ includes copy.hsn
-          }),
-        };
+  try {
+    // If your API expects ONE warehouse at the top level, take it from the first bike.
+    // If your API allows multiple warehouses, use the "multi-warehouse" payload shown below.
+    const firstWarehouse =
+      (this.addedBikes[0] && this.addedBikes[0].warehouse) ||
+      this.bikeForm.warehouse ||
+      "";
 
-        const response = await axios.post(process.env.VUE_APP_AGENCY_BACKEND_URL + "addInventry", payload);
-        console.log("✅ Bike details submitted:", response.data);
+    const payload = {
+      invoiceDate: this.commonInvoiceDate || this.bikeForm.invoiceDate,
+      invoiceNumber: this.commonInvoiceNumber || this.bikeForm.invoiceNumber,
+      warehouse: firstWarehouse, // <-- fixed: not taken from the (reset) form
+      bikes: this.addedBikes.map((b) => {
+        const copy = { ...b };
+        delete copy._localId;
+        return copy; // includes copy.warehouse and copy.hsn
+      }),
+    };
+    console.log('payload', JSON.stringify(payload, null, 2))
+    const response = await axios.post(
+      process.env.VUE_APP_AGENCY_BACKEND_URL + "addInventry",
+      payload
+    );
+    console.log("✅ Bike details submitted:", response.data);
 
-        this.addedBikes = [];
-        this.onReset();
-        this.showSnackbar("success", "Bikes submitted successfully.");
-      } catch (error) {
-        console.error("❌ Error saving bikes:", error);
-        const msg = (error && error.response && error.response.data && error.response.data.message) || "Failed to save bikes. Check console.";
-        this.showSnackbar("error", msg);
-      } finally {
-        this.isSubmitting = false;
-      }
-    },
+    this.addedBikes = [];
+    this.onReset();
+    this.showSnackbar("success", "Bikes submitted successfully.");
+  } catch (error) {
+    console.error("❌ Error saving bikes:", error);
+    const msg =
+      (error && error.response && error.response.data && error.response.data.message) ||
+      "Failed to save bikes. Check console.";
+    this.showSnackbar("error", msg);
+  } finally {
+    this.isSubmitting = false;
+  }
+},
+
+    
     showSnackbar(color = "success", message = "") {
       this.snackbar.message = message || "Action completed";
       this.snackbar.color = color;

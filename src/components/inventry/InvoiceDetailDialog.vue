@@ -4,7 +4,17 @@
       <v-card-title style="60px">
         Invoice: {{ invoice?.invoiceNumber || '-' }}
         <v-spacer />
+
+        <!-- <v-btn color="primary" @click="show = true">Show History</v-btn> -->
+        <HistoryComponent
+          entity="INVOICE"
+          :invoiceNumber="invoice?.invoiceNumber"
+          :baseUrl="base"
+        />
+
+        <v-spacer />
         <DownloadPdf :items="selectedItemsData" :headers="invoiceDetailHeaders" />
+        
         <v-spacer />
         <DownloadXlsx
           :items="selectedItemsData"
@@ -136,10 +146,11 @@
 import DownloadPdf from '@/views/DownloadPdf.vue';
 import DownloadXlsx from '@/views/DownloadXlsx.vue';
 import DownloadPdfInventory from '@/views/DownloadInvoiveInventory.vue';
+import HistoryComponent from './InvoiceHistoryTimeline.vue'
 
 export default {
   name: 'InvoiceDetailDialog',
-  components: { DownloadPdf, DownloadXlsx, DownloadPdfInventory },
+  components: { DownloadPdf, DownloadXlsx, DownloadPdfInventory, HistoryComponent },
   props: {
     open: { type: Boolean, default: false },
     invoice: { type: Object, default: null },
@@ -152,12 +163,13 @@ export default {
   },
   data() {
     return {
+      show: false,
       statusOptions: ['ACTIVE', 'INACTIVE', 'REVIEW'],
       bulkStatus: null,
       bulkUpdating: false,
       bulkMessage: '',
       snack: { show: false, text: '', color: 'success' },
-
+      base: '',
       internalSelected: [],
 
       // pagination for serial number continuity across pages

@@ -78,52 +78,85 @@
           <div v-else>
             <v-simple-table dense>
               <thead style="background-color:#dff3f79c; color:white;">
-                <tr style="color:white;">
-                  <!-- checkbox header -->
+                <tr>
+                  <!-- Checkbox header -->
                   <th style="width:48px; text-align:center;">
                     <v-checkbox
                       :input-value="allSelected"
                       @change="toggleSelectAll"
                       hide-details
-                      dense
+                      density="compact"
                     />
                   </th>
 
-                  <!-- other headers (inventoryHoldDays filtered out) -->
-                  <th  v-for="h in dialogHeaders" :key="h.value">{{ h.text }}</th>
+                  <!-- Dynamic headers -->
+                  <th v-for="h in dialogHeaders" :key="h.value">{{ h.text }}</th>
 
                   <!-- Actions column -->
-                  <th style="width:110px; text-align:center;">Actions</th>
+                  <th style="width:160px; text-align:center;">Actions</th>
                 </tr>
               </thead>
+
               <tbody>
+                <!-- Empty state -->
                 <tr v-if="!localChassisResults.length">
                   <td :colspan="dialogHeaders.length + 2" class="text-center">No items found</td>
                 </tr>
 
+                <!-- Rows -->
                 <tr
                   v-for="(row, idx) in localChassisResults"
                   :key="row.pk || row.chassisNumber || row.engineNumber || idx"
                 >
-                  <!-- row checkbox -->
+                  <!-- Row checkbox -->
                   <td style="text-align:center;">
                     <v-checkbox
                       :input-value="isSelected(row)"
                       @change="toggleRowSelection(row)"
                       hide-details
-                      dense
+                      density="compact"
                     />
                   </td>
 
+                  <!-- Data cells -->
                   <td v-for="h in dialogHeaders" :key="h.value">
                     {{ getValue(row, h.value) }}
                   </td>
 
-                  <!-- Edit action -->
-                  <td style="text-align:center;">
-                    <v-btn small text @click="openEdit(row)">
-                      <v-icon left small>mdi-pencil</v-icon>Edit
-                    </v-btn>
+                  <!-- Actions -->
+                  <td style="text-align:center; white-space:nowrap;">
+                    <!-- Edit -->
+                    <v-tooltip text="Edit Item" location="top">
+                      <template #activator="{ props }">
+                        <v-btn
+                          v-bind="props"
+                          color="primary"
+                          size="x-small"
+                          variant="tonal"
+                          class="mr-1"
+                          @click="openEdit(row)"
+                        >
+                          <v-icon size="16" start>mdi-pencil</v-icon>
+                          Edit
+                        </v-btn>
+                      </template>
+                    </v-tooltip>
+
+                    <!-- Inventory History -->
+                    <v-tooltip text="View Inventory History" location="top">
+                      <template #activator="{ props }">
+                        <v-btn
+                          v-bind="props"
+                          color="teal"
+                          size="x-small"
+                          variant="tonal"
+                          @click="openHistory(row)"
+                        >
+                          <v-icon size="16" start>mdi-history</v-icon>
+                          History
+                        </v-btn>
+                      </template>
+                    </v-tooltip>
                   </td>
                 </tr>
               </tbody>
@@ -136,11 +169,16 @@
           <div class="mr-4">
             <small v-if="selectedRows.length">{{ selectedRows.length }} selected</small>
           </div>
+           <InventoryHistoryDialog
+            v-if="true"
+            v-model="historyDialogOpen"
+            :invoiceNumber="historyInvoiceNumber"
+            :chassisNumber="historyChassisNumber"
+          />
           <v-btn text @click="closeDialog">Close</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
     <!-- Edit dialog (internal) -->
     <v-dialog v-model="editDialog" persistent max-width="920px">
       <v-card>
@@ -169,10 +207,11 @@ import DownloadPdfInventory from '@/views/DownloadInvoiveInventory.vue';
 import DownloadXlsx from '@/views/DownloadXlsx.vue';
 import DownloadInvoiceXlsx from '@/views/DownloadInvoiceXlsx.vue';
 import EditInventory from './EditInventory.vue'; // adjust path if needed
+import InventoryHistoryDialog from './InventoryHistoryDialog.vue'
 
 export default {
   name: 'TopBar',
-  components: { DownloadPdfInventory, DownloadXlsx, EditInventory, DownloadInvoiceXlsx },
+  components: { DownloadPdfInventory, DownloadXlsx, EditInventory, DownloadInvoiceXlsx, InventoryHistoryDialog },
   props: {
     invoiceSearch: String, // unchanged
     selectedItemsData: { type: Array, default: () => [] },
@@ -182,6 +221,9 @@ export default {
   data() {
     return {
       // chassis search local state
+      historyDialogOpen: false,
+        historyInvoiceNumber: '',
+        historyChassisNumber: '',
       chassisQuery: '',
       _chassisTimer: null,
       engineDebounceMs: 420,
@@ -232,6 +274,14 @@ export default {
     }
   },
   methods: {
+    openHistory(row) {
+      if (!row) return;
+      this.historyInvoiceNumber = row.invoiceNumber || row.invoice_no || '';
+      this.historyChassisNumber = row.chassisNumber || row.chassis || '';
+      this.historyDialogOpen = true;
+    },
+
+
     // debounce handler
     onChassisInput() {
       if (this._chassisTimer) {
