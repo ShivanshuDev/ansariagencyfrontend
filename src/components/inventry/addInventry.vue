@@ -1,14 +1,14 @@
 <template>
   <div class="add-bike-form">
-  <div style="display:flex; flex-direction:row; justify-content:space-between; width:100%;">
-    <h2 style="width:50%;">Add Bike Details</h2>
-    <div style="width:50%; text-align:right; font-size:10px;">
-      <div v-if="singleBikeErrors.chassisNumber" class="error-msg">{{ singleBikeErrors.chassisNumber }}</div>
-      <div style="font-size:1.2rem; font-weight:600;" v-else-if="bikeForm.chassisNumber && chassisCheck.loading" class="error-msg">Checking…</div>
-      <div style="font-size:1.2rem; font-weight:600;" v-else-if="bikeForm.chassisNumber && chassisCheck.available === false" class="error-msg">Chassis number already exists</div>
-      <div v-else-if="bikeForm.chassisNumber && chassisCheck.available === null && !chassisCheck.loading" class="error-msg">Could not verify chassis number</div>
+    <div style="display:flex; flex-direction:row; justify-content:space-between; width:100%;">
+      <h2 style="width:50%;">Add Bike Details</h2>
+      <div style="width:50%; text-align:right; font-size:10px;">
+        <div v-if="singleBikeErrors.chassisNumber" class="error-msg">{{ singleBikeErrors.chassisNumber }}</div>
+        <div style="font-size:1.2rem; font-weight:600;" v-else-if="bikeForm.chassisNumber && chassisCheck.loading" class="error-msg">Checking…</div>
+        <div style="font-size:1.2rem; font-weight:600;" v-else-if="bikeForm.chassisNumber && chassisCheck.available === false" class="error-msg">Chassis number already exists</div>
+        <div v-else-if="bikeForm.chassisNumber && chassisCheck.available === null && !chassisCheck.loading" class="error-msg">Could not verify chassis number</div>
+      </div>
     </div>
-  </div>
 
     <!-- COMMON INVOICE -->
     <div style="margin-bottom: 20px; display:flex; flex-direction:row; justify-content:space-between;">
@@ -35,15 +35,15 @@
       </div>
 
       <div class="actions" style="align-items:flex-end;">
-         <div style="flex:1; display:flex; align-items:flex-end; justify-content:flex-end; padding-top:9px;">
-            <button
-              class="create-btn"
-              @click="saveBikeToTable"
-              :disabled="isSavingBike || chassisCheck.loading || chassisCheck.available === false"
-            >
-              {{ isSavingBike ? 'Saving...' : 'Add More' }}
-            </button>
-          </div>
+        <div style="flex:1; display:flex; align-items:flex-end; justify-content:flex-end; padding-top:9px;">
+          <button
+            class="create-btn"
+            @click="saveBikeToTable"
+            :disabled="isSavingBike || chassisCheck.loading || chassisCheck.available === false"
+          >
+            {{ isSavingBike ? 'Saving...' : 'Add More' }}
+          </button>
+        </div>
         <button type="button" class="add-btn" @click="onReset">Reset Form</button>
       </div>
     </div>
@@ -105,14 +105,29 @@
               type="text"
               v-model="bikeForm.chassisNumber"
               placeholder="Chassis Number *"
+              maxlength="17"
+              @input="onChassisInput"
               @blur="triggerImmediateChassisCheck"
             />
+            <div v-if="singleBikeErrors.chassisNumber" class="error-msg">{{ singleBikeErrors.chassisNumber }}</div>
+            <div v-else-if="bikeForm.chassisNumber && bikeForm.chassisNumber.length < 17" class="error-msg">
+              Chassis must be 17 characters ({{ bikeForm.chassisNumber.length }}/17)
+            </div>
           </div>
 
           <div class="field-detail" :class="{'field-error': singleBikeErrors.engineNumber}">
             <label>Engine Number *</label>
-            <input  type="text" v-model="bikeForm.engineNumber" placeholder="Engine Number *" />
+            <input
+              type="text"
+              v-model="bikeForm.engineNumber"
+              placeholder="Engine Number *"
+              maxlength="12"
+              @input="onEngineInput"
+            />
             <div v-if="singleBikeErrors.engineNumber" class="error-msg">{{ singleBikeErrors.engineNumber }}</div>
+            <div v-else-if="bikeForm.engineNumber && bikeForm.engineNumber.length < 10" class="error-msg">
+              Engine number must be between 10 and 12 characters ({{ bikeForm.engineNumber.length }})
+            </div>
           </div>
 
           <div class="field-detail" :class="{'field-error': singleBikeErrors.warehouse}">
@@ -326,11 +341,9 @@ export default {
         this.models = [];
       }
     },
-    // ✨ When model changes, auto-fill HSN from the matched model object
     'bikeForm.modelName': function (newVal) {
       const m = this.findModelByName(newVal);
       this.bikeForm.hsn = m && m.hsn ? String(m.hsn) : "";
-      // also clear color if model changes
       this.bikeForm.color = "";
     },
     // Debounced chassis check (3s after last keystroke)
@@ -368,7 +381,7 @@ export default {
         notes: "",
         statusType: "DRAFT",
         source: "TVS Company",
-        hsn: "" // ✨ new field captured from model
+        hsn: ""
       };
     },
     formatDate(d) {
@@ -388,7 +401,6 @@ export default {
       try {
         const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + "getCategoryModel/" + categoryName);
         if (res.data && Array.isArray(res.data.models)) {
-          // models contain objects like { modelName, colors, category, hsn }
           this.models = res.data.models;
         } else {
           this.models = [];
@@ -411,7 +423,6 @@ export default {
         this.categories = [];
       }
     },
-    // ✨ helper: find the full model object by name
     findModelByName(modelName) {
       if (!modelName) return null;
       return this.models.find((m) => m.modelName === modelName) || null;
@@ -468,6 +479,57 @@ export default {
         this.chassisCheck.loading = false;
       }
     },
+
+    /* ---------------------------
+       Input sanitizers & handlers
+       --------------------------- */
+
+    // Chassis input: uppercase, remove spaces, enforce maxlength (17)
+    onChassisInput(e) {
+      // Accept event or direct string (v-model sometimes passes string)
+      let v = "";
+      if (typeof e === "string") v = e;
+      else if (e && e.target && typeof e.target.value === "string") v = e.target.value;
+      else v = this.bikeForm.chassisNumber || "";
+
+      v = v.toUpperCase().replace(/\s+/g, '');
+      if (v.length > 17) v = v.slice(0, 17);
+      this.bikeForm.chassisNumber = v;
+
+      // live inline error
+      const len = (this.bikeForm.chassisNumber || '').length;
+      if (len > 0 && len < 17) {
+        this.singleBikeErrors.chassisNumber = `Chassis must be 17 characters (${len}/17)`;
+      } else {
+        // only clear if exactly 17 or empty
+        if (len === 17 || len === 0) delete this.singleBikeErrors.chassisNumber;
+      }
+    },
+
+    // Engine input: uppercase, remove spaces, enforce maxlength (12)
+    onEngineInput(e) {
+      let v = "";
+      if (typeof e === "string") v = e;
+      else if (e && e.target && typeof e.target.value === "string") v = e.target.value;
+      else v = this.bikeForm.engineNumber || "";
+
+      v = v.toUpperCase().replace(/\s+/g, '');
+      if (v.length > 12) v = v.slice(0, 12);
+      this.bikeForm.engineNumber = v;
+
+      const len = (this.bikeForm.engineNumber || '').length;
+      if (len > 0 && len < 10) {
+        this.singleBikeErrors.engineNumber = `Engine number must be between 10 and 12 characters (${len})`;
+      } else {
+        if (len >= 10 && len <= 12) delete this.singleBikeErrors.engineNumber;
+        if (len === 0) delete this.singleBikeErrors.engineNumber;
+      }
+    },
+
+    /* ---------------------------
+       Validation updates
+       --------------------------- */
+
     validateCommon() {
       this.commonErrors = {};
       if (!this.commonInvoiceNumber || !this.commonInvoiceNumber.toString().trim()) {
@@ -484,17 +546,26 @@ export default {
       if (!b.categoryName || !b.categoryName.toString().trim()) errors.categoryName = "Category is required";
       if (!b.modelName || !b.modelName.toString().trim()) errors.modelName = "Model is required";
       if (!b.color || !b.color.toString().trim()) errors.color = "Color is required";
+
       if (!b.chassisNumber || !b.chassisNumber.toString().trim()) errors.chassisNumber = "Chassis Number is required";
+      else if ((b.chassisNumber || '').length !== 17) errors.chassisNumber = "Chassis must be exactly 17 characters";
+
       if (!b.engineNumber || !b.engineNumber.toString().trim()) errors.engineNumber = "Engine Number is required";
+      else if ((b.engineNumber || '').length < 10 || (b.engineNumber || '').length > 12) errors.engineNumber = "Engine must be 10–12 characters";
+
       if (!b.warehouse || !b.warehouse.toString().trim()) errors.warehouse = "Warehouse is required";
       if (!b.addedBy || !b.addedBy.toString().trim()) errors.addedBy = "Added By is required";
       if (!b.invoiceNumber || !b.invoiceNumber.toString().trim()) errors.invoiceNumber = "Invoice Number is required";
       if (!b.invoiceDate) errors.invoiceDate = "Invoice Date is required";
       if (!b.source || !b.source.toString().trim()) errors.source = "Source is required";
+
+      // chassis availability state from backend
       if (this.chassisCheck.available === false) errors.chassisNumber = "Chassis number already exists";
       if (this.chassisCheck.loading) errors.chassisNumber = "Please wait, checking chassis number…";
+
       return errors;
     },
+
     saveBikeToTable() {
       this.ensureModelFieldsDefaults();
 
@@ -513,11 +584,10 @@ export default {
 
       this.isSavingBike = true;
       try {
-        // ✨ hsn already inside this.bikeForm; include it in the pushed copy
         const payloadBike = { ...this.bikeForm, _localId: Date.now() + Math.floor(Math.random() * 1000) };
         this.addedBikes.push(payloadBike);
 
-        // reset form
+        // reset form (keep invoice and user)
         this.bikeForm = this.getEmptyBikeForm();
         this.bikeForm.addedBy = this.userName || "";
         this.bikeForm.invoiceNumber = this.commonInvoiceNumber || "";
@@ -570,81 +640,48 @@ export default {
     noConfirmation() {
       this.showConfirmation = false;
     },
-    // async submitAll() {
-    //   this.showConfirmation = false;
-    //   this.isSubmitting = true;
 
-    //   try {
-    //     const payload = {
-    //       invoiceDate: this.commonInvoiceDate || this.bikeForm.invoiceDate,
-    //       invoiceNumber: this.commonInvoiceNumber || this.bikeForm.invoiceNumber,
-    //       warehouse: this.bikeForm.warehouse,
-    //       bikes: this.addedBikes.map((b) => {
-    //         const copy = { ...b };
-    //         delete copy._localId;
-    //         return copy; // ✨ includes copy.hsn
-    //       }),
-    //     };
-
-    //     const response = await axios.post(process.env.VUE_APP_AGENCY_BACKEND_URL + "addInventry", payload);
-    //     console.log("✅ Bike details submitted:", response.data);
-
-    //     this.addedBikes = [];
-    //     this.onReset();
-    //     this.showSnackbar("success", "Bikes submitted successfully.");
-    //   } catch (error) {
-    //     console.error("❌ Error saving bikes:", error);
-    //     const msg = (error && error.response && error.response.data && error.response.data.message) || "Failed to save bikes. Check console.";
-    //     this.showSnackbar("error", msg);
-    //   } finally {
-    //     this.isSubmitting = false;
-    //   }
-    // },
-    
     async submitAll() {
-  this.showConfirmation = false;
-  this.isSubmitting = true;
+      this.showConfirmation = false;
+      this.isSubmitting = true;
 
-  try {
-    // If your API expects ONE warehouse at the top level, take it from the first bike.
-    // If your API allows multiple warehouses, use the "multi-warehouse" payload shown below.
-    const firstWarehouse =
-      (this.addedBikes[0] && this.addedBikes[0].warehouse) ||
-      this.bikeForm.warehouse ||
-      "";
+      try {
+        const firstWarehouse =
+          (this.addedBikes[0] && this.addedBikes[0].warehouse) ||
+          this.bikeForm.warehouse ||
+          "";
 
-    const payload = {
-      invoiceDate: this.commonInvoiceDate || this.bikeForm.invoiceDate,
-      invoiceNumber: this.commonInvoiceNumber || this.bikeForm.invoiceNumber,
-      warehouse: firstWarehouse, // <-- fixed: not taken from the (reset) form
-      bikes: this.addedBikes.map((b) => {
-        const copy = { ...b };
-        delete copy._localId;
-        return copy; // includes copy.warehouse and copy.hsn
-      }),
-    };
-    console.log('payload', JSON.stringify(payload, null, 2))
-    const response = await axios.post(
-      process.env.VUE_APP_AGENCY_BACKEND_URL + "addInventry",
-      payload
-    );
-    console.log("✅ Bike details submitted:", response.data);
+        const payload = {
+          invoiceDate: this.commonInvoiceDate || this.bikeForm.invoiceDate,
+          invoiceNumber: this.commonInvoiceNumber || this.bikeForm.invoiceNumber,
+          warehouse: firstWarehouse,
+          bikes: this.addedBikes.map((b) => {
+            const copy = { ...b };
+            delete copy._localId;
+            return copy;
+          }),
+        };
+        console.log('payload', JSON.stringify(payload, null, 2))
+        const response = await axios.post(
+          process.env.VUE_APP_AGENCY_BACKEND_URL + "addInventry",
+          payload
+        );
+        console.log("✅ Bike details submitted:", response.data);
 
-    this.addedBikes = [];
-    this.onReset();
-    this.showSnackbar("success", "Bikes submitted successfully.");
-  } catch (error) {
-    console.error("❌ Error saving bikes:", error);
-    const msg =
-      (error && error.response && error.response.data && error.response.data.message) ||
-      "Failed to save bikes. Check console.";
-    this.showSnackbar("error", msg);
-  } finally {
-    this.isSubmitting = false;
-  }
-},
+        this.addedBikes = [];
+        this.onReset();
+        this.showSnackbar("success", "Bikes submitted successfully.");
+      } catch (error) {
+        console.error("❌ Error saving bikes:", error);
+        const msg =
+          (error && error.response && error.response.data && error.response.data.message) ||
+          "Failed to save bikes. Check console.";
+        this.showSnackbar("error", msg);
+      } finally {
+        this.isSubmitting = false;
+      }
+    },
 
-    
     showSnackbar(color = "success", message = "") {
       this.snackbar.message = message || "Action completed";
       this.snackbar.color = color;
@@ -653,8 +690,6 @@ export default {
   },
 };
 </script>
-
-
 
 <style scoped>
 .add-bike-form {
@@ -821,5 +856,4 @@ textarea {
 .bikes-table thead th {
   font-weight: bold;
 }
-
 </style>

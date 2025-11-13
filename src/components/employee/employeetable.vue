@@ -102,7 +102,7 @@
     </v-dialog>
 
     <!-- Edit dialog (opens when user clicks Edit) -->
-    <v-dialog persistent v-model="editDialog" max-width="920px">
+    <v-dialog persistent v-model="editDialog" max-width="1320px">
       <v-card>
         <v-card-title>
           Edit Employee

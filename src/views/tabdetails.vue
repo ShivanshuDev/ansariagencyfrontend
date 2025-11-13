@@ -72,6 +72,7 @@ import CLIENTSUMMERY from '@/components/ledger/ClientSummaryCard.vue'
 import DAYBOOK from '@/components/ledger/DayBook.vue'
 import QUICKINVOICE from '@/components/sales/QuickInvoice.vue'
 import AllCustomerInvoices from '@/components/sales/CustomerInvoiceTable.vue'
+import RTODetails from '@/components/sales/FinanceAndRto.vue'
 
 export default {
   components:{
@@ -93,7 +94,8 @@ export default {
     CLIENTSUMMERY,
     DAYBOOK,
     QUICKINVOICE,
-    AllCustomerInvoices
+    AllCustomerInvoices,
+    RTODetails
   },
   props: {
     selectedTab: {
@@ -129,6 +131,7 @@ export default {
       if(this.selectedTab === 'DAYBOOK') return 'DAYBOOK';
       if(this.selectedTab === 'QUICKINVOICE') return 'QUICKINVOICE';
       if(this.selectedTab === 'AllCustomerInvoices') return 'AllCustomerInvoices';
+      if(this.selectedTab === 'RTODetails') return 'RTODetails';
       return null;
     },
     displayName() {

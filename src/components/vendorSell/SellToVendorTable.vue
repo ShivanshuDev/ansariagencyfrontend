@@ -33,6 +33,13 @@
             </v-col>
             <v-col cols="12" md="3">
               <v-text-field dense outlined clearable
+                v-model.trim="filters.chassisNumber"
+                label="Chassis Number"
+                prepend-inner-icon="mdi-account"
+                @click:clear="loadAll"/>
+            </v-col>
+            <v-col cols="12" md="3">
+              <v-text-field dense outlined clearable
                 v-model.trim="filters.name"
                 label="Exact Name (vendor/buyer/consignee)"
                 prepend-inner-icon="mdi-card-account-details"
@@ -75,8 +82,8 @@
           :headers="headers"
           :items="rows"
           :loading="loading"
-          :items-per-page="15"
-          :footer-props="{ itemsPerPageOptions: [10, 15, 25, 50] }"
+          :items-per-page="10"
+          :footer-props="{ itemsPerPageOptions: [10, 20, 30, 40] }"
           class="elevation-1"
           item-key="pk"
           dense
@@ -472,7 +479,7 @@ export default {
         { text: 'Status', value: 'meta.statusType', width: 130 },
         { text: 'Actions', value: 'actions', sortable: false, align: 'end', width: 170 }
       ],
-      filters: { invoiceNumber: null, clientId: null, name: null, from: null, to: null, statusD: null },
+      filters: { invoiceNumber: null, chassisNumber:null, clientId: null, name: null, from: null, to: null, statusD: null },
       menus: { from: false, to: false },
 
       dialogs: { view: false, update: false },
@@ -507,9 +514,12 @@ export default {
     // ---- endpoints ----
     url (name, arg) {
       const B = this.base
+      console.log('name', name)
+      console.log('arg', arg)
       switch (name) {
         case 'getAll': return `${B}getallselltovendor`
         case 'getByInvoice': return `${B}getselltovendorbyinvoicenumber/${encodeURIComponent(arg)}`
+        case 'getSellToVendorByChassis': return `${B}getSellToVendorByChassis/${encodeURIComponent(arg.chassisNumber)}`
         case 'getByStatus': {
           const status = typeof arg === 'string' ? arg : (arg && (arg.statusD || arg.status)) || ''
           return `${B}getSellToVendorByStatus/${encodeURIComponent(status)}`
@@ -541,8 +551,9 @@ export default {
     },
 
     async runSearch () {
-      const { invoiceNumber, clientId, name, from, to, statusD } = this.filters
+      const { invoiceNumber, chassisNumber, clientId, name, from, to, statusD } = this.filters
       this.loading = true
+      console.log('chassisNumber', chassisNumber)
       try {
         let data
         if (invoiceNumber) {
@@ -557,6 +568,9 @@ export default {
           data = r.data?.items || []
         } else if (name) {
           const r = await axios.get(this.url('getByName', { name }))
+          data = r.data?.items || []
+        } else if (chassisNumber) {
+          const r = await axios.get(this.url('getSellToVendorByChassis', { chassisNumber }))
           data = r.data?.items || []
         } else if (from && to) {
           const r = await axios.get(this.url('getByDates', { from, to }))
@@ -573,7 +587,7 @@ export default {
     },
 
     resetFilters () {
-      this.filters = { invoiceNumber: null, clientId: null, name: null, from: null, to: null, statusD: null }
+      this.filters = { invoiceNumber: null, chassisNumber:null, clientId: null, name: null, from: null, to: null, statusD: null }
       this.loadAll()
     },
 

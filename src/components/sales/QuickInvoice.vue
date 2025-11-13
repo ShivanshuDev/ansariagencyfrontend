@@ -17,11 +17,11 @@
           <span>Owner</span>
         </v-stepper-step>
         <v-divider></v-divider>
-        <v-stepper-step :complete="currentStep > 2" step="2" >
+        <!-- <v-stepper-step :complete="currentStep > 2" step="2" >
           Finance & RTO
         </v-stepper-step>
-        <v-divider></v-divider>
-        <v-stepper-step step="3" >
+        <v-divider></v-divider> -->
+        <v-stepper-step step="2" >
           Price & Payment
         </v-stepper-step>
       </v-stepper-header>
@@ -475,8 +475,7 @@
         </div>
 
         <!-- STEP 2: FINANCE & RTO DETAIL -->
-        <div v-if="currentStep === 2">
-          <!-- Sales Mode -->
+        <!-- <div v-if="currentStep === 2">
           <section class="section-wrap">
             <div class="section-head">Choose Sales Mode</div>
             <v-radio-group v-model="form.salesMode" row>
@@ -485,7 +484,6 @@
             </v-radio-group>
           </section>
           
-          <!-- Finance Details (hide when CASH) -->
           <section v-if="form.salesMode==='FINANCE'" class="section-wrap">
             <div class="section-head">Finance Details</div>
             <v-row dense>
@@ -502,7 +500,6 @@
             </v-row>
           </section>
 
-          <!-- Registration -->
           <section class="section-wrap">
             <div class="section-head">Registration Information</div>
             <v-row dense>
@@ -535,7 +532,6 @@
             </v-row>
           </section>
 
-          <!-- Insurance -->
           <section class="section-wrap">
             <div class="section-head">Insurance Details</div>
             <v-row dense>
@@ -559,7 +555,6 @@
             </v-row>
           </section>
 
-          <!-- Receiving -->
           <section class="section-wrap">
             <div class="section-head">Customer Receiving Detail</div>
             <v-row dense>
@@ -592,16 +587,16 @@
               <v-col cols="12" sm="8"><v-text-field v-model="form.receiving.remarks" label="Remarks" dense outlined hide-details="auto"/></v-col>
             </v-row>
           </section>
-        </div>
+        </div> -->
 
         <!-- STEP 3: PRICE & PAYMENT DETAIL -->
-        <div v-if="currentStep === 3">
+        <div v-if="currentStep === 2">
           <!-- Price structure -->
           <section class="section-wrap">
             <div class="section-head">Price Structure</div>
             <v-row dense>
               <v-col cols="12" sm="3">
-                <v-text-field :value="money(lineAmount)" label="Vehicle Amount (ex-RTO/Ins)" dense outlined hide-details="auto" readonly/>
+                <v-text-field :value="money(lineAmount)" label="Vehicle Amount" dense outlined hide-details="auto" readonly/>
               </v-col>
               <v-col cols="12" sm="3">
                 <v-text-field :value="money(totalRtoCharges)" label="RTO Charges" dense outlined hide-details="auto" readonly/>
@@ -878,7 +873,7 @@
           <v-spacer />
           <v-btn 
             style="width:100px;"
-            v-if="currentStep < 3" 
+            v-if="currentStep < 2" 
             @click="currentStep++" 
             color="primary"
           >
@@ -887,7 +882,7 @@
           </v-btn>
           <v-btn 
             style="width:250px;"
-            v-if="currentStep === 3" 
+            v-if="currentStep === 2" 
             @click="onSubmit" 
             color="primary"
             :loading="submitting"

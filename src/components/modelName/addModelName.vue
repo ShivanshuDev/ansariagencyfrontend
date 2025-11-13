@@ -257,11 +257,11 @@
               <div class="d-flex align-center justify-space-between mb-2">
                 <div class="subtitle-1">Colors</div>
                 <div>
-                  <v-btn small text @click="addColorField" :disabled="loading">Add color field</v-btn>
+                  <v-btn small text @click="addColorField" :disabled="loading">Add color</v-btn>
                 </div>
               </div>
 
-              <div v-if="form.colorInputs.length === 0" class="text--secondary mb-2">No color fields — click "Add color field".</div>
+              <div v-if="form.colorInputs.length === 0" class="text--secondary mb-2">No color fields — click "Add color".</div>
 
               <div style="max-height:220px; overflow:auto;">
                 <br />
@@ -471,7 +471,7 @@ export default {
     return {
       modelDetailsDialog: {
         visible: false,
-        data: null,     // { modelName, category, hsn, colors, active, ... }
+        data: null,
       },
 
       loading: false,
@@ -481,10 +481,9 @@ export default {
       search: "",
       searchTimer: null,
 
-      // form
       form: {
         modelName: "",
-        hsn: "",                 // ⬅️ HSN at model level
+        hsn: "",
         colorInputs: [],
         active: true,
         category: null,
@@ -501,7 +500,7 @@ export default {
       headers: [
         { text: "Category", value: "category", sortable: true },
         { text: "Model Name", value: "modelName", sortable: true },
-        { text: "HSN", value: "hsn", sortable: true },        // ⬅️ HSN column
+        { text: "HSN", value: "hsn", sortable: true },
         { text: "Color", value: "color", sortable: false },
         { text: "Actions", value: "actions", sortable: false, align: "end" }
       ],
@@ -509,7 +508,7 @@ export default {
       rules: {
         required: v => !!v || "This field is required",
         min3: v => (v && v.length >= 3) || "Minimum 3 characters",
-        hsnDigits: v => /^\d{4,8}$/.test(String(v || '')) || "Enter 4–8 digits", // ⬅️ HSN rule
+        hsnDigits: v => /^\d{4,8}$/.test(String(v || '')) || "Enter 4–8 digits",
       },
 
       endpoints: {
@@ -522,16 +521,13 @@ export default {
         deleteCategoryBase: process.env.VUE_APP_AGENCY_BACKEND_URL + "deleteCategory"
       },
 
-      // Dialog/UI controls
       categoryDialog: { visible: false, mode: "add", value: "", valid: false, editingItem: null },
       modelDialog: { visible: false, mode: "add", valid: false, editingKey: null },
       colorDialog: { visible: false },
       dialogNewColor: "",
 
-      // per-item loading map
       itemLoading: {},
 
-      // delete confirmation dialog
       deleteDialog: { visible: false, item: null }
     };
   },
@@ -553,7 +549,7 @@ export default {
         const colors = Array.isArray(m.colors) ? m.colors : (Array.isArray(m.color) ? m.color : (m.colors ? [m.colors] : []));
         const active = typeof m.active !== "undefined" ? !!m.active : true;
         const category = m.category ?? m.cat ?? m.categoryName ?? null;
-        const hsn = m.hsn ?? m.HSN ?? null;              // ⬅️ capture HSN from API item
+        const hsn = m.hsn ?? m.HSN ?? null;
         return { modelName, colors, active, category, hsn, __raw: m };
       });
     },
@@ -565,7 +561,7 @@ export default {
         (m.modelName && m.modelName.toLowerCase().includes(q)) ||
         (m.category && m.category.toString().toLowerCase().includes(q)) ||
         (m.colors && m.colors.join(", ").toLowerCase().includes(q)) ||
-        (m.hsn && String(m.hsn).toLowerCase().includes(q))       // ⬅️ include HSN in search
+        (m.hsn && String(m.hsn).toLowerCase().includes(q))
       );
     },
 
@@ -596,7 +592,6 @@ export default {
         navigator.clipboard?.writeText(text);
         this.showSnackbar('Copied!');
       } catch (e) {
-        // fallback
         const ta = document.createElement('textarea');
         ta.value = text; document.body.appendChild(ta);
         ta.select(); document.execCommand('copy');
@@ -604,7 +599,7 @@ export default {
         this.showSnackbar('Copied!');
       }
     },
-    // style helpers for color chips
+
     chipStyle(c) {
       const bg = this.normalizeColor(c);
       return { background: this.isLight(bg) ? '#0000000a' : '#ffffff0a', borderColor: bg };
@@ -617,25 +612,22 @@ export default {
       const bg = this.normalizeColor(c);
       return this.isLight(bg) ? undefined : 'white';
     },
-    // naive normalization: if user passed a named color/hex, just return it
     normalizeColor(c) {
       return (c || '').toString().trim();
     },
-    // contrast check (very small util for hex like #RRGGBB); falls back to dark text
     isLight(color) {
       const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color || '');
-      if (!m) return true; // assume light background for unknown names => dark text
+      if (!m) return true;
       const r = parseInt(m[1], 16), g = parseInt(m[2], 16), b = parseInt(m[3], 16);
       const luma = 0.2126*(r/255) + 0.7152*(g/255) + 0.0722*(b/255);
       return luma > 0.6;
     },
 
     openDetails(item) {
-      // Normalize the row payload
       const normalized = {
         modelName: item?.modelName ?? '',
         category: item?.category ?? null,
-        hsn: item?.hsn ?? null,            // ⬅️ include HSN in details
+        hsn: item?.hsn ?? null,
         colors: Array.isArray(item?.colors) ? [...item.colors] : [],
         active: !!item?.active,
         __raw: item,
@@ -653,20 +645,17 @@ export default {
       const item = this.modelDetailsDialog.data;
       this.modelDetailsDialog.visible = false;
       if (!item) return;
-      // Reuse existing edit flow with pre-filled data
       this.openModelDialog({
         modelName: item.modelName,
         category: item.category,
-        hsn: item.hsn || "",               // ⬅️ pass HSN into edit
+        hsn: item.hsn || "",
         colors: item.colors,
         active: item.active,
       });
     },
 
-    // utility to normalize a key for itemLoading (safe)
     getKey(name) {
       if (!name) return "";
-      // remove spaces and encode to keep key safe
       return encodeURIComponent(name).replace(/%/g, "_");
     },
 
@@ -705,15 +694,13 @@ export default {
     addModelForCategory(c) {
       const name = c?.category || c?.name || null;
       if (!name) return;
-
-      // prepare "add" mode with category preselected
       this.editing = false;
       this.originalModelName = "";
       this.form.modelName = "";
-      this.form.hsn = "";                 // ⬅️ reset HSN
+      this.form.hsn = "";
       this.form.colorInputs = [];
       this.form.active = true;
-      this.form.category = name;   // preselect category
+      this.form.category = name;
       this.modelDialog.mode = "add";
       this.modelDialog.editingKey = null;
       this.modelDialog.visible = true;
@@ -742,7 +729,6 @@ export default {
         if (oldName && oldName !== val) {
           try {
             this.loading = true;
-            // fallback: delete + add if update endpoint missing
             await axios.delete(`${this.endpoints.deleteCategoryBase}/${encodeURIComponent(oldName)}`);
             await axios.post(this.endpoints.addCategory, { category: val });
             this.showSnackbar("Category updated");
@@ -825,10 +811,11 @@ export default {
       return res.data;
     },
 
-    // UPDATED: include HSN in payload
+    // updateModel now accepts oldName and includes oldModelName only when provided
     async updateModel(oldName, payload) {
       const model = (payload.modelName || "").toString().trim();
       if (!model) throw new Error("modelName missing in payload");
+
       const pk = `MODEL#${model}`;
       const sk = 'MODEL#INFO';
 
@@ -837,10 +824,14 @@ export default {
         sk,
         modelName: model,
         category: payload.category ?? null,
-        hsn: payload.hsn ?? null,                                                // ⬅️ include HSN
+        hsn: payload.hsn ?? null,
         colors: Array.isArray(payload.colors) ? payload.colors : (payload.colors ? [payload.colors] : []),
         active: typeof payload.active === 'boolean' ? payload.active : undefined
       };
+
+      if (oldName && oldName !== model) {
+        body.oldModelName = oldName;
+      }
 
       Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
 
@@ -854,13 +845,12 @@ export default {
       return res.data;
     },
 
-    // Open model dialog for add/edit (only that item)
     openModelDialog(item = null) {
       if (item) {
         this.editing = true;
         this.originalModelName = item.modelName;
         this.form.modelName = item.modelName;
-        this.form.hsn = item.hsn || "";                    // ⬅️ prefill HSN
+        this.form.hsn = item.hsn || "";
         this.form.colorInputs = Array.isArray(item.colors) ? [...item.colors] : [];
         this.form.active = !!item.active;
         this.form.category = item.category || null;
@@ -870,7 +860,7 @@ export default {
         this.editing = false;
         this.originalModelName = "";
         this.form.modelName = "";
-        this.form.hsn = "";                                 // ⬅️ reset HSN
+        this.form.hsn = "";
         this.form.colorInputs = [];
         this.form.active = true;
         this.form.category = null;
@@ -887,7 +877,6 @@ export default {
       this.modelDialog.editingKey = null;
     },
 
-    // Called by dialog save button
     async submitModelFromDialog() {
       const editingKey = this.modelDialog.editingKey ? this.modelDialog.editingKey : null;
       if (editingKey) this.$set(this.itemLoading, editingKey, true);
@@ -895,10 +884,8 @@ export default {
 
       try {
         await this.onSubmit();
-        // close the dialog if submission didn't throw
         this.modelDialog.visible = false;
       } catch (err) {
-        // onSubmit handles snackbars
       } finally {
         if (editingKey) this.$set(this.itemLoading, editingKey, false);
         else this.loading = false;
@@ -906,7 +893,6 @@ export default {
       }
     },
 
-    // FORM UX
     addColorField() {
       if (!Array.isArray(this.form.colorInputs)) this.form.colorInputs = [];
       this.form.colorInputs.push("");
@@ -933,7 +919,7 @@ export default {
 
     resetForm(keepActive = false) {
       this.form.modelName = "";
-      this.form.hsn = "";                                  // ⬅️ clear HSN
+      this.form.hsn = "";
       this.form.colorInputs = [];
       this.form.active = keepActive ? true : false;
       this.form.category = null;
@@ -947,7 +933,6 @@ export default {
       this.modelDialog.visible = false;
     },
 
-    // SUBMIT (Add / Update)
     async onSubmit() {
       const formRef = this.$refs.form || this.$refs.modelDialogForm;
       if (formRef) {
@@ -965,7 +950,7 @@ export default {
 
       const payload = {
         modelName,
-        hsn: this.form.hsn,                  // ⬅️ include HSN
+        hsn: this.form.hsn,
         colors: uniqueColors,
         active: !!this.form.active,
         category: this.form.category || null,
@@ -976,10 +961,11 @@ export default {
         const loadingKey = this.getKey(oldName);
         this.$set(this.itemLoading, loadingKey, true);
         try {
-          await this.updateModel(null, payload);
+          // only include oldName when actual rename happened
+          const oldNameToSend = (oldName && oldName !== payload.modelName) ? oldName : null;
+          await this.updateModel(oldNameToSend, payload);
           this.showSnackbar("Model updated");
 
-          // Find and update local model by oldName
           const idx = this.models.findIndex(m => {
             const name = typeof m === "string" ? m : (m.modelName ?? m.name ?? m.label ?? m.model ?? "");
             return name === oldName;
@@ -988,7 +974,7 @@ export default {
           if (idx !== -1) {
             this.$set(this.models, idx, {
               modelName: payload.modelName,
-              hsn: payload.hsn,                  // keep HSN
+              hsn: payload.hsn,
               colors: payload.colors,
               active: payload.active,
               category: payload.category
@@ -1003,6 +989,8 @@ export default {
             this.selectedModel.colors = Array.from(payload.colors);
             this.selectedModel.category = payload.category;
             this.selectedModel.active = payload.active;
+            // update stored original name for selection
+            this.selectedModel.__originalName = payload.modelName;
           }
         } catch (err) {
           console.error("update model error", err);
@@ -1013,14 +1001,13 @@ export default {
           this.resetForm(true);
         }
       } else {
-        // Add
         try {
           this.loading = true;
           await this.addModel(payload);
           this.showSnackbar("Model added");
           this.models.unshift({
             modelName: payload.modelName,
-            hsn: payload.hsn,                    // include HSN
+            hsn: payload.hsn,
             colors: payload.colors,
             active: payload.active,
             category: payload.category
@@ -1037,12 +1024,10 @@ export default {
       }
     },
 
-    // EDIT / SELECT MODEL
     onEdit(item) {
       this.openModelDialog(item);
     },
 
-    // Delete flow
     confirmDelete(item) {
       this.deleteDialog.item = item;
       this.deleteDialog.visible = true;
@@ -1072,12 +1057,14 @@ export default {
     },
 
     selectModel(item) {
+      // record original name so panel saves know if a rename happened
       this.selectedModel = {
         modelName: item.modelName,
-        hsn: item.hsn || null,                     // ⬅️ track HSN in selection
+        hsn: item.hsn || null,
         colors: Array.isArray(item.colors) ? [...item.colors] : [],
         active: !!item.active,
-        category: item.category || null
+        category: item.category || null,
+        __originalName: item.modelName  // <-- important: store original
       };
     },
 
@@ -1086,7 +1073,6 @@ export default {
       this.newColor = "";
     },
 
-    // COLORS PANEL ACTIONS
     addColorToSelected() {
       const color = (this.newColor || "").toString().trim();
       if (!color || !this.selectedModel) return;
@@ -1124,7 +1110,6 @@ export default {
       this.selectedModel.colors.splice(i, 1);
     },
 
-    // SAVE colors & status using pk/sk constructed here
     async saveSelectedModelColors() {
       if (!this.selectedModel) return;
       const key = this.getKey(this.selectedModel.modelName);
@@ -1132,13 +1117,18 @@ export default {
       try {
         const payload = {
           modelName: this.selectedModel.modelName,
-          hsn: this.selectedModel.hsn || null,                 // ⬅️ keep HSN when saving from panel
+          hsn: this.selectedModel.hsn || null,
           colors: Array.isArray(this.selectedModel.colors) ? this.selectedModel.colors : [],
           active: !!this.selectedModel.active,
           category: this.selectedModel.category || null,
         };
 
-        await this.updateModel(null, payload);
+        // send oldName only if original name exists and it differs
+        const oldNameToSend = (this.selectedModel.__originalName && this.selectedModel.__originalName !== payload.modelName)
+          ? this.selectedModel.__originalName
+          : null;
+
+        await this.updateModel(oldNameToSend, payload);
 
         this.showSnackbar("Model colors saved");
 
@@ -1149,7 +1139,7 @@ export default {
         if (idx !== -1) {
           this.$set(this.models, idx, {
             modelName: payload.modelName,
-            hsn: payload.hsn,                   // keep HSN
+            hsn: payload.hsn,
             colors: payload.colors,
             active: payload.active,
             category: payload.category
@@ -1157,6 +1147,9 @@ export default {
         } else {
           await this.fetchModels();
         }
+
+        // update stored original name after successful save
+        if (this.selectedModel) this.selectedModel.__originalName = payload.modelName;
 
         this.colorDialog.visible = false;
       } catch (err) {
@@ -1167,7 +1160,6 @@ export default {
       }
     },
 
-    // UX
     debouncedFilter() {
       clearTimeout(this.searchTimer);
       this.searchTimer = setTimeout(() => {}, 200);
@@ -1175,6 +1167,7 @@ export default {
   }
 };
 </script>
+
 
 <style scoped>
 .category-list { max-height: 730px; overflow-y: auto; }

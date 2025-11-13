@@ -774,93 +774,86 @@ export default {
       this.$emit('show-details', item); // keep parent hooks
     },
 
-    async fetchRows (resetPage = false) {
-      if (!this.BASE) { console.error('VUE_APP_AGENCY_BACKEND_URL is not set'); return; }
-      if (resetPage) this.options.page = 1;
+    async fetchRows() {
       this.loading = true;
       try {
-        const { page, itemsPerPage, sortBy, sortDesc } = this.options;
-        let qp = new URLSearchParams();
+        // Supported filters
+        const filters = [
+          'billNumber',
+          'phone',
+          'name',
+          'chassis',
+          'date',
+          'ownerType',
+          'salesMode',
+          'status'
+        ];
 
-        qp.set('page', page);
-        qp.set('limit', itemsPerPage);
-        if (sortBy && sortBy[0]) {
-          qp.set('sortBy', sortBy[0]);
-          qp.set('sortDir', (sortDesc && sortDesc[0]) ? 'desc' : 'asc');
-        }
+        // Extract active filters
+        const active = {};
+        filters.forEach(f => {
+          const v = this.filters?.[f];
+          if (v !== undefined && v !== null && v !== '') active[f] = v;
+        });
 
-        if (this.filters.global) qp.set('q', this.filters.global);
-        if (this.filters.status) qp.set('status', this.filters.status);
-        if (this.filters.salesMode) qp.set('salesMode', this.filters.salesMode);
-        if (this.filters.ownerType) qp.set('ownerType', this.filters.ownerType);
-        if (this.filters.billNumber) qp.set('billNumber', this.filters.billNumber);
-        if (this.filters.phone) qp.set('phone', this.filters.phone);
-        if (this.filters.name) qp.set('name', this.filters.name);
-        if (this.filters.chassis) qp.set('chassis', this.filters.chassis);
-        if (this.filters.date) qp.set('date', this.filters.date);
-
-        const anyNonKey =
-          !!(this.filters.global || this.filters.model || this.filters.color ||
-             this.filters.status || this.filters.salesMode || this.filters.qty || this.filters.ownerType);
-
-        const keyFilters = [
-          this.filters.billNumber ? 'bill' : null,
-          this.filters.phone ? 'phone' : null,
-          this.filters.name ? 'name' : null,
-          this.filters.chassis ? 'chassis' : null,
-          this.filters.date ? 'date' : null,
-          this.filters.ownerType ? 'ownerType' : null,
-          this.filters.salesMode ? 'salesMode' : null,
-        ].filter(Boolean);
+        // Map single filters to endpoints
+        const endpointMap = {
+          billNumber: 'getByInvoice',
+          phone: 'getByPhone',
+          name: 'getByName',
+          chassis: 'getByChassis',
+          date: 'getByDate',
+          ownerType: 'ownerType',
+          salesMode: 'bySalesMode'
+          // status does NOT have its own endpoint, so search is correct
+        };
 
         let endpoint = 'allCustomerInvoice';
-        if (anyNonKey || keyFilters.length > 1) {
+
+        if (Object.keys(active).length === 1) {
+          const key = Object.keys(active)[0];
+          console.log('endpointMap[key]', endpointMap[key])
+          endpoint = endpointMap[key] || 'search';
+          console.log('endpoint', endpoint)
+        } else if (Object.keys(active).length > 1) {
           endpoint = 'search';
-        } else if (keyFilters.length === 1) {
-          switch (keyFilters[0]) {
-            case 'bill':        endpoint = 'getByInvoice'; break;
-            case 'phone':       endpoint = 'getByPhone';   break;
-            case 'name':        endpoint = 'getByName';    break;
-            case 'chassis':     endpoint = 'getByChassis'; break;
-            case 'date':        endpoint = 'getByDate';    break;
-            case 'ownerType':   endpoint = 'ownerType';    break;
-            case 'salesMode':   endpoint = 'salesMode';    break;
-          }
         }
 
-        let url;
-        if (this.filters.billNumber || this.filters.phone || this.filters.name || this.filters.chassis || this.filters.date || this.filters.ownerType || this.filters.salesMode) {
-          qp = new URLSearchParams();
-          if (this.filters.billNumber) qp.set('billNumber', this.filters.billNumber);
-          if (this.filters.phone) qp.set('phone', this.filters.phone);
-          if (this.filters.name) qp.set('name', this.filters.name);
-          if (this.filters.chassis) qp.set('chassis', this.filters.chassis);
-          if (this.filters.date) qp.set('date', this.filters.date);
-          if (this.filters.ownerType) qp.set('ownerType', this.filters.ownerType);
-          if (this.filters.salesMode) qp.set('salesMode', this.filters.salesMode);
-          if (sortBy && sortBy[0]) qp.set('sortBy', sortBy[0]);
-          if (sortDesc && sortDesc[0] != null) qp.set('sortDir', sortDesc[0] ? 'desc' : 'asc');
-          qp.set('page', page); qp.set('limit', itemsPerPage);
-          url = `${this.BASE}${endpoint}?${qp.toString()}`;
-        } else {
-          url = `${this.BASE}${endpoint}?${qp.toString()}`;
-        }
+        const qp = new URLSearchParams(active).toString();
+        const url = `${this.BASE}${endpoint}${qp ? '?' + qp : ''}`;
 
         const resp = await fetch(url);
         const data = await resp.json();
 
-        const items = Array.isArray(data) ? data : (data.items || data.invoices || data.data || []);
-        this.rows = items.map(this.normalizeRow);
-        this.rows.sort((a, b) => (b.invoiceDateISO || '').localeCompare(a.invoiceDateISO || ''));
-        this.total = Number(data.total || data.count || this.rows.length || 0);
+        // after you get `items` and determine total
+        const items = Array.isArray(data) ? data : (data.items || data.data || data.invoices || []);
+        const total = (data.total != null) ? Number(data.total) : items.length;
+
+        // If backend returned full dataset (no real server paging), slice for v-data-table.
+        // This keeps v-data-table's pagination correct while still using your options (page/itemsPerPage).
+        const page = Number(this.options.page || 1);
+        const perPage = Number(this.options.itemsPerPage || 18);
+
+        // If the server returned everything (no total provided), treat it as client-side page slicing
+        if (data.total == null && Array.isArray(items)) {
+          this.total = items.length;
+          const start = (page - 1) * perPage;
+          const end = start + perPage;
+          this.rows = items.slice(start, end).map(r => this.normalizeRow(r));
+        } else {
+          // Server already paged properly (recommended) — use returned items and server total
+          this.rows = items.map(r => this.normalizeRow(r));
+          this.total = total;
+        }
       } catch (e) {
-        console.error('fetchRows error', e);
+        console.error(e);
         this.rows = [];
         this.total = 0;
       } finally {
         this.loading = false;
       }
     },
+
 
     normalizeRow (r) {
       return {
@@ -1086,9 +1079,10 @@ export default {
 }
 </script>
 
+
 <style scoped>
 .invoice-card {
-  margin: 20px;
+  margin: 2px;
   overflow: hidden;
   border: 1px solid #eef1f5;
   box-shadow: 0 8px 24px rgba(16,24,40,.06);
