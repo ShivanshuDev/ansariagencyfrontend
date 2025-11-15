@@ -474,121 +474,6 @@
           
         </div>
 
-        <!-- STEP 2: FINANCE & RTO DETAIL -->
-        <!-- <div v-if="currentStep === 2">
-          <section class="section-wrap">
-            <div class="section-head">Choose Sales Mode</div>
-            <v-radio-group v-model="form.salesMode" row>
-              <v-radio label="Cash" value="CASH"></v-radio>
-              <v-radio label="Finance" value="FINANCE"></v-radio>
-            </v-radio-group>
-          </section>
-          
-          <section v-if="form.salesMode==='FINANCE'" class="section-wrap">
-            <div class="section-head">Finance Details</div>
-            <v-row dense>
-              <v-col cols="12" sm="4">
-                <v-select v-model="form.finance.company" :items="financeCompanies" label="Select Finance Company" dense outlined hide-details="auto"/>
-              </v-col>
-              <v-col cols="12" sm="4"><v-text-field v-model="form.finance.financerName" label="Financer Name" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4"><v-text-field v-model.number="form.finance.downPayment" :rules="[optMoney]" type="number" prefix="₹" label="Down Payment" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4"><v-text-field v-model.number="form.finance.loanAmount" :rules="[optMoney]" type="number" prefix="₹" label="Loan Amount" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4"><v-text-field v-model.number="form.finance.disbursementAmount" :rules="[optMoney]" type="number" prefix="₹" label="Disbursement Amount" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4"><v-text-field v-model="form.finance.agreementNumber" label="Agreement Number" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4"><v-text-field v-model.number="form.finance.emi" :rules="[optMoney]" type="number" prefix="₹" label="EMI" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4"><v-text-field v-model.number="form.finance.tenureMonths" :rules="[optInteger]" type="number" label="Tenure in Months" dense outlined hide-details="auto"/></v-col>
-            </v-row>
-          </section>
-
-          <section class="section-wrap">
-            <div class="section-head">Registration Information</div>
-            <v-row dense>
-              <v-col cols="12" sm="4"><v-text-field v-model="form.registration.number" label="Registration Number" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4">
-                <v-menu v-model="menus.rcApplied" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-                  <template #activator="{ on, attrs }"><v-text-field v-model="form.registration.rcAppliedDate" v-bind="attrs" v-on="on" label="RC Applied Date" dense outlined hide-details="auto" readonly prepend-inner-icon="mdi-calendar"/></template>
-                  <v-date-picker v-model="form.registration.rcAppliedDate" @input="menus.rcApplied=false"/>
-                </v-menu>
-              </v-col>
-              <v-col cols="12" sm="4">
-                <v-menu v-model="menus.regPay" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-                  <template #activator="{ on, attrs }"><v-text-field v-model="form.registration.paymentDate" v-bind="attrs" v-on="on" label="Registration Payment Date" dense outlined hide-details="auto" readonly prepend-inner-icon="mdi-calendar"/></template>
-                  <v-date-picker v-model="form.registration.paymentDate" @input="menus.regPay=false"/>
-                </v-menu>
-              </v-col>
-              <v-col cols="12" sm="4">
-                <v-menu v-model="menus.hsrpApplied" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-                  <template #activator="{ on, attrs }"><v-text-field v-model="form.registration.hsrpAppliedDate" v-bind="attrs" v-on="on" label="HSRP Applied Date" dense outlined hide-details="auto" readonly prepend-inner-icon="mdi-calendar"/></template>
-                  <v-date-picker v-model="form.registration.hsrpAppliedDate" @input="menus.hsrpApplied=false"/>
-                </v-menu>
-              </v-col>
-              <v-col cols="12" sm="4"><v-text-field v-model="form.registration.hsrpCourier" label="HSRP Receiving Date by courier" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4">
-                <v-menu v-model="menus.rcPrint" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-                  <template #activator="{ on, attrs }"><v-text-field v-model="form.registration.rcPrintDate" v-bind="attrs" v-on="on" label="RC Print Date" dense outlined hide-details="auto" readonly prepend-inner-icon="mdi-calendar"/></template>
-                  <v-date-picker v-model="form.registration.rcPrintDate" @input="menus.rcPrint=false"/>
-                </v-menu>
-              </v-col>
-            </v-row>
-          </section>
-
-          <section class="section-wrap">
-            <div class="section-head">Insurance Details</div>
-            <v-row dense>
-              <v-col cols="12" sm="3"><v-select v-model="form.insurance.type" :items="insuranceTypes" label="Insurance Type" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="3"><v-text-field v-model="form.insurance.company" label="Insurance Company" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="3"><v-text-field v-model="form.insurance.policyNo" label="Policy No." dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="3"><v-text-field v-model="form.insurance.idv" :rules="[optMoney]" label="Insurance Declared Value" prefix="₹" type="number" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="3">
-                <v-menu v-model="menus.insFrom" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-                  <template #activator="{ on, attrs }"><v-text-field v-model="form.insurance.validFrom" v-bind="attrs" v-on="on" label="Insurance From (DD-MM-YYYY)" dense outlined hide-details="auto" readonly prepend-inner-icon="mdi-calendar"/></template>
-                  <v-date-picker v-model="form.insurance.validFrom" @input="menus.insFrom=false"/>
-                </v-menu>
-              </v-col>
-              <v-col cols="12" sm="3"><v-select v-model="form.insurance.periodYears" :items="[1,2,3,4,5]" label="Insurance Period (in Years)" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="3">
-                <v-menu v-model="menus.insUpto" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-                  <template #activator="{ on, attrs }"><v-text-field v-model="form.insurance.validUpto" v-bind="attrs" v-on="on" label="Insurance UPTO (DD-MM-YYYY)" dense outlined hide-details="auto" readonly prepend-inner-icon="mdi-calendar"/></template>
-                  <v-date-picker v-model="form.insurance.validUpto" @input="menus.insUpto=false"/>
-                </v-menu>
-              </v-col>
-            </v-row>
-          </section>
-
-          <section class="section-wrap">
-            <div class="section-head">Customer Receiving Detail</div>
-            <v-row dense>
-              <v-col cols="12" sm="4"><v-text-field v-model="form.receiving.receiverName" label="Receiver Name" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4">
-                <v-text-field
-                  v-model="form.receiving.mobile"
-                  :rules="[optPhone]"
-                  label="Mobile Number"
-                  inputmode="numeric"
-                  :maxlength="10"
-                  :counter="10"
-                  @keypress="onlyDigits"
-                  @input="restrictReceiverMobileInput"
-                  dense outlined hide-details="auto"
-                />
-              </v-col>
-              <v-col cols="12" sm="4">
-                <v-menu v-model="menus.numberPlateDate" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-                  <template #activator="{ on, attrs }"><v-text-field v-model="form.receiving.numberPlateReceivingDate" v-bind="attrs" v-on="on" label="Number Plate Receiving Date" dense outlined hide-details="auto" readonly prepend-inner-icon="mdi-calendar"/></template>
-                  <v-date-picker v-model="form.receiving.numberPlateReceivingDate" @input="menus.numberPlateDate=false"/>
-                </v-menu>
-              </v-col>
-              <v-col cols="12" sm="4">
-                <v-menu v-model="menus.rcReceivingDate" :close-on-content-click="false" transition="scale-transition" offset-y min-width="auto">
-                  <template #activator="{ on, attrs }"><v-text-field v-model="form.receiving.rcReceivingDate" v-bind="attrs" v-on="on" label="RC Receiving Date" dense outlined hide-details="auto" readonly prepend-inner-icon="mdi-calendar"/></template>
-                  <v-date-picker v-model="form.receiving.rcReceivingDate" @input="menus.rcReceivingDate=false"/>
-                </v-menu>
-              </v-col>
-              <v-col cols="12" sm="8"><v-text-field v-model="form.receiving.remarks" label="Remarks" dense outlined hide-details="auto"/></v-col>
-            </v-row>
-          </section>
-        </div> -->
-
         <!-- STEP 3: PRICE & PAYMENT DETAIL -->
         <div v-if="currentStep === 2">
           <!-- Price structure -->
@@ -960,8 +845,8 @@
               </div>
               <div class="inv-center">
                 <div class="inv-title">BILL INVOICE</div>
-                <div class="authorized">Authorised Dealer</div>
-                <div class="subline">TVS MOPED, TVS MOTORCYCLE, EV SCOOTER GENUINE SPARE & ACCESSORIES</div>
+                <div style="text-align:center;" class="subline">TVS MOPED, TVS MOTORCYCLE, EV SCOOTER, <br> GENUINE SPARE & ACCESSORIES</div>
+                <div style="text-align:center;" class="authorized"><u>Authorised Dealer</u></div>
               </div>
               <div class="inv-right">
                 <div class="company-name">ANSARI AUTOMOBILES</div>
@@ -983,13 +868,23 @@
             <div class="addr-wrap">
               <div class="addr">
                 <div class="b">Bill To -</div>
-                <div>NAME: {{ form.customer.name || '-' }}</div>
-                <div v-if="form.owner.relationType || form.owner.relationName">
-                  {{ convertRelation(form.owner.relationType) }}  — &nbsp; {{ form.owner.relationName || '-' }}
-                </div>
-                <div>CURRENT ADD: {{ printableAddress || '-' }}</div>
-                <div v-if="form.permanentAddress && (form.permanentAddress.line1 || form.permanentAddress.village || form.permanentAddress.district)">
-                  PERMANENT ADD: {{ [
+                <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                  <tr>
+                    <td style="font-weight:700; padding:1px 0; width:200px;">CUSTOMER NAME</td>
+                    <td>: {{ form.customer.name || '-' }}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:700; padding:1px 0;">{{ convertRelation(form.owner.relationType) }}</td>
+                    <td>: {{ form.owner.relationName || '-' }}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:700; padding:1px 0;">CURRENT ADD</td>
+                    <td>: {{ printableAddress || '-' }}</td>
+                  </tr>
+                  <tr v-if="form.permanentAddress && (form.permanentAddress.line1 || form.permanentAddress.village || form.permanentAddress.district)">
+                    <td style="font-weight:700; padding:1px 0;">PERMANENT ADD</td>
+                    <td>:
+                    {{ [
                     form.permanentAddress.line1,
                     form.permanentAddress.line2,
                     form.permanentAddress.village,
@@ -998,11 +893,22 @@
                     form.permanentAddress.district,
                     form.permanentAddress.state,
                     form.permanentAddress.pincode
-                  ].filter(Boolean).join(', ') }}
-                </div>
-                <div v-if="form.customer.phone">MOB: {{ form.customer.phone }}</div>
-                <div v-if="form.ids.type && form.ids.value">AADHAAR NUMBER : {{ form.ids.type==='AADHAAR' ? form.ids.value : '-' }}</div>
-                <div v-if="form.basic.assignedRtoOffice">ASSIGNED RTO OFFICE DETAIL:- {{ form.basic.assignedRtoOffice }}</div>
+                    ].filter(Boolean).join(', ') }}
+                    </td>
+                  </tr>
+                  <tr v-if="form.customer.phone">
+                    <td style="font-weight:700; padding:1px 0;">MOBILE NO.</td>
+                    <td>: {{ form.customer.phone }}</td>
+                  </tr>
+                  <tr v-if="form.ids.type && form.ids.value">
+                    <td style="font-weight:700; padding:1px 0;">AADHAAR NUMBER</td>
+                    <td>: {{ form.ids.type==='AADHAAR' ? form.ids.value : '-' }}</td>
+                  </tr>
+                  <tr v-if="form.basic.assignedRtoOffice">
+                    <td style="font-weight:700; padding:1px 0;">ASSIGNED RTO</td>
+                    <td>: {{ form.basic.assignedRtoOffice }}</td>
+                  </tr>
+                </table>
               </div>
             </div>
 
@@ -1027,52 +933,52 @@
             </div>
 
             <!-- VEHICLE TABLE -->
-            <table class="grid">
+            <table style="border-top:1px solid #000; border-bottom:1px solid #000; border-left:2px solid #000; border-right:2px solid #000; border-collapse:collapse;" class="grid">
               <thead>
                 <tr>
-                  <th>MODEL</th>
-                  <th class="c">QTY</th>
-                  <th class="r">PRICE</th>
-                  <th class="r">AMOUNT</th>
+                  <th style="border:1px solid #000; padding:6px 8px;">MODEL</th>
+                  <th style="border:1px solid #000; padding:6px 8px;" class="c">QTY</th>
+                  <th style="border:1px solid #000; padding:6px 8px;" class="r">PRICE</th>
+                  <th style="border:1px solid #000; padding:6px 8px;" class="r">AMOUNT</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>
-                    <div>{{ form.model || '-' }}</div>
+                  <td style="border:1px solid #000; padding:6px 8px;"> 
+                    <div style="font-size:14px; font-weight:600;">{{ form.model || '-' }}</div>
                     <div class="sub-info">
                       <div>Chassis: {{ form.chassisNumber || '—' }}</div>
                       <div>Engine: {{ selectedChassisInfo?.engineNumber || '—' }}</div>
                       <div>Color: {{ selectedChassisInfo?.color || '—' }}</div>
                     </div>
                   </td>
-                  <td class="c">{{ form.qty }}</td>
-                  <td class="r">{{ money(unitVehicleExRtoIns) }}</td>
-                  <td class="r">{{ money(lineAmount) }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;" class="c">{{ form.qty }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;" class="r">{{ money(unitVehicleExRtoIns) }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;" class="r">{{ money(lineAmount) }}</td>
                 </tr>
               </tbody>
             </table>
 
             <!-- ACCESSORIES -->
-            <table v-if="form.accessories.length" class="grid mt-3">
+            <table style="border-top:1px solid #000; border-bottom:1px solid #000; border-left:2px solid #000; border-right:2px solid #000; border-collapse:collapse;" v-if="form.accessories.length" class="grid">
               <thead>
                 <tr>
-                  <th colspan="2">ACCESSORIES</th>
-                  <th class="r">QTY</th>
-                  <th class="r">PRICE</th>
-                  <th class="r">AMOUNT</th>
+                  <th style="border:1px solid #000; padding:6px 8px;" colspan="2">ACCESSORIES</th>
+                  <th style="border:1px solid #000; padding:6px 8px;" class="r">QTY</th>
+                  <th style="border:1px solid #000; padding:6px 8px;" class="r">PRICE</th>
+                  <th style="border:1px solid #000; padding:6px 8px;" class="r">AMOUNT</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="acc in form.accessories" :key="acc.key">
-                  <td colspan="2">{{ acc.name || '—' }}</td>
-                  <td class="r">{{ acc.qty || 0 }}</td>
-                  <td class="r">{{ money(acc.price) }}</td>
-                  <td class="r">{{ money(accessoryAmount(acc)) }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;" colspan="2">{{ acc.name || '—' }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;" class="r">{{ acc.qty || 0 }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;" class="r">{{ money(acc.price) }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;" class="r">{{ money(accessoryAmount(acc)) }}</td>
                 </tr>
                 <tr class="sub-total-row">
-                  <td colspan="4" class="r"><b>Total Accessories:</b></td>
-                  <td class="r"><b>{{ money(accessoriesTotal) }}</b></td>
+                  <td style="border:1px solid #000; padding:6px 8px;" colspan="4" class="r"><b>Total Accessories:</b></td>
+                  <td style="border:1px solid #000; padding:6px 8px;" class="r"><b>{{ money(accessoriesTotal) }}</b></td>
                 </tr>
               </tbody>
             </table>
@@ -1119,20 +1025,24 @@
                 </div>
                 <div class="row paid"><span>Paid</span><span class="r">{{ money(totalPaid) }}</span></div>
                 <div class="row due"><span>Due</span><span class="r">{{ money(dueAmount) }}</span></div>
-                <div class="row"><span>Amount (in words)</span><span class="r">{{ amountInWords }}</span></div>
+                <div style="border:none;" class="row"><span>Amount (in words)</span><span class="r">{{ amountInWords }}</span></div>
               </div>
             </div>
 
             <!-- PAYMENT TABLE -->
-            <table class="grid mt-3" v-if="form.payments.length">
+            <table style="border-top:1px solid #000; border-bottom:1px solid #000; border-left:2px solid #000; border-right:2px solid #000; border-collapse:collapse;" class="grid" v-if="form.payments.length">
               <thead>
-                <tr><th>MODE</th><th>REFERENCE</th><th class="r">AMOUNT</th></tr>
+                <tr>
+                  <th style="border:1px solid #000; padding:6px 8px;">MODE</th>
+                  <th style="border:1px solid #000; padding:6px 8px;">REFERENCE</th>
+                  <th style="border:1px solid #000; padding:6px 8px;" class="r">AMOUNT</th>
+                </tr>
               </thead>
               <tbody>
                 <tr v-for="p in form.payments" :key="p.key">
-                  <td>{{ p.mode }}</td>
-                  <td>{{ p.reference || '—' }}</td>
-                  <td class="r">{{ money(p.amount) }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;">{{ p.mode }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;">{{ p.reference || '—' }}</td>
+                  <td style="border:1px solid #000; padding:6px 8px;" class="r">{{ money(p.amount) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -1141,15 +1051,33 @@
             <div class="bank-qr-sign">
               <div class="bank">
                 <div style="text-align:center; margin-bottom:12px; font-size:13px;"><b><u>Company's Bank Details</u></b></div>
-                <div class="row"><span>A/c Holder's Name :</span><span>Ansari Automobiles</span></div>
-                <div class="row"><span>Bank Name :</span><span>Union Bank of India</span></div>
-                <div class="row"><span>A/c No. :</span><span>302901010100080</span></div>
-                <div class="row"><span>IFSC Code :</span><span>UBIN0530298</span></div>
-                <div class="row"><span>Branch :</span><span>MAUNATH BHANJAN</span></div>
+                <table style="width:100%; border-collapse:collapse;">
+                  <tr>
+                    <td style="font-weight:500; font-size:10px; padding:2px;">A/c Holder's Name :</td>
+                    <td style="padding:4px 6px; font-size:10px;">Ansari Automobiles</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:500; font-size:10px; padding:2px;">Bank Name :</td>
+                    <td style="padding:2px; font-size:10px;">Union Bank of India</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:500; font-size:10px; padding:2px;">A/c No. :</td>
+                    <td style="padding:2px; font-size:10px;">302901010100080</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:500; font-size:10px; padding:2px;">IFSC Code :</td>
+                    <td style="padding:2px; font-size:10px;">UBIN0530298</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight:500; font-size:10px; padding:2px;">Branch :</td>
+                    <td style="padding:2px; font-size:10px;">MAUNATH BHANJAN</td>
+                  </tr>
+                </table>
+
               </div>
               <div class="qr">
                 <div class="b c">Scan to Pay</div>
-                <div class="qr-box"><!-- you can drop your QR img here if you have one --></div>
+                <div class="qr-box"><img style="width:120px; height:120px;" src="@/assets/qr.png" /></div>
               </div>
               <div class="sign">
                 <div class="b c">For Ansari Automobiles</div>
@@ -1163,12 +1091,11 @@
             </div>
 
             <!-- ENQUIRY STRIP -->
-              <span>Enquery Number: </span>
             <div class="enquiry-strip">
-              <div style="font-size:11px;">SALES - 8090086427  | </div>
-              <div style="font-size:11px;">RC/HSRP - 8528414311 |</div>
-              <div style="font-size:11px;">PARTS - 9648261555 | </div>
-              <div style="font-size:11px;">SERVICE - 8090231724/8400630140</div>
+              <div style="font-size:10px; padding-top:10px; padding-bottom:10px;  display:flex; flex-direction:row; justify-content:center; aligh-items:center; width:25%; height:auto; border:1px solid black; ">SALES ENQ NO: 8090086427 </div>
+              <div style="font-size:10px; padding-top:10px; padding-bottom:10px;  display:flex; flex-direction:row; justify-content:center; aligh-items:center; width:25%; height:auto; border:1px solid black; ">RC/HSRP ENQ NO: 8528414311</div>
+              <div style="font-size:10px; padding-top:10px; padding-bottom:10px;  display:flex; flex-direction:row; justify-content:center; aligh-items:center; width:25%; height:auto; border:1px solid black; ">PARTS ENQ NO: 9648261555</div>
+              <div style="font-size:10px; padding-top:10px; padding-bottom:10px;  display:flex; flex-direction:row; justify-content:center; aligh-items:center; width:25%; height:auto; border:1px solid black; ">SERVICE: 8090231724/8400630140</div>
             </div>
 
             <!-- DECLARATION -->
@@ -1434,27 +1361,82 @@ export default {
     // showroomTotal () { 
     //   return this.isTaxInclusive ? Number(this.subtotal.toFixed(2)) : Number((this.taxableAmount + this.cgstAmount + this.sgstAmount).toFixed(2))
     // },
-    showroomTotal () { 
-    const taxInclusiveTotal = this.isTaxInclusive ? 
-      Number(this.subtotal.toFixed(2)) : 
-      Number((this.taxableAmount + this.cgstAmount + this.sgstAmount).toFixed(2))
+  //   showroomTotal () { 
+  //   const taxInclusiveTotal = this.isTaxInclusive ? 
+  //     Number(this.subtotal.toFixed(2)) : 
+  //     Number((this.taxableAmount + this.cgstAmount + this.sgstAmount).toFixed(2))
     
-    // For SHOWROOM mode, showroom total is just the tax calculated amount
-    return taxInclusiveTotal
-  },
+  //   // For SHOWROOM mode, showroom total is just the tax calculated amount
+  //   return taxInclusiveTotal
+  // },
+
+  showroomTotal () {
+  // Tax calculation based on the subtotal (vehicle + accessories)
+  const s = Number(this.subtotal || 0) // lineAmount + accessoriesTotal
+  if (this.isTaxInclusive) {
+    // subtotal already includes tax
+    return Number(s.toFixed(2))
+  } else {
+    // tax exclusive: taxableAmount + cgst + sgst
+    const tax = Number(this.cgstAmount || 0) + Number(this.sgstAmount || 0)
+    return Number((this.taxableAmount + tax).toFixed(2))
+  }
+},
 
     // On-road total = showroom total + (RTO + Insurance) * qty? RTO/Ins are per unit, so multiply by qty
-    onRoadTotal () {
-      if (this.form.billOptions.billPriceMode === 'ON_ROAD') {
-        // For ON_ROAD mode: entered price already includes everything
-        return Number(this.form.price || 0) * Number(this.form.qty || 1)
-      } else {
-        // For SHOWROOM mode: showroom total + RTO + Insurance
-        const perUnitCharges = Number(this.form.rtoCharges || 0) + Number(this.form.insuranceCharges || 0)
-        const totalCharges = perUnitCharges * Number(this.form.qty || 1)
-        return Number((this.showroomTotal + totalCharges).toFixed(2))
-      }
-    },
+    // onRoadTotal () {
+    //   if (this.form.billOptions.billPriceMode === 'ON_ROAD') {
+    //     // For ON_ROAD mode: entered price already includes everything
+    //     return Number(this.form.price || 0) * Number(this.form.qty || 1)
+    //   } else {
+    //     // For SHOWROOM mode: showroom total + RTO + Insurance
+    //     const perUnitCharges = Number(this.form.rtoCharges || 0) + Number(this.form.insuranceCharges || 0)
+    //     const totalCharges = perUnitCharges * Number(this.form.qty || 1)
+    //     return Number((this.showroomTotal + totalCharges).toFixed(2))
+    //   }
+    // },
+
+  onRoadTotal () {
+  const qty = Number(this.form.qty || 1)
+  // total per-unit RTO & Insurance (already multiply by qty below)
+  const totalRto = Number(this.totalRtoCharges || 0)
+  const totalIns = Number(this.totalInsuranceCharges || 0)
+
+  if (this.form.billOptions.billPriceMode === 'ON_ROAD') {
+    // When ON_ROAD, treat the entered price as the vehicle on-road price per unit.
+    // Include accessoriesTotal (which are usually added on top).
+    // If tax is exclusive, calculate tax on (vehicle + accessories) accordingly.
+    const vehicleOnRoad = Number(this.form.price || 0) * qty
+    const itemsTotal = vehicleOnRoad + Number(this.accessoriesTotal || 0)
+    // If taxes are exclusive, add tax on top of itemsTotal; if inclusive, assume included already.
+    if (this.isTaxExclusive) {
+      // taxable part = itemsTotal (since price is exclusive of tax)
+      const taxable = Number(this.isTaxExclusive ? this.taxableAmountForItems(itemsTotal) : this.taxableAmount)
+      // compute cgst/sgst on taxable
+      const cgst = Number(((taxable * Number(this.form.cgstPercent || 0)) / 100).toFixed(2))
+      const sgst = Number(((taxable * Number(this.form.sgstPercent || 0)) / 100).toFixed(2))
+      return Number((itemsTotal + cgst + sgst).toFixed(2))
+    } else {
+      // tax inclusive — itemsTotal considered final
+      return Number(itemsTotal.toFixed(2))
+    }
+  } else {
+    // SHOWROOM mode: showroomTotal + RTO + Insurance (RTO/Ins are per-unit and multiplied by qty)
+    const perUnitCharges = Number(this.form.rtoCharges || 0) + Number(this.form.insuranceCharges || 0)
+    const totalCharges = perUnitCharges * qty
+    return Number((this.showroomTotal + totalCharges).toFixed(2))
+  }
+},
+
+taxableAmountForItems(itemsTotal) {
+  const tr = this.taxRate
+  if (tr > 0 && this.isTaxInclusive) {
+    // if itemsTotal already includes tax, return net (not used above for exclusive case)
+    return Number((itemsTotal / (1 + tr)).toFixed(2))
+  }
+  // if tax exclusive or no tax, taxable is itemsTotal
+  return Number(itemsTotal.toFixed(2))
+},
 
 
     // Total discount calculation
@@ -1474,19 +1456,25 @@ export default {
 
     // What should appear as GRAND TOTAL in the bill (after discounts)
     
+    // billGrandTotal () {
+    //   let baseTotal
+      
+    //   if (this.form.billOptions.billPriceMode === 'ON_ROAD') {
+    //     // ON_ROAD: Use the entered price directly (already includes RTO/Insurance)
+    //     baseTotal = Number(this.form.price || 0) * Number(this.form.qty || 1)
+    //   } else {
+    //     // SHOWROOM: Use showroom total (vehicle + accessories + tax)
+    //     baseTotal = this.showroomTotal
+    //   }
+      
+    //   return Number(Math.max(0, (baseTotal - this.totalDiscount)).toFixed(2))
+    // },
+
     billGrandTotal () {
-      let baseTotal
-      
-      if (this.form.billOptions.billPriceMode === 'ON_ROAD') {
-        // ON_ROAD: Use the entered price directly (already includes RTO/Insurance)
-        baseTotal = Number(this.form.price || 0) * Number(this.form.qty || 1)
-      } else {
-        // SHOWROOM: Use showroom total (vehicle + accessories + tax)
-        baseTotal = this.showroomTotal
-      }
-      
-      return Number(Math.max(0, (baseTotal - this.totalDiscount)).toFixed(2))
-    },
+  // Recompute using the improved onRoadTotal/showroomTotal logic and then subtract discounts
+  const baseTotal = this.onRoadTotal // onRoadTotal already covers both modes (returns final total for bill mode)
+  return Number(Math.max(0, (Number(baseTotal || 0) - Number(this.totalDiscount || 0))).toFixed(2))
+},
 
     totalPaid () { return Number(this.form.payments.reduce((s, p) => s + Number(p.amount || 0), 0).toFixed(2)) },
     dueAmount () { return Number(Math.max(0, (this.billGrandTotal - this.totalPaid)).toFixed(2)) },
@@ -2357,270 +2345,256 @@ export default {
 }
 </script>
 
+
+
 <style scoped>
-/* nominee*/
-.nominee-thumb {
-  position: relative;
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 10px;
-  align-items: center;
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 10px;
-  padding: 8px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+/* --------------------
+   Utility & base
+   -------------------- */
+:root{
+  --accent:#222;
+  --muted:#666;
+  --border:#e6e6e6;
+  --primary:#0d6efd;
+  --danger:#ff4d4f;
+  --success:#0b7a27;
+  --error:#c1121f;
 }
-.nominee-thumb img {
-  width: 120px;
-  height: 90px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-.nominee-thumb .thumb-meta .name {
-  font-size: 12px; font-weight: 600;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.nominee-thumb .thumb-meta .size { font-size: 11px; color: #666; margin-top: 2px; }
-.nominee-thumb .remove {
-  position: absolute; top: 6px; right: 6px;
-  background: #ff4d4f; color: #fff; border-radius: 14px;
-}
+*{box-sizing:border-box}
+body{font-family:Inter, Arial, Helvetica, sans-serif;margin:0;color:#111}
 
-/* ************************/
-.uploader {
-  border: 1px dashed #d6d6d6;
-  padding: 12px;
-  border-radius: 10px;
-  background: #fafafa;
-}
-
-/* File choose button */
-.choose-file {
-  display: inline-block;
-  position: relative;
-}
-.choose-file input[type="file"] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  width: 100%;
-  cursor: pointer;
-}
-.btn {
-  display: inline-block;
-  padding: 8px 14px;
-  border-radius: 8px;
-  background: #0d6efd;
-  color: #fff;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  user-select: none;
-}
-.btn:hover { filter: brightness(0.95); }
-.btn.ghost {
-  background: transparent;
-  color: #333;
-  border: 1px solid #d0d0d0;
-}
-.btn.primary { background: #0d6efd; color: #fff; }
-.btn.small { padding: 6px 10px; font-weight: 500; }
-
-/* Files area */
-.files-wrap { margin-top: 12px; }
-.list-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.actions .btn + .btn { margin-left: 8px; }
-
-/* Thumbnails grid */
-.thumbs {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.thumb {
-  position: relative;
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-}
-.thumb img {
-  width: 100%; height: 100px; object-fit: cover; display: block;
-}
-.thumb-meta { padding: 8px; }
-.thumb-meta .name {
-  font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.thumb-meta .size { font-size: 11px; color: #666; margin-top: 2px; }
-.thumb .remove {
-  position: absolute; top: 6px; right: 6px;
-  background: #ff4d4f; color: #fff; border: none; border-radius: 14px;
-  width: 22px; height: 22px; line-height: 20px; cursor: pointer;
-}
-.thumb .remove:hover { filter: brightness(0.95); }
-
-/* Non-image list */
-.list .row {
-  display: flex; align-items: center; justify-content: space-between;
-  background: #fff; border: 1px solid #eee; border-radius: 8px;
-  padding: 8px 10px; margin-bottom: 8px;
-}
-.list .row .name { font-weight: 600; }
-.list .row .muted { font-size: 12px; color: #666; margin-top: 2px; }
-.grow { flex: 1; }
-
-/* Progress */
-.progress {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #333;
-}
-.elevated-panels .v-expansion-panel { border:1px solid #e5e7eb; border-radius:10px; margin-bottom:12px; overflow:hidden; }
-.panel-title { font-weight:700; color:#0b5aa2; background:#eef6ff; }
-.section-wrap { border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:12px; background:#fff; }
-.section-head { font-weight:700; color:#333; margin-bottom:8px; }
-.mini-title { font-weight:600; color:#444; margin:4px 0 8px; }
-/* Invoice styles */
-.invoice-header { display: flex; flex-direction: row; justify-content: space-between; grid-template-columns: 180px 1fr 300px; align-items: center; gap: 12px; border: 2px solid #000; border-left: none; border-right: none; padding: 6px 8px; background: #fff; box-sizing: border-box; }
-.inv-left { display:flex; align-items:center; padding-left:6px; }
-.inv-logo { max-width: 160px; height: auto; object-fit: contain; display:block; }
-/* .inv-center { display:flex; justify-content:center; align-items:center; } */
-.inv-title { width: 100%; text-align:center; padding: 6px 12px; font-weight:700; font-size:14px; letter-spacing: 1px; }
-.inv-right { text-align:right; padding-right:8px; }
-.company-name { font-weight:700; font-size:14px; text-transform: uppercase; }
-.company-lines { margin-top:4px; font-size:11px; color:#111; }
-.company-lines .small { font-size:10px; color:#333; margin-top:2px }
-@media (max-width: 900px) {
-  .invoice-header { grid-template-columns: 120px 1fr 160px; }
-  .inv-logo { max-width: 110px; }
-  .inv-title { font-size:13px; padding:5px 8px; }
-  .company-name { font-size:12px; }
-}
-.bill-a4-landscape{ width: 1122px; max-width: 100%; margin: 0 auto; background:#fff; color:#000; padding:12px 18px; font-family: "Inter", Arial, Helvetica, sans-serif; font-size:12px; box-sizing:border-box; }
-.muted{ color:#666; font-size:11px; }
-.meta-row{ display:flex; justify-content:space-between; margin:6px 0 12px; }
-/* .addr-wrap-landscape{ display:flex; gap:12px; margin-bottom:12px; } */
-.addr-land{ flex:1; border:1px solid #000; padding:8px; min-height:86px; box-sizing:border-box; }
-.grid-land{ width:100%; border-collapse:collapse; margin-top:6px; }
-.grid-land th, .grid-land td{ border:1px solid #000; padding:8px; font-size:12px; }
-.grid-land thead th{ background:#f6f6f6; }
+/* text align helpers */
 .c{ text-align:center; }
 .r{ text-align:right; }
-.sub-total-row { background: #f9f9f9; font-weight: bold; }
-.charges-row-land{ display:flex; flex-direction: column; gap:12px; margin-top:10px; align-items:flex-start; }
-.charges-box-land{ flex:1; padding:4px; box-sizing:border-box; }
-.tax-box-land{ width:660px; border:1px solid #000; padding:8px; box-sizing:border-box; }
-.tax-box-land .tax-row{ display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed #ddd; }
-.tax-box-land .tax-row.total{ font-weight:700; background:#f7f7f7; }
-.tax-box-land .tax-row.paid{ color:#0b7a27; font-weight:700; }
-.tax-box-land .tax-row.due{ color:#c1121f; font-weight:700; }
-.tax-row{font-size:10px;}
-.nominee-land{ display:flex; gap:12px; margin-top:10px; }
-.nominee-land > div{ flex:1 }
-.paygrid-land{ width:100%; border-collapse:collapse; margin-top:12px; }
-.paygrid-land th, .paygrid-land td{ border:1px solid #000; padding:6px; }
-.paygrid-land thead th{ background:#f6f6f6; }
-.sign-declare-wrap{ display:flex; gap:12px; margin-top:12px; align-items:flex-end; }
-.sig-area{ flex:1; display:flex; flex-direction:column; align-items:flex-end; }
-.sig-line{ width:240px; height:40px; border-bottom:1px solid #000; margin-bottom:6px; }
-.sig-caption{ font-size:12px; text-align:right; color:#333; }
-.declare-land{ width:480px; border-top:1px solid #000; padding-top:8px; box-sizing:border-box; }
-.grid-land { width: 100%; border-collapse: collapse; margin-top: 10px; }
-.grid-land th, .grid-land td { border: 1px solid #ccc; padding: 8px 10px; vertical-align: top; }
-.grid-land th { background: #f5f5f5; font-weight: bold; text-align: left; }
-.grid-land .r { text-align: right; }
-.grid-land .c { text-align: center; }
-.sub-info { font-size: 12px; color: #666; margin-top: 3px; line-height: 1.4; }
-.sub-info span { display: inline-block; margin-right: 6px; }
-.mt-4 { margin-top: 16px; }
 
-/* Stepper customization */
-.v-stepper__header { box-shadow: none; border-bottom: 1px solid #e0e0e0; }
-.v-stepper__step--active .v-stepper__step__step { background-color: #1976d2; }
-/* Layout shell */
-.bill-a4{
-  width: 794px; /* A4 portrait @ ~96dpi */
-  max-width: 100%;
-  margin: 0 auto;
+/* muted text */
+.muted{ color:var(--muted); font-size:11px; }
+
+/* --------------------
+   Buttons / inputs
+   -------------------- */
+.btn{
+  display:inline-block;
+  padding:8px 14px;
+  border-radius:8px;
+  background:var(--primary);
+  color:#fff;
+  font-weight:600;
+  border:none;
+  cursor:pointer;
+  user-select:none;
+}
+.btn:hover{ filter:brightness(0.95) }
+.btn.ghost{
+  background:transparent;
+  color:#333;
+  border:1px solid #d0d0d0;
+}
+.btn.primary{ background:var(--primary); color:#fff; }
+.btn.small{ padding:6px 10px; font-weight:500; }
+
+/* file input wrapper */
+.choose-file{ display:inline-block; position:relative; }
+.choose-file input[type="file"]{
+  position:absolute; inset:0; opacity:0; width:100%; height:100%; cursor:pointer;
+}
+
+/* --------------------
+   Upload / files / thumbs
+   -------------------- */
+/* shared card look for thumbs & nominee-thumb */
+.card-like{
   background:#fff;
-  color:#000;
-  padding:12px 16px;
-  font-family: "Inter", Arial, Helvetica, sans-serif;
-  font-size:12px;
-  box-sizing:border-box;
-  border: 1px solid #000;
+  border:1px solid #eee;
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 1px 2px rgba(0,0,0,0.04);
 }
 
-/* Header */
-.invoice-header{
-  display:flex;
+/* nominee (two-column small preview) */
+.nominee-thumb{
+  position:relative;
+  display:grid;
+  grid-template-columns:120px 1fr;
+  gap:10px;
   align-items:center;
-  justify-content:space-between;
-  padding:8px 6px;
-  border-top:2px solid #000;
-  border-bottom:2px solid #000;
+  padding:8px;
 }
-.inv-left{ display:flex; align-items:center; }
-.inv-logo{ max-width:140px; height:auto; object-fit:contain; }
-.inv-center{display: flex; flex-direction:column; justify-content:space-around; text-align:center; flex:1; }
-.inv-title{ font-weight:700; font-size:16px; letter-spacing:0.5px; }
-.authorized{ font-size:12px; text-decoration:underline; margin-top:2px; }
-.subline{word-wrap:nowrap; font-size:11px; margin-top:2px; }
-.inv-right{ text-align:right; min-width:240px; }
-.company-name{ font-weight:700; text-transform:uppercase; }
-.company-lines .small{ font-size:10px; }
+.nominee-thumb.card-like{ /* reuse card look */
+  border-radius:10px;
+  padding:8px;
+}
+.nominee-thumb img{
+  width:120px;
+  height:90px;
+  object-fit:cover;
+  border-radius:8px;
+}
 
-/* Meta row */
-.meta-row{ display:flex; justify-content:space-between; margin:8px 0 10px; }
+/* general thumbnails grid */
+.thumbs{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:10px;
+  margin-bottom:12px;
+}
+.thumb{ position:relative; }
+.thumb.card-like{ border-radius:10px; }
+.thumb img{ width:100%; height:100px; object-fit:cover; display:block; }
+.thumb-meta, .nominee-thumb .thumb-meta{ padding:8px; }
+.thumb-meta .name, .nominee-thumb .thumb-meta .name{
+  font-size:12px; font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.thumb-meta .size, .nominee-thumb .thumb-meta .size{
+  font-size:11px; color:var(--muted); margin-top:2px;
+}
 
-/* Bill to block */
-.addr-wrap{ display:flex; margin:0px; }
-.addr{ flex:1; border:1px solid #000; padding:8px; min-height:86px; }
+/* remove button shared */
+.thumb .remove, .nominee-thumb .remove{
+  position:absolute; top:6px; right:6px;
+  background:var(--danger); color:#fff; border-radius:14px;
+  width:22px; height:22px; line-height:20px; cursor:pointer; border:none;
+}
+.thumb .remove:hover, .nominee-thumb .remove:hover{ filter:brightness(0.95) }
+
+/* non-image file list */
+.uploader{
+  border:1px dashed #d6d6d6; padding:12px; border-radius:10px; background:#fafafa;
+}
+.list .row{
+  display:flex; align-items:center; justify-content:space-between;
+  background:#fff; border:1px solid #eee; border-radius:8px;
+  padding:8px 10px; margin-bottom:8px;
+}
+.list .row .name{ font-weight:600; }
+.list .row .muted{ font-size:12px; color:var(--muted); margin-top:2px; }
+.grow{ flex:1; }
+
+/* progress */
+.progress{ margin-top:8px; font-size:12px; color:#333; }
+
+/* --------------------
+   Panels / section (single unified definition)
+   -------------------- */
+.elevated-panels .v-expansion-panel{
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  margin-bottom:12px;
+  overflow:hidden;
+}
+.panel-title{ font-weight:700; color:#0b5aa2; background:#eef6ff; padding:8px; }
+.section-wrap{
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+  padding:12px;
+  margin-bottom:12px;
+  background:#fff;
+}
+.section-head{ font-weight:700; color:#333; margin-bottom:8px; }
+.mini-title{ font-weight:600; color:#444; margin:4px 0 8px; }
+
+/* stepper tweak */
+.v-stepper__header{ box-shadow:none; border-bottom:1px solid #e0e0e0; }
+.v-stepper__step--active .v-stepper__step__step{ background-color:#1976d2; }
+
+/* --------------------
+   Invoice / bill layout (A4 / landscape helpers)
+   -------------------- */
+.bill-a4{
+  border:2px solid #000;
+  margin:0 auto; background:#fff; color:#000; padding:10px 10px;
+  font-size:12px; box-sizing:border-box; font-family:Inter, Arial, Helvetica, sans-serif;
+}
+/* .bill-a4{ width:794px; border:2px solid #000; } /* A4 portrait @ ~96dpi */
+/* .bill-a4-landscape{ width:1122px; border:1px solid #ccc; } */ 
+
+/* invoice header */
+.invoice-header{
+  display:flex; flex-direction:row; justify-content:space-between; align-items:center;
+  gap:12px; border:2px solid #000; border-bottom:1px solid #000; padding:6px 8px; background:#fff;
+}
+.inv-left{ display:flex; align-items:center; padding-left:6px; }
+.inv-logo{ max-width:160px; height:auto; object-fit:contain; display:block; }
+.inv-title{ text-align:center; padding:6px 12px; font-weight:700; font-size:14px; letter-spacing:1px; width:100%; }
+.inv-right{ text-align:right; padding-right:8px; min-width:180px; }
+.company-name{ font-weight:700; font-size:14px; text-transform:uppercase; }
+.company-lines{ margin-top:4px; font-size:11px; color:#111; }
+.company-lines .small{ font-size:10px; color:#333; margin-top:2px; }
+
+/* responsive header tweaks */
+@media (max-width:900px){
+  .invoice-header{ grid-template-columns:120px 1fr 160px; }
+  .inv-logo{ max-width:110px; }
+  .inv-title{ font-size:13px; padding:5px 8px; }
+  .company-name{ font-size:12px; }
+}
+
+/* meta row */
+.meta-row{
+  display:flex; justify-content:space-between; margin:0; padding:10px;
+  border-top:1px solid #000; border-bottom:1px solid #000; border-left:2px solid #000; border-right:2px solid #000;
+}
+
+/* address / bill-to */
+.addr-wrap{ display:flex; margin:0; }
+.addr{
+  flex:1;
+  border-top:1px solid #000; border-bottom:1px solid #000;
+  border-left:2px solid #000; border-right:2px solid #000;
+  padding:8px; min-height:86px;
+}
 .b{ font-weight:700; }
-.c{ text-align:center; }
 
-/* Nominee strip */
+/* nominee strip */
 .nominee-strip{
-  display:flex; gap:8px; border:1px solid #000; padding:8px; margin:8px 0 10px;
+  display:flex; gap:8px;
+  border-top:1px solid #000; border-bottom:1px solid #000;
+  border-left:2px solid #000; border-right:2px solid #000;
+  padding:8px; margin:0;
 }
 .nominee-strip > div{ flex:1; }
 .cap{ font-weight:700; font-size:11px; }
 
-/* Tables */
-.grid{ width:100%; border-collapse:collapse; }
-.grid th, .grid td{ border:1px solid #000; padding:8px; vertical-align:top; }
-.grid thead th{ background:#f6f6f6; text-align:left; }
-.r{ text-align:right; } .c{ text-align:center; }
-.sub-info{ color:#444; font-size:11px; line-height:1.3; margin-top:3px; }
+/* --------------------
+   Tables (unified, replaced grid-land/grid)
+   -------------------- */
+.grid, .grid-land{
+  width:100%; border-collapse:collapse; margin-top:0px; padding:5px;
+}
+/* .grid th, .grid td, .grid-land th, .grid-land td{
+  border-left:2px solid #000; border-right:2px solid #000; border-top:1px solid #000; border-bottom:1px solid #000; padding:8px 10px; vertical-align:top;
+}
+.grid thead th, .grid-land thead th{ background:#f5f5f5; font-weight:700; text-align:left; } */
+.grid .r, .grid-land .r{ text-align:right; }
+.grid .c, .grid-land .c{ text-align:center; }
+.sub-info{ color:#444; font-weight:600; font-size:11px; line-height:1.3; }
 .sub-total-row{ background:#f9f9f9; font-weight:700; }
-.mt-3{ margin-top:12px; }
 
-/* Amount block */
-.amount-block{ display:flex; gap:12px; margin-top:12px; align-items:flex-start; }
+/* small margin helpers */
+.mt-3{ margin-top:12px }
+.mt-4{ margin-top:16px }
+
+/* --------------------
+   Amounts / totals
+   -------------------- */
+.amount-block{ display:flex; gap:12px; margin:0; align-items:flex-start; }
 .charges{ flex:1; font-size:11px; }
 .totals-box{
-  width: 100%;
-  border:1px solid #000;
-  padding:10px 20px;
+  width:100%; border-left:2px solid #000; border-right:2px solid #000; border-top:1px solid #000;border-bottom:1px solid #000; padding:10px 20px; box-sizing:border-box;
 }
-.totals-box .row{
-  display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed #ddd; font-size:11px;
-}
+.totals-box .row{ display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dashed #ddd; font-size:11px; }
 .totals-box .row.grand{ font-weight:700; background:#f7f7f7; }
-.totals-box .row.paid{ color:#0b7a27; font-weight:700; }
-.totals-box .row.due{ color:#c1121f; font-weight:700; }
+.totals-box .row.paid{ color:var(--success); font-weight:700; }
+.totals-box .row.due{ color:var(--error); font-weight:700; }
 .totals-box .row.disc{ color:#ff6b35; }
-.totals-box .row.total-disc{ border-top:1px dashed #ddd; }
 
-/* Bank + QR + Sign row */
+/* --------------------
+   Bank / QR / Signature
+   -------------------- */
 .bank-qr-sign{
-  display:flex; gap:12px; margin-top:12px; align-items:stretch;
+  display:flex; align-items:stretch; gap:0px;
+  border-left:1px solid black; border-right:1px solid black;
 }
 .bank, .qr, .sign{
   flex:1; border:1px solid #000; padding:8px; min-height:120px;
@@ -2628,23 +2602,28 @@ export default {
 .bank .row{ display:flex; justify-content:space-between; font-size:11px; padding:2px 8px; }
 .qr .qr-box{ width:120px; height:120px; border:1px solid #000; margin:8px auto 0; }
 
-/* Enquiry strip */
-.enquiry-strip{
-  font-size:10px;
-  display:flex; justify-content:space-between;
-  border-top:1px solid #000; border-bottom:1px solid #000;
-  padding:6px 4px; margin-top:8px; font-size:11px;
-}
-
-/* Declaration */
+/* enquiry / declaration */
+.enquiry-strip{ display:flex; justify-content:space-between; border:1px solid #000; }
 .declaration{ font-size:12px; color:#000; margin-top:6px; }
 .declaration ol{ margin:6px 0 0 16px; }
 
-/* --- keep your existing form/stepper styles intact --- */
-.section-wrap { border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:12px; background:#fff; }
-.section-head { font-weight:700; color:#333; margin-bottom:8px; }
-.mini-title { font-weight:600; color:#444; margin:4px 0 8px; }
-.v-stepper__header { box-shadow: none; border-bottom: 1px solid #e0e0e0; }
-.v-stepper__step--active .v-stepper__step__step { background-color: #1976d2; }
+/* signature area */
+.sign-declare-wrap{ display:flex; gap:12px; margin-top:12px; align-items:flex-end; }
+.sig-area{ flex:1; display:flex; flex-direction:column; align-items:flex-end; }
+.sig-line{ width:240px; height:40px; border-bottom:1px solid #000; margin-bottom:6px; }
+.sig-caption{ font-size:12px; text-align:right; color:#333; }
+.declare-land{ width:480px; border-top:1px solid #000; padding-top:8px; box-sizing:border-box; }
 
+/* --------------------
+   Misc / fallbacks
+   -------------------- */
+.list-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.actions .btn + .btn{ margin-left:8px; }
+
+/* Small screen tweaks */
+@media (max-width:600px){
+  .container, .bill-a4, .bill-a4-landscape{ padding:12px; }
+  .thumb img{ height:80px; }
+  .nominee-thumb{ grid-template-columns: 100px 1fr; }
+}
 </style>
