@@ -626,7 +626,6 @@ export default {
       // Endpoints
       updateEndpoint: process.env.VUE_APP_AGENCY_BACKEND_URL + 'updateInventoryItem',
       presignEndpoint: process.env.VUE_APP_AGENCY_BACKEND_URL + 'uploadImages',
-      ledgerEndpoint: process.env.VUE_APP_AGENCY_BACKEND_URL + 'addEntry'
     }
   },
 
@@ -1536,16 +1535,6 @@ export default {
           status: this.statusType,
           link: this.billFileLocation || null,
           extra: { paymentType: this.paymentType }
-        }
-
-        const res = await fetch(this.ledgerEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-        const json = await res.json().catch(() => ({}))
-        if (!res.ok || json?.ok === false) {
-          throw new Error(json?.message || 'Ledger entry failed')
         }
 
         this.showSnack('Ledger entry created.', 'success')

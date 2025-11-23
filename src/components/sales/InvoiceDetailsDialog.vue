@@ -167,6 +167,15 @@
           </v-card>
         </div>
 
+        <div>
+          <v-card>
+            <div class="section-title">
+              Documents
+            </div>
+            {{invoice.docs}}
+          </v-card>
+        </div>
+
         <!-- Meta -->
         <v-alert border="left" colored-border class="mt-6 soft-alert" elevation="0">
           <div class="flex flex-wrap items-center justify-between">

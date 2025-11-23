@@ -1,51 +1,67 @@
 <template>
   <v-card>
-    <v-card-title>Add Payment (Customer Paid)</v-card-title>
+    <v-card-title>Vendor Deposit</v-card-title>
 
     <v-card-text>
       <v-form ref="form" v-model="valid" lazy-validation>
         <v-row dense>
-          <!-- Client ID -->
-          <v-col cols="12" sm="4">
-            <v-text-field
+          <!-- Vendor dropdown -->
+          <v-col cols="12" sm="6">
+            <v-select
               v-model="form.clientId"
-              label="Client ID"
+              :items="clientOptions"
+              item-text="label"
+              item-value="value"
+              label="Select Vendor"
               :rules="[rReq]"
               outlined dense
               clearable
-              @click:clear="clearClient"
+              :loading="clientsLoading"
+              return-object
+              @change="onVendorSelect"
             >
-              <template v-slot:append-outer>
-                <v-btn
-                  icon small
-                  :loading="clientLoading"
-                  :disabled="!canLookup"
-                  @click="lookupClient(true)"
-                >
-                  <v-icon>mdi-magnify</v-icon>
-                </v-btn>
+              <template v-slot:selection="{ item }">
+                <div v-if="item">{{ item.label }}</div>
+                <div v-else>—</div>
               </template>
-            </v-text-field>
-            <div v-if="clientError" class="red--text text-caption mt-1">{{ clientError }}</div>
+            </v-select>
+            <div v-if="clientsError" class="red--text text-caption mt-1">{{ clientsError }}</div>
           </v-col>
 
-          <!-- Client Name (auto-filled from API, readonly) -->
-          <v-col cols="12" sm="4">
-            <v-text-field
-              :value="clientName || '—'"
-              label="Client Name"
-              outlined dense
-              readonly
-              :loading="clientLoading"
-              hide-details
-            />
+          <!-- Vendor quick details card (shown when vendor selected) -->
+          <v-col cols="12">
+            <v-card v-if="selectedClient" class="pa-3" outlined>
+              <v-row>
+                <v-col cols="12" sm="4"><strong>Name</strong><div>{{ selectedClient.name }}</div></v-col>
+                <v-col cols="12" sm="4"><strong>Client ID</strong><div>{{ selectedClient.clientId }}</div></v-col>
+                <v-col cols="12" sm="4"><strong>Phone</strong><div>{{ selectedClient.phone || selectedClient.altphone || '—' }}</div></v-col>
+
+                <v-col cols="12" sm="4"><strong>Email</strong><div>{{ selectedClient.email || '—' }}</div></v-col>
+                <v-col cols="12" sm="4"><strong>GSTIN</strong><div>{{ selectedClient.gstin || '—' }}</div></v-col>
+                <v-col cols="12" sm="4"><strong>Status</strong><div>{{ selectedClient.status || '—' }}</div></v-col>
+
+                <!-- Billing address short -->
+                <v-col cols="12">
+                  <strong>Billing Address</strong>
+                  <div v-if="selectedClient.billing">
+                    {{ selectedClient.billing.line1 || '' }} {{ selectedClient.billing.line2 || '' }},
+                    {{ selectedClient.billing.city || '' }} {{ selectedClient.billing.state || '' }} {{ selectedClient.billing.pincode || '' }}
+                  </div>
+                  <div v-else>—</div>
+                </v-col>
+              </v-row>
+            </v-card>
+
+            <v-card v-else class="pa-3" outlined>
+              <div class="text-caption">Select a vendor to see details</div>
+            </v-card>
           </v-col>
 
           <!-- Amount -->
           <v-col cols="12" sm="4">
             <v-text-field
               v-model.number="form.amount"
-              label="Amount Received"
+              label="Amount"
               type="number"
               :rules="[rReq, rNumPos]"
               outlined dense
@@ -53,18 +69,30 @@
             />
           </v-col>
 
-          <!-- Reference ID (optional, auto if blank) -->
+          <!-- Payment Mode -->
           <v-col cols="12" sm="4">
-            <v-text-field
-              v-model="form.sourceId"
-              label="Reference ID (optional)"
-              placeholder="UPI/Bank/Cheque Ref — auto if blank"
+            <v-select
+              v-model="form.extra.paymentType"
+              :items="paymentModes"
+              item-text="text"
+              item-value="value"
+              label="Payment Mode"
               outlined dense
               clearable
             />
           </v-col>
 
-          <!-- Date picker (defaults to today) -->
+          <!-- Reference -->
+          <v-col cols="12" sm="4">
+            <v-text-field
+              v-model="form.extra.referenceNo"
+              label="Reference (UPI/Bank/Cheque)"
+              outlined dense
+              clearable
+            />
+          </v-col>
+
+          <!-- Date -->
           <v-col cols="12" sm="4">
             <v-menu
               v-model="dateMenu"
@@ -79,7 +107,7 @@
                   v-bind="attrs"
                   v-on="on"
                   v-model="dateDisplay"
-                  label="Payment Date"
+                  label="Deposit Date"
                   placeholder="YYYY-MM-DD"
                   dense
                   outlined
@@ -96,36 +124,12 @@
             </v-menu>
           </v-col>
 
-          <!-- Payment Mode -->
-          <v-col cols="12" sm="4">
-            <v-select
-              v-model="form.extra.paymentType"
-              :items="paymentModes"
-              item-text="text"
-              item-value="value"
-              label="Payment Mode"
-              outlined dense
-              :rules="[rReq]"
-              clearable
-            />
-          </v-col>
-
-          <!-- Payment Reference (UPI txn id / Bank ref / Cheque no) -->
-          <v-col cols="12" sm="4">
-            <v-text-field
-              v-model="form.extra.referenceNo"
-              label="Payment Reference (UPI/Bank/Cheque)"
-              outlined dense
-              clearable
-            />
-          </v-col>
-
           <!-- Narration -->
           <v-col cols="12">
             <v-text-field
               v-model="form.narration"
               label="Narration"
-              placeholder="Payment received"
+              placeholder="Deposit by vendor"
               outlined dense
               clearable
             />
@@ -137,7 +141,7 @@
     <v-card-actions>
       <v-spacer />
       <v-btn :loading="loading" color="primary" @click="submit">
-        <v-icon left>mdi-cash-check</v-icon> Add Payment
+        <v-icon left>mdi-bank-transfer</v-icon> Deposit
       </v-btn>
     </v-card-actions>
   </v-card>
@@ -145,7 +149,7 @@
 
 <script>
 export default {
-  name: 'PaymentReceiptForm',
+  name: 'VendorDepositForm',
   data () {
     const today = new Date()
     const pad = n => String(n).padStart(2, '0')
@@ -154,34 +158,30 @@ export default {
     return {
       valid: false,
       loading: false,
-      dateMenu: false,
 
-      // client lookup UI state
-      clientLoading: false,
-      clientError: '',
-      clientName: '',
-      debounceT: null,
+      // clients list state
+      clientsLoading: false,
+      clientsError: '',
+      clients: [],
+
+      // selection detail
+      selectedClient: null,
+
+      // date controls
+      dateMenu: false,
+      dateOnly: toISODate(today),
 
       form: {
-        clientId: '',
+        clientId: null,       // will hold the selected option object (see v-select return-object)
         amount: null,
-
-        // fixed for deposit-only
-        entryType: 'CREDIT',
-        sourceType: 'PAYMENT',
-
-        sourceId: '',                  // auto if blank
+        sourceId: '',
         date: new Date().toISOString(),
-        status: 'DEPOSIT',
-        narration: 'Deposit received from customer',
+        narration: 'Deposit received from vendor name',
         extra: {
-          paymentType: '',             // CASH/UPI/CARD/BANK_TRANSFER/CHEQUE/OTHER
+          paymentType: '',
           referenceNo: ''
         }
       },
-
-      // date controls
-      dateOnly: toISODate(today),
 
       paymentModes: [
         { text: 'CASH', value: 'CASH' },
@@ -192,34 +192,36 @@ export default {
         { text: 'OTHER', value: 'OTHER' }
       ],
 
-      // rules
-      rReq: v => !!(v && String(v).trim()) || 'Required',
+      // validation rules
+      rReq: v => !!(v && (typeof v === 'object' ? v.value : String(v).trim())) || 'Required',
       rNumPos: v => (!isNaN(Number(v)) && Number(v) > 0) || 'Enter a positive amount'
     }
   },
 
   computed: {
     dateDisplay () { return this.dateOnly },
-    canLookup () { return !!(this.form.clientId && String(this.form.clientId).trim()) },
-    BASE () { return (process.env.VUE_APP_AGENCY_BACKEND_URL || '').replace(/\/$/, '') }
+    BASE () { return (process.env.VUE_APP_AGENCY_BACKEND_URL || '').replace(/\/$/, '') },
+    // transform clients into v-select-friendly items
+    clientOptions () {
+      return this.clients.map(c => ({
+        label: `${c.name || '—'} (${c.clientId || c.pk || '—'})`,
+        value: c.clientId,
+        payload: c,
+        // keep quick access to object as return-object
+        name: c.name
+      }))
+    }
   },
 
-  watch: {
-    // Debounced auto-lookup when clientId changes
-    'form.clientId' (val) {
-      this.clientError = ''
-      this.clientName = ''
-      clearTimeout(this.debounceT)
-      if (!val || !String(val).trim()) return
-      this.debounceT = setTimeout(() => this.lookupClient(false), 350)
-    }
+  mounted () {
+    this.fetchClients()
   },
 
   methods: {
     applyDate (val) {
       this.dateOnly = val
       const [y, m, d] = val.split('-').map(Number)
-      const date = new Date(y, m - 1, d, 12, 0, 0) // noon to avoid TZ edge cases
+      const date = new Date(y, m - 1, d, 12, 0, 0)
       this.form.date = date.toISOString()
       this.dateMenu = false
     },
@@ -229,92 +231,104 @@ export default {
       const d = new Date()
       const pad = n => String(n).padStart(2, '0')
       const ts = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
-      this.form.sourceId = `PAY-${ts}`
+      this.form.sourceId = `DEP-${ts}`
     },
 
-    clearClient () {
-      this.form.clientId = ''
-      this.clientName = ''
-      this.clientError = ''
-    },
-
-    // ---- fetch client name by clientId ----
-    async lookupClient (force) {
-      const id = (this.form.clientId || '').trim()
-      if (!id) return
-
-      // avoid duplicate fetch if not forced and name already present
-      if (!force && this.clientName) return
-
-      this.clientLoading = true
-      this.clientError = ''
-      this.clientName = ''
-
+    // fetch vendor/clients from backend
+    async fetchClients () {
+      this.clientsLoading = true
+      this.clientsError = ''
       try {
-        const url = `${this.BASE}/getClientByClientId/${encodeURIComponent(id)}`
+        const url = `${this.BASE}/getAllClient`
         const r = await fetch(url)
         const data = await r.json().catch(() => ({}))
-
         if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`)
-
-        // handle both array and single object shapes
-        const item = Array.isArray(data?.items) ? data.items[0] : (data?.item || data)
-        const name =
-          item?.name ||
-          item?.clientName ||
-          item?.customer?.name ||
-          item?.Item?.name ||
-          item?.Item?.clientName ||
-          ''
-
-        if (!name) {
-          this.clientError = 'Client found but name missing'
-        } else {
-          this.clientName = name
-        }
+        // expecting data.items array (as you posted)
+        this.clients = Array.isArray(data.items) ? data.items : []
       } catch (e) {
-        this.clientError = 'Client not found'
+        this.clientsError = 'Failed to load vendors'
+        console.error('fetchClients error', e)
       } finally {
-        this.clientLoading = false
+        this.clientsLoading = false
       }
     },
 
-    // ---- submit deposit ----
+    // when v-select returns the selected object (because return-object is set),
+    // here we map to selectedClient object from clients list
+    onVendorSelect (selected) {
+      // selected is the entire option object from clientOptions (because return-object),
+      // we stored value as clientId — so look up the original client item
+      if (!selected) {
+        this.selectedClient = null
+        this.form.clientId = null
+        return
+      }
+
+      const clientId = selected.value || selected
+      const found = this.clients.find(c => c.clientId === clientId || c.pk === clientId)
+      if (found) {
+        this.selectedClient = found
+        // ensure the form.clientId is the simple clientId value for backend
+        this.form.clientId = found.clientId
+      } else {
+        // fallback: if selected value is already clientId string
+        this.selectedClient = null
+        this.form.clientId = clientId
+      }
+    },
+
+    // submit deposit to backend
     async submit () {
       const ok = await this.$refs.form.validate()
       if (!ok) return
 
-      // Enforce deposit-only semantics
-      this.form.entryType = 'CREDIT'
-      this.form.sourceType = 'PAYMENT'
+      if (!this.form.clientId) {
+        this.$emit('notify', { text: 'Select vendor', color: 'warning' })
+        return
+      }
       if (Number(this.form.amount) <= 0) {
         this.$emit('notify', { text: 'Amount must be greater than 0', color: 'warning' })
         return
       }
 
       this.ensureSourceId()
-
       this.loading = true
+      console.log('this.form', this.form)
+
       try {
-        const url = `${this.BASE}/addClientDeposit`
+        const payload = {
+          vendorId: this.form.clientId,   // backend expects vendorId (clientId)
+          amount: Number(this.form.amount),
+          date: this.form.date,
+          narration: this.form.narration +'  '+ this.selectedClient.name,
+          meta: {
+            sourceId: this.form.sourceId,
+            paymentType: this.form.extra.paymentType,
+            referenceNo: this.form.extra.referenceNo
+          }
+        }
+
+        const url = `${this.BASE}/vendorDeposit`
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.form)
+          body: JSON.stringify(payload)
         })
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
 
         if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`)
 
-        this.$emit('notify', { text: data.message || 'Payment recorded successfully', color: 'success' })
-        this.$emit('created', data.entry || data)
+        this.$emit('notify', { text: data.message || 'Deposit successful', color: 'success' })
+        // emit created info so parent can refresh ledgers etc
+        this.$emit('created', data)
 
-        // reset lightweight fields
+        // reset simple fields
         this.form.amount = null
         this.form.extra.referenceNo = ''
         this.form.sourceId = ''
       } catch (err) {
-        this.$emit('notify', { text: err?.message || 'Failed to add payment', color: 'error' })
+        console.error('vendorDeposit error', err)
+        this.$emit('notify', { text: err?.message || 'Failed to deposit', color: 'error' })
       } finally {
         this.loading = false
       }
@@ -322,3 +336,8 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+/* small spacing fixes */
+.pa-3 { padding: 12px; }
+</style>

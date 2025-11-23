@@ -127,22 +127,6 @@
                   prefix="₹"
                   dense outlined hide-details="auto"
                 />
-                <div class="caption grey--text mt-1">
-                  Mode: <b>{{ form.billOptions.billPriceMode }}</b>.
-                  <span v-if="form.billOptions.billPriceMode==='ON_ROAD'">We derive ex-RTO/Insurance price from this.</span>
-                  <span v-else>We will add RTO/Insurance on top.</span>
-                </div>
-              </v-col>
-
-              <v-col cols="12" sm="6" md="4">
-                <v-text-field v-model.number="form.qty" type="number" :rules="[rQty]" label="Qty" dense outlined hide-details="auto"/>
-              </v-col>
-
-              <v-col cols="12" sm="6" md="4">
-                <v-text-field v-model.number="form.rtoCharges" type="number" label="RTO Charges (per unit)" prefix="₹" dense outlined hide-details="auto"/>
-              </v-col>
-              <v-col cols="12" sm="6" md="4">
-                <v-text-field v-model.number="form.insuranceCharges" type="number" label="Insurance Charges (per unit)" prefix="₹" dense outlined hide-details="auto"/>
               </v-col>
             </v-row>
           </section>
@@ -420,7 +404,7 @@
             <div class="section-head">Nominee Details</div>
             <v-row dense>
               <v-col cols="12" sm="4"><v-text-field v-model="form.nominee.name" label="Nominee Name" dense outlined hide-details="auto"/></v-col>
-              <v-col cols="12" sm="4"><v-select v-model="form.nominee.relation" :items="relations" label="Relation With Nominee" dense outlined hide-details="auto"/></v-col>
+              <v-col cols="12" sm="4"><v-select v-model="form.nominee.relation" :items="relations" label="Relation With Owner" dense outlined hide-details="auto"/></v-col>
               <v-col cols="12" sm="4"><v-text-field v-model.number="form.nominee.age" :rules="[rAge]" label="Nominee Age" type="number" dense outlined hide-details="auto"/></v-col>
               <v-col cols="12" sm="4">
                 <v-text-field
@@ -832,6 +816,11 @@
           <v-btn small outlined class="mr-2" :disabled="!canPreview" @click="$refs.gatePass.show(form, selectedChassisInfo, billGrandTotal)">
             <v-icon left small>mdi-file-eye</v-icon> Gate Pass
           </v-btn>
+           <!-- NEW: No Dues button (enabled only when dueAmount === 0) -->
+          <v-btn small outlined class="mr-2" :disabled="dueAmount !== 0" @click="downloadNoDuesPdf">
+            <v-icon left small>mdi-file-check</v-icon>
+            No Dues
+          </v-btn>
           <v-btn small outlined class="mr-2" @click="downloadPdf"><v-icon left small>mdi-file-pdf-box</v-icon>Download</v-btn>
           <v-btn icon @click="invoiceDialog=false"><v-icon>mdi-close</v-icon></v-btn>
         </v-toolbar>
@@ -1111,19 +1100,22 @@
         </v-card-text>
       </v-card>
     </v-dialog>
-    <GatePass ref="gatePass" />
+    <GatePass ref="gatepassRef" />
   </v-card>
 </template>
 
 <script>
 import html2pdf from 'html2pdf.js'
 import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import axios from 'axios';
 import GatePass from './GatePass.vue'
 let uid = 1;
 let _imgUid = 1;  
 
 export default {
   name: 'QuickInvoiceCustomerPro',
+  components:{ GatePass },
   data () {
     return {
       nomineeImageMaxBytes: 5 * 1024 * 1024, // 5 MB
@@ -1170,6 +1162,11 @@ export default {
         priceIncludesTax: false,   // true => EXCLUSIVE (add on top); false => INCLUSIVE (back-calc)
         cgstPercent: 9,
         sgstPercent: 9,
+        docs: {
+          invoice: null,
+          nodues: null,
+          gatepass: null
+        },
         // owner
         owner: { ownershipType:'INDIVIDUAL', careOf:'', dob:null, relationType:'', relationName:'' },
         customer: { // used for invoice/payload
@@ -1220,7 +1217,7 @@ export default {
       },
       idTypes: ['AADHAAR','PAN','VOTER','DL','PASSPORT'],
       ownershipTypes: ['INDIVIDUAL','FIRM'],
-      relations: ['Father','Mother','Husband','Wife','Brother','Sister','Son','Daughter','Other'],
+      relations: ['Son', 'Husband', 'Wife',],
       insuranceTypes: ['THIRD PARTY','ZERO DEP','BASIC'],
       financeCompanies: [
         'TVS CREDIT SERVICES LIMITED',
@@ -1255,9 +1252,9 @@ export default {
       rPct: v => (v == null || (!isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 100)) || '0–100 only',
       rPhoneInline: v => (/^\d{10}$/.test(String(v || ''))) || 'Enter 10-digit mobile',
       rAltPhoneInline: v => (!v || /^\d{10}$/.test(String(v || ''))) || '10-digit only',
-      rPincodeInline: v => (!v || /^\d{6}$/.test(String(v || ''))) || '6-digit PIN only',
+      rPincodeInline: v => (!v || /^\d{6}$/.test(String(v))) || '6-digit PIN only',
       rEmailInline: v => (!v || /\S+@\S+\.\S+/.test(String(v || ''))) || 'Invalid email',
-      rNomineeMobileInline: v => (!v || /^\d{10}$/.test(String(v || ''))) || '10-digit only',
+      rNomineeMobileInline: v => (!v || /^\d{10}$/.test(String(v))) || '10-digit only',
       rNameInline: v => (!v || /^[A-Za-z\s]+$/.test(String(v))) || 'Only alphabets allowed',
       rAadhaar: v => (!v || /^\d{12}$/.test(String(v))) || '12-digit Aadhaar',
       rVoter: v => (!v || /^[A-Z]{3}\d{7}$/i.test(String(v))) || 'Invalid Voter ID',
@@ -1272,7 +1269,6 @@ export default {
         val => (!val && !other) || (val && String(val).trim().length>0) || 'Required when other filled',
     }
   },
-  components:{GatePass},
   computed: {
     hasDiscounts () {
       return this.totalDiscount > 0
@@ -1357,86 +1353,49 @@ export default {
     cgstAmount () { return Number(((this.taxableAmount * Number(this.form.cgstPercent || 0)) / 100).toFixed(2)) },
     sgstAmount () { return Number(((this.taxableAmount * Number(this.form.sgstPercent || 0)) / 100).toFixed(2)) },
 
-    // Showroom total: tax based on subtotal; RTO/Ins NOT included
-    // showroomTotal () { 
-    //   return this.isTaxInclusive ? Number(this.subtotal.toFixed(2)) : Number((this.taxableAmount + this.cgstAmount + this.sgstAmount).toFixed(2))
-    // },
-  //   showroomTotal () { 
-  //   const taxInclusiveTotal = this.isTaxInclusive ? 
-  //     Number(this.subtotal.toFixed(2)) : 
-  //     Number((this.taxableAmount + this.cgstAmount + this.sgstAmount).toFixed(2))
-    
-  //   // For SHOWROOM mode, showroom total is just the tax calculated amount
-  //   return taxInclusiveTotal
-  // },
-
-  showroomTotal () {
-  // Tax calculation based on the subtotal (vehicle + accessories)
-  const s = Number(this.subtotal || 0) // lineAmount + accessoriesTotal
-  if (this.isTaxInclusive) {
-    // subtotal already includes tax
-    return Number(s.toFixed(2))
-  } else {
-    // tax exclusive: taxableAmount + cgst + sgst
-    const tax = Number(this.cgstAmount || 0) + Number(this.sgstAmount || 0)
-    return Number((this.taxableAmount + tax).toFixed(2))
-  }
-},
-
-    // On-road total = showroom total + (RTO + Insurance) * qty? RTO/Ins are per unit, so multiply by qty
-    // onRoadTotal () {
-    //   if (this.form.billOptions.billPriceMode === 'ON_ROAD') {
-    //     // For ON_ROAD mode: entered price already includes everything
-    //     return Number(this.form.price || 0) * Number(this.form.qty || 1)
-    //   } else {
-    //     // For SHOWROOM mode: showroom total + RTO + Insurance
-    //     const perUnitCharges = Number(this.form.rtoCharges || 0) + Number(this.form.insuranceCharges || 0)
-    //     const totalCharges = perUnitCharges * Number(this.form.qty || 1)
-    //     return Number((this.showroomTotal + totalCharges).toFixed(2))
-    //   }
-    // },
+    showroomTotal () {
+      // Tax calculation based on the subtotal (vehicle + accessories)
+      const s = Number(this.subtotal || 0) // lineAmount + accessoriesTotal
+      if (this.isTaxInclusive) {
+        // subtotal already includes tax
+        return Number(s.toFixed(2))
+      } else {
+        // tax exclusive: taxableAmount + cgst + sgst
+        const tax = Number(this.cgstAmount || 0) + Number(this.sgstAmount || 0)
+        return Number((this.taxableAmount + tax).toFixed(2))
+      }
+    },
 
   onRoadTotal () {
-  const qty = Number(this.form.qty || 1)
-  // total per-unit RTO & Insurance (already multiply by qty below)
-  const totalRto = Number(this.totalRtoCharges || 0)
-  const totalIns = Number(this.totalInsuranceCharges || 0)
+    const qty = Number(this.form.qty || 1)
+    const totalRto = Number(this.totalRtoCharges || 0)
+    const totalIns = Number(this.totalInsuranceCharges || 0)
 
-  if (this.form.billOptions.billPriceMode === 'ON_ROAD') {
-    // When ON_ROAD, treat the entered price as the vehicle on-road price per unit.
-    // Include accessoriesTotal (which are usually added on top).
-    // If tax is exclusive, calculate tax on (vehicle + accessories) accordingly.
-    const vehicleOnRoad = Number(this.form.price || 0) * qty
-    const itemsTotal = vehicleOnRoad + Number(this.accessoriesTotal || 0)
-    // If taxes are exclusive, add tax on top of itemsTotal; if inclusive, assume included already.
-    if (this.isTaxExclusive) {
-      // taxable part = itemsTotal (since price is exclusive of tax)
-      const taxable = Number(this.isTaxExclusive ? this.taxableAmountForItems(itemsTotal) : this.taxableAmount)
-      // compute cgst/sgst on taxable
-      const cgst = Number(((taxable * Number(this.form.cgstPercent || 0)) / 100).toFixed(2))
-      const sgst = Number(((taxable * Number(this.form.sgstPercent || 0)) / 100).toFixed(2))
-      return Number((itemsTotal + cgst + sgst).toFixed(2))
+    if (this.form.billOptions.billPriceMode === 'ON_ROAD') {
+      const vehicleOnRoad = Number(this.form.price || 0) * qty
+      const itemsTotal = vehicleOnRoad + Number(this.accessoriesTotal || 0)
+      if (this.isTaxExclusive) {
+        const taxable = Number(this.isTaxExclusive ? this.taxableAmountForItems(itemsTotal) : this.taxableAmount)
+        const cgst = Number(((taxable * Number(this.form.cgstPercent || 0)) / 100).toFixed(2))
+        const sgst = Number(((taxable * Number(this.form.sgstPercent || 0)) / 100).toFixed(2))
+        return Number((itemsTotal + cgst + sgst).toFixed(2))
+      } else {
+        return Number(itemsTotal.toFixed(2))
+      }
     } else {
-      // tax inclusive — itemsTotal considered final
-      return Number(itemsTotal.toFixed(2))
+      const perUnitCharges = Number(this.form.rtoCharges || 0) + Number(this.form.insuranceCharges || 0)
+      const totalCharges = perUnitCharges * qty
+      return Number((this.showroomTotal + totalCharges).toFixed(2))
     }
-  } else {
-    // SHOWROOM mode: showroomTotal + RTO + Insurance (RTO/Ins are per-unit and multiplied by qty)
-    const perUnitCharges = Number(this.form.rtoCharges || 0) + Number(this.form.insuranceCharges || 0)
-    const totalCharges = perUnitCharges * qty
-    return Number((this.showroomTotal + totalCharges).toFixed(2))
-  }
-},
+  },
 
-taxableAmountForItems(itemsTotal) {
-  const tr = this.taxRate
-  if (tr > 0 && this.isTaxInclusive) {
-    // if itemsTotal already includes tax, return net (not used above for exclusive case)
-    return Number((itemsTotal / (1 + tr)).toFixed(2))
-  }
-  // if tax exclusive or no tax, taxable is itemsTotal
-  return Number(itemsTotal.toFixed(2))
-},
+  taxableAmountForItems(itemsTotal) {
+    const tr = this.taxRate
+    if (tr > 0 && this.isTaxInclusive) {
+      return Number((itemsTotal / (1 + tr)).toFixed(2))
+    }
+    return Number(itemsTotal.toFixed(2))
+  },
 
 
     // Total discount calculation
@@ -1449,32 +1408,14 @@ taxableAmountForItems(itemsTotal) {
       )
     },
 
-    // Vehicle amount to show inside the tax-box row (keep clarity)
     displayVehicleAmount () {
       return this.lineAmount
     },
 
-    // What should appear as GRAND TOTAL in the bill (after discounts)
-    
-    // billGrandTotal () {
-    //   let baseTotal
-      
-    //   if (this.form.billOptions.billPriceMode === 'ON_ROAD') {
-    //     // ON_ROAD: Use the entered price directly (already includes RTO/Insurance)
-    //     baseTotal = Number(this.form.price || 0) * Number(this.form.qty || 1)
-    //   } else {
-    //     // SHOWROOM: Use showroom total (vehicle + accessories + tax)
-    //     baseTotal = this.showroomTotal
-    //   }
-      
-    //   return Number(Math.max(0, (baseTotal - this.totalDiscount)).toFixed(2))
-    // },
-
     billGrandTotal () {
-  // Recompute using the improved onRoadTotal/showroomTotal logic and then subtract discounts
-  const baseTotal = this.onRoadTotal // onRoadTotal already covers both modes (returns final total for bill mode)
-  return Number(Math.max(0, (Number(baseTotal || 0) - Number(this.totalDiscount || 0))).toFixed(2))
-},
+      const baseTotal = this.onRoadTotal
+      return Number(Math.max(0, (Number(baseTotal || 0) - Number(this.totalDiscount || 0))).toFixed(2))
+    },
 
     totalPaid () { return Number(this.form.payments.reduce((s, p) => s + Number(p.amount || 0), 0).toFixed(2)) },
     dueAmount () { return Number(Math.max(0, (this.billGrandTotal - this.totalPaid)).toFixed(2)) },
@@ -1490,12 +1431,11 @@ taxableAmountForItems(itemsTotal) {
     },
     amountInWords () { return this.numberToWordsIndian(this.billGrandTotal || 0) },
 
-    // ====== ID Proof helpers (length & input constraints) ======
     idMaxLength () {
       const t = this.form.ids.type
       if (t === 'AADHAAR') return 12
       if (t === 'PAN') return 10
-      if (t === 'VOTER') return 10  // e.g., ABC1234567
+      if (t === 'VOTER') return 10
       if (t === 'DL') return 20
       if (t === 'PASSPORT') return 8
       return 32
@@ -1509,20 +1449,16 @@ taxableAmountForItems(itemsTotal) {
   },
 
   watch: {
-    // Keep visibility of RTO/Insurance aligned with mode.
     'form.billOptions.billPriceMode'(val) {
       if (val === 'ON_ROAD') {
-        // hide the rows in bill
         this.form.billOptions.showRto = false
         this.form.billOptions.showInsurance = false
       } else {
-        // default to showing; user can still uncheck
         this.form.billOptions.showRto = true
         this.form.billOptions.showInsurance = true
       }
     },
 
-    // When ID type changes, clear value (requirement #6/7)
     'form.ids.type' () {
       this.form.ids.value = ''
     }
@@ -1536,14 +1472,440 @@ taxableAmountForItems(itemsTotal) {
 
   methods: {
 
-    //nominee
+    // Add these helpers to your `methods` section
+
+    /**
+     * Wait for an element or truthy value from a selector/function.
+     * - selOrFn: CSS selector string or function returning an element/truthy or null.
+     * - attempts: how many polls
+     * - intervalMs: ms between polls
+     */
+    async waitFor(selOrFn, attempts = 12, intervalMs = 150) {
+      const isFn = typeof selOrFn === 'function';
+      for (let i = 0; i < attempts; i++) {
+        try {
+          const found = isFn ? await selOrFn() : document.querySelector(selOrFn);
+          if (found) return found;
+        } catch (e) {
+          // ignore and retry
+        }
+        await new Promise(r => setTimeout(r, intervalMs));
+      }
+      return null;
+    },
+
+    /**
+     * Call GatePass.show(...) to open preview, wait for the sheet element
+     * capture it as a PNG blob and upload via presign. Returns a result object
+     * similar to other results: { type:'gatepass', key, url, status, ... }
+     *
+     * Arguments:
+     *  - form, selected, totalFromParent => forwarded to GatePass.show
+     *
+     * NOTE: This keeps the GatePass dialog open (so the user sees it). If you want to auto-close,
+     * you can set this.$refs.gatepassRef.open = false (or call a close method) after upload.
+     */
+    async callGatepassAndUpload(form = this.form, selected = this.selectedChassisInfo, totalFromParent = this.billGrandTotal) {
+      // ensure child GatePass exists
+      try {
+        // 1. Open gatepass via component API (if available)
+        if (this.$refs && this.$refs.gatepassRef && typeof this.$refs.gatepassRef.show === 'function') {
+          // call the show method in the GatePass component to populate and open the dialog
+          this.$refs.gatepassRef.show(form, selected || {}, totalFromParent || 0);
+        } else {
+          // nothing to open; we'll still try to find a DOM node via selector
+          console.warn('GatePass component ref not found; falling back to DOM selector.');
+        }
+
+        // 2. Wait for the actual element to appear. The GatePass component uses `ref="sheet"` internally,
+        // so child component's $refs.sheet should point to the DOM. Try that first (works in Vue2).
+        const gpRoot = await this.waitFor(async () => {
+          // prefer direct child component's sheet ref if available
+          try {
+            if (this.$refs && this.$refs.gatepassRef) {
+              const child = this.$refs.gatepassRef;
+              // child.$refs.sheet may be the DOM element (or a Vue wrapper), handle both
+              if (child.$refs && child.$refs.sheet) {
+                return child.$refs.sheet;
+              }
+              // sometimes the dialog is teleported and the component itself is the element
+              if (child.$el) return child.$el;
+            }
+          } catch (e) { /* ignore */ }
+
+          // fallback DOM selectors - pick a stable class used in GatePass template
+          const sel = document.querySelector('.gp-a4') || document.querySelector('.gatepass-root') || document.querySelector('#gatepass') || document.querySelector('[data-ref="gatepass"]');
+          return sel || null;
+        }, 20, 150);
+
+        if (!gpRoot) {
+          console.warn('GatePass element not found after wait; skipping gatepass upload.');
+          return { type: 'gatepass', status: 'skipped', message: 'gp not found' };
+        }
+
+        // If the ref is a Vue ref object, extract actual DOM node:
+        const gpEl = (gpRoot instanceof HTMLElement) ? gpRoot : (gpRoot.$el || gpRoot);
+
+        // small delay to allow fonts/images to settle
+        await new Promise(r => setTimeout(r, 180));
+
+        // 3. capture element using html2canvas (we already have generatePdfBlobFromElement for PDF path).
+        // We'll use html2canvas directly and convert to PNG blob for "image from gatepass"
+        const canvas = await html2canvas(gpEl, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        // convert to blob (PNG)
+        const imgBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1.0));
+        if (!imgBlob) throw new Error('Failed to convert GatePass canvas to blob');
+
+        // 4. build key and request presign
+        const prefix = this.sanitizeLocationPrefix ? this.sanitizeLocationPrefix() : (String(this.form.customer?.phone || 'unknown').replace(/\D/g,'') || 'unknown');
+        const invNum = this.inv?.number || (this.form.chassisNumber ? `INV-${this.form.chassisNumber}` : `INV-${Date.now()}`);
+        const fileName = `GatePass_${invNum}.png`;
+        const key = `${prefix}/gatepass/${fileName}`;
+
+        // request presigned URL (your requestPresign expects (key, fileType))
+        let presignUrl;
+        try {
+          presignUrl = await this.requestPresign(key, 'image/png');
+        } catch (err) {
+          // some backends expect different payload - try a fallback shape if requestPresign fails (defensive)
+          console.warn('requestPresign failed, attempting fallback raw POST', err);
+          try {
+            const resp = await axios.post(`${this.BASE.replace(/\/$/,'')}/uploadImages`, { fileName: key, fileType: 'image/png' });
+            presignUrl = resp?.data?.url;
+          } catch (ex2) {
+            throw new Error('Presign request failed: ' + (ex2?.message || err?.message || 'unknown'));
+          }
+        }
+
+        if (!presignUrl) throw new Error('No presigned URL returned for GatePass image');
+
+        // 5. upload via PUT
+        let publicUrl;
+        try {
+          publicUrl = await this.uploadBlobToPresignedUrl(imgBlob, presignUrl, 'image/png');
+        } catch (upErr) {
+          // try again without content-type header (some presigned endpoints require no explicit header)
+          try {
+            const resp = await fetch(presignUrl, { method: 'PUT', body: imgBlob });
+            if (!resp.ok) throw new Error(`Upload failed (status ${resp.status})`);
+            publicUrl = presignUrl.split('?')[0];
+          } catch (fallbackErr) {
+            throw new Error('GatePass upload failed: ' + (fallbackErr?.message || upErr?.message || 'unknown'));
+          }
+        }
+
+        // done — return object
+        return { type: 'gatepass', key, url: publicUrl, status: 'success' };
+      } catch (err) {
+        console.error('callGatepassAndUpload error:', err);
+        return { type: 'gatepass', status: 'failed', error: String(err) };
+      }
+    },
+
+    // ---------- New helper: waitFor a DOM/ref to appear ----------
+    async waitFor(getter, attempts = 10, delay = 150) {
+      for (let i = 0; i < attempts; i++) {
+        try {
+          const v = getter();
+          if (v) return v;
+        } catch (e) { /* ignore */ }
+        await new Promise(r => setTimeout(r, delay));
+      }
+      return null;
+    },
+
+    // ------------------ New helpers for PDF generation & presigned upload ------------------
+
+    async generatePdfBlobFromElement(el) {
+      // Use html2canvas -> jsPDF to produce a PDF blob
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      const pdf = new jsPDF('p', 'pt', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      return pdf.output('blob');
+    },
+
+    sanitizeLocationPrefix() {
+      // mobile + name -> mobile_name (safe)
+      const mobile = String(this.form.customer.phone || '').replace(/\D/g, '').trim();
+      const nameRaw = (this.form.owner?.ownershipType === 'FIRM' ? (this.form.firm?.name || '') : (this.form.customer?.name || '')).trim();
+      const name = nameRaw.replace(/\s+/g, '_').replace(/[^\w\-\.]/g, '');
+      return `${mobile || 'unknown'}${name ? '_'+name : ''}`;
+    },
+
+    async requestPresign(key, fileType) {
+      // Follow your backend payload shape { body: { fileName, fileType } }
+      const url = `${this.BASE.replace(/\/$/,'')}/uploadImages`;
+      const payload = { body: { fileName: key, fileType } };
+      const resp = await axios.post(url, payload);
+      if (!resp || (resp.status !== 200 && resp.status !== 201)) {
+        throw new Error(`Presign failed (${resp?.status})`);
+      }
+      const data = resp.data || {};
+      // support multiple shapes: { url }, { data: { url } }, { presigned: { url } }, or return first http string
+      const presigned = data.url || (data.data && data.data.url) || (data.presigned && data.presigned.url) || null;
+      if (presigned) return presigned;
+      // fallback: find an http url in response body
+      const findUrl = (obj) => {
+        if (!obj) return null;
+        if (typeof obj === 'string' && obj.startsWith('http')) return obj;
+        if (typeof obj === 'object') {
+          for (const k of Object.keys(obj)) {
+            try {
+              const found = findUrl(obj[k]);
+              if (found) return found;
+            } catch (e) {}
+          }
+        }
+        return null;
+      };
+      const firstUrl = findUrl(data);
+      if (firstUrl) return firstUrl;
+      throw new Error('No presigned URL returned from backend');
+    },
+
+    async uploadBlobToPresignedUrl(blob, presignedUrl, fileType = 'application/pdf') {
+      const resp = await fetch(presignedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': fileType },
+        body: blob
+      });
+      if (!resp.ok) {
+        const text = await resp.text().catch(()=>null);
+        throw new Error(`Upload failed ${resp.status} ${resp.statusText} ${text || ''}`);
+      }
+      return presignedUrl.split('?')[0];
+    },
+
+    buildNoDuesElementForPdf() {
+      let logoSrc;
+      try { logoSrc = require('@/assets/newLogoTVS.png'); } catch (err) { logoSrc = '@/assets/newLogoTVS.png'; }
+
+      const wrapper = document.createElement('div');
+      wrapper.style.width = '794px';
+      wrapper.style.padding = '24px';
+      wrapper.style.boxSizing = 'border-box';
+      wrapper.style.fontFamily = 'Arial, Helvetica, sans-serif';
+      wrapper.style.color = '#000';
+      wrapper.style.background = '#fff';
+
+      const invNum = this.inv.number || (this.form.chassisNumber ? `INV-${this.form.chassisNumber}` : 'NA');
+      const invDate = this.inv.date || new Date().toLocaleDateString('en-GB');
+      const customerName = this.form.owner.ownershipType === 'FIRM' ? (this.form.firm.name || '-') : (this.form.customer.name || '-');
+      const chassis = this.form.chassisNumber || '-';
+      const model = this.form.model || '-';
+      const companyName = 'ANSARI AUTOMOBILES';
+      const amountWords = this.amountInWords || '';
+
+      wrapper.innerHTML = `
+        <div style="text-align:center; margin-bottom:10px;">
+          <img src="${logoSrc}" alt="Logo" style="height:70px; display:block; margin:0 auto 8px;" />
+          <div style="font-weight:700; font-size:18px;">${companyName}</div>
+          <div style="font-size:12px; margin-top:4px;">BADI KAMHARIYA BY PASS ROAD, MAU</div>
+          <hr style="margin:16px 0; border:none; border-top:1px solid #ccc;" />
+        </div>
+
+        <div style="text-align:center; margin:8px 0 18px;">
+          <div style="font-size:22px; font-weight:700; letter-spacing:1px;">NO DUES CERTIFICATE</div>
+          <div style="font-size:12px; color:#444; margin-top:6px;">(This certifies that the customer has cleared all dues)</div>
+        </div>
+
+        <div style="font-size:14px; line-height:1.6;">
+          <div><strong>Invoice No:</strong> ${invNum}</div>
+          <div><strong>Invoice Date:</strong> ${invDate}</div>
+          <div style="margin-top:8px;"><strong>Customer Name:</strong> ${customerName}</div>
+          <div><strong>Model / Chassis:</strong> ${model} / ${chassis}</div>
+          <div style="margin-top:8px;"><strong>Bill Grand Total:</strong> ${this.money(this.billGrandTotal)}</div>
+          <div><strong>Amount Paid:</strong> ${this.money(this.totalPaid)}</div>
+          <div style="margin-top:12px; background:#f7f7f7; padding:10px; border-radius:4px;">
+            <strong>Status:</strong> <span style="color:green; font-weight:700;">No Outstanding Dues (₹0)</span>
+          </div>
+
+          <div style="margin-top:14px;">
+            This is to certify that <strong>${customerName}</strong> has no outstanding dues against the above invoice as on <strong>${invDate}</strong>. All payments have been received and the account stands settled for the referenced vehicle.
+          </div>
+
+          <div style="margin-top:10px;"><em>Amount (in words):</em> ${amountWords}</div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-top:36px; align-items:flex-end;">
+          <div style="width:60%;">
+            <div style="font-size:12px; color:#666;">This certificate is system generated and does not require a physical signature.</div>
+          </div>
+          <div style="width:35%; text-align:center;">
+            <div style="height:60px;"></div>
+            <div style="border-top:1px solid #000; padding-top:6px; font-size:13px;">Authorised Signatory</div>
+            <div style="font-size:12px; color:#666; margin-top:4px;">${companyName}</div>
+          </div>
+        </div>
+      `;
+      return wrapper;
+    },
+
+    async generateAndUploadPdfsAfterSubmit() {
+      const results = [];
+      try {
+        const prefix = this.sanitizeLocationPrefix(); // mobile_name
+        const invNum = this.inv.number || (this.form.chassisNumber ? `INV-${this.form.chassisNumber}` : `INV-${Date.now()}`);
+        const invoiceFileName = `Invoice_${invNum}.pdf`;
+        const noDuesFileName = `NoDues_${invNum}.pdf`;
+        const gatePassFileName = `GatePass_${invNum}.pdf`;
+
+        // wait a bit for DOM placement (invoice/gatepass)
+        await this.$nextTick();
+        await new Promise(r => setTimeout(r, 180));
+
+        // 1) Invoice: search refs, id or selector fallbacks
+        const invEl = await this.waitFor(() => {
+          if (this.$refs && this.$refs.billArea) return this.$refs.billArea;
+          const byId = document.getElementById('billArea');
+          if (byId) return byId;
+          const q = document.querySelector('[data-ref="billArea"], .bill-area, #billArea');
+          return q;
+        }, 8, 150);
+
+        if (invEl) {
+          try {
+            const blob = await this.generatePdfBlobFromElement(invEl);
+            const keyInv = `${prefix}/invoice/${invoiceFileName}`;
+            const presignInv = await this.requestPresign(keyInv, blob.type || 'application/pdf');
+            const urlInvPublic = await this.uploadBlobToPresignedUrl(blob, presignInv, 'application/pdf');
+            results.push({ type: 'invoice', key: keyInv, url: urlInvPublic, status: 'success' });
+          } catch (err) {
+            console.error('Invoice PDF/upload failed:', err);
+            results.push({ type: 'invoice', status: 'failed', error: String(err) });
+          }
+        } else {
+          console.warn('Invoice element not found; skipping invoice PDF upload.');
+        }
+
+        // 2) NoDues (only if due is zero)
+        if (Number(this.dueAmount || 0) === 0) {
+          const ndEl = this.buildNoDuesElementForPdf();
+          document.body.appendChild(ndEl);
+          try {
+            const ndBlob = await this.generatePdfBlobFromElement(ndEl);
+            const keyNd = `${prefix}/nodues/${noDuesFileName}`;
+            const presignNd = await this.requestPresign(keyNd, ndBlob.type || 'application/pdf');
+            const urlNdPublic = await this.uploadBlobToPresignedUrl(ndBlob, presignNd, 'application/pdf');
+            results.push({ type: 'nodues', key: keyNd, url: urlNdPublic, status: 'success' });
+          } catch (err) {
+            console.error('NoDues PDF/upload failed:', err);
+            results.push({ type: 'nodues', status: 'failed', error: String(err) });
+          } finally {
+            if (ndEl && ndEl.parentNode) ndEl.parentNode.removeChild(ndEl);
+          }
+        }
+
+        // NEW ROBUST GATEPASS CAPTURE + UPLOAD
+        try {
+          // const gpRef = this.$refs.gatepassRef;
+          // if (gpRef && typeof gpRef.show === 'function') {
+
+          //   // 1) Open gatepass dialog with correct data
+          //   gpRef.show(this.form, this.selectedChassisInfo || {}, this.billGrandTotal || 0);
+
+          //   // 2) Wait for Vue to render the dialog
+          //   await this.$nextTick();
+          //   await new Promise(r => setTimeout(r, 300));
+
+          //   // 3) Capture the correct element: <div ref="sheet">
+          //   const gpSheetEl = gpRef.$refs?.sheet ?? gpRef.$el ?? null;
+
+          //   if (!gpSheetEl) {
+          //     console.warn("GatePass printable <div ref='sheet'> not found");
+          //   } else {
+          //     const gpBlob = await this.generatePdfBlobFromElement(gpSheetEl);
+
+          //     if (gpBlob && gpBlob.size > 100) {
+          //       const keyGp = `${prefix}/gatepass/${gatePassFileName}`;
+          //       const presignGp = await this.requestPresign(keyGp, gpBlob.type || 'application/pdf');
+          //       const putUrl = (typeof presignGp === 'string') ? presignGp : (presignGp.url || presignGp);
+
+          //       const urlGpPublic = await this.uploadBlobToPresignedUrl(gpBlob, putUrl, 'application/pdf');
+          //       results.push({ type: 'gatepass', key: keyGp, url: urlGpPublic, status: 'success' });
+          //     } else {
+          //       console.warn("GatePass blob too small → capture failed");
+          //     }
+          //   }
+
+          // } else {
+          //   console.warn("gatepassRef not found or show() not available");
+          // }
+          const gpRef = this.$refs.gatepassRef;
+          if (gpRef && typeof gpRef.show === 'function') {
+
+            // 1) Open gatepass dialog with correct data
+            gpRef.show(this.form, this.selectedChassisInfo || {}, this.billGrandTotal || 0);
+
+            // 2) Wait for Vue to render the dialog
+            await this.$nextTick();
+            await new Promise(r => setTimeout(r, 3000));  // <---- changed from 300 to 3000ms (3 sec)
+
+            // 3) Capture the correct element: <div ref="sheet">
+            const gpSheetEl = gpRef.$refs?.sheet ?? gpRef.$el ?? null;
+
+            if (!gpSheetEl) {
+              console.warn("GatePass printable <div ref='sheet'> not found");
+            } else {
+              const gpBlob = await this.generatePdfBlobFromElement(gpSheetEl);
+
+              if (gpBlob && gpBlob.size > 100) {
+                const keyGp = `${prefix}/gatepass/${gatePassFileName}`;
+                const presignGp = await this.requestPresign(keyGp, gpBlob.type || 'application/pdf');
+                const putUrl = (typeof presignGp === 'string') ? presignGp : (presignGp.url || presignGp);
+
+                const urlGpPublic = await this.uploadBlobToPresignedUrl(gpBlob, putUrl, 'application/pdf');
+                results.push({ type: 'gatepass', key: keyGp, url: urlGpPublic, status: 'success' });
+              } else {
+                console.warn("GatePass blob too small → capture failed");
+              }
+            }
+
+          } else {
+            console.warn("gatepassRef not found or show() not available");
+          }
+
+        } catch (err) {
+          console.warn('GatePass upload error:', err);
+        }
+
+        // Build doc mapping for backend
+        const doc = {};
+        for (const r of results) {
+          if (r.type === 'invoice' && r.key) doc.invoice = r.key;
+          if (r.type === 'nodues' && r.key) doc.nodues = r.key;
+          if (r.type === 'gatepass' && r.key) doc.gatepass = r.key;
+        }
+
+        // Notify backend (non-fatal)
+        if (Object.keys(doc).length) {
+          try {
+            const attachUrl = `${this.BASE.replace(/\/$/,'')}/attachInvoiceFiles`;
+            await axios.post(attachUrl, { billNumber: invNum, doc });
+          } catch (errAttach) {
+            console.warn('Failed to notify backend of uploaded files', errAttach);
+          }
+        }
+
+        this.$emit('pdfUploadResults', results);
+        this.$emit('notify', { text: 'PDF upload process finished', color: 'success' });
+        return results;
+      } catch (err) {
+        console.error('PDF upload error', err);
+        this.$emit('notify', { text: 'PDF upload failed', color: 'error' });
+        return [{ status: 'failed', message: String(err) }];
+      }
+    },
+
+    // ------------------ Existing methods (unchanged) ------------------
 
     onNomineeFileChange(fileOrFiles) {
-      // v-file-input passes a single File when multiple is NOT set
       const f = Array.isArray(fileOrFiles) ? fileOrFiles[0] : fileOrFiles;
       if (!f) { this.clearNomineeImage(); return; }
 
-      // type/size checks
       if (!f.type || !f.type.startsWith('image/')) {
         this.$nextTick(() => this.clearNomineeImage());
         this.$toast ? this.$toast.error('Please choose an image file.') : alert('Please choose an image file.');
@@ -1556,16 +1918,13 @@ taxableAmountForItems(itemsTotal) {
         return;
       }
 
-      // cleanup old preview
       if (this.form.nominee.previewUrl) {
         URL.revokeObjectURL(this.form.nominee.previewUrl);
       }
 
-      // set new
       this.form.nominee.file = f;
       this.form.nominee.previewUrl = URL.createObjectURL(f);
 
-      // reset v-file-input so same file can be reselected later
       this.form.nominee.inputKey = Date.now() + Math.random();
     },
 
@@ -1586,14 +1945,11 @@ taxableAmountForItems(itemsTotal) {
       return `${(kb / 1024).toFixed(2)} MB`;
     },
 
-    // If you submit with FormData:
     appendNomineeToFormData(fd) {
-      // append other nominee fields as you do already…
       fd.append('nominee[name]', this.form.nominee.name || '');
       fd.append('nominee[relation]', this.form.nominee.relation || '');
       fd.append('nominee[age]', this.form.nominee.age != null ? this.form.nominee.age : '');
       fd.append('nominee[mobile]', this.form.nominee.mobile || '');
-      // append image if present
       if (this.form.nominee.file) {
         fd.append('nomineeImage', this.form.nominee.file, this.form.nominee.file.name);
       }
@@ -1681,51 +2037,32 @@ taxableAmountForItems(itemsTotal) {
       }
     },
 
-    formatSize(bytes) {
-      if (bytes < 1024) return `${bytes} B`;
-      const kb = bytes / 1024;
-      if (kb < 1024) return `${kb.toFixed(1)} KB`;
-      const mb = kb / 1024;
-      return `${mb.toFixed(2)} MB`;
-    },
-
     convertRelation(relation, personGender = null) {
-    /**
-     * Convert relationship to abbreviated format (S/O, D/O, W/O, etc.)
-     * 
-     * @param {string} relation - The relationship to convert (e.g., 'father', 'mother', 'husband')
-     * @param {string} personGender - Optional: Gender of the person ('male', 'female')
-     * @returns {string} Abbreviated relationship format
-     */
-    relation = relation.toLowerCase().trim();
-    
-    const conversionMap = {
+      relation = relation.toLowerCase().trim();
+      const conversionMap = {
         'father': 'S/O',
-        'mother': 'S/O', // or D/O depending on person's gender
+        'mother': 'S/O',
         'husband': 'W/O',
         'wife': 'H/O',
         'son': 'F/O',
         'daughter': 'F/O',
         'spouse': 'S/O'
-    };
-    
-    // Handle mother case based on person's gender
-    if (relation === 'mother') {
+      };
+      if (relation === 'mother') {
         if (personGender && personGender.toLowerCase() === 'female') {
             return 'D/O';
         } else {
             return 'S/O';
         }
-    }
-    
-    return conversionMap[relation] || relation.toUpperCase() + '/O';
-},
+      }
+      return conversionMap[relation] || relation.toUpperCase() + '/O';
+    },
+
     money (v) {
       const n = Number(v || 0)
       return new Intl.NumberFormat('en-IN', { style:'currency', currency:'INR', maximumFractionDigits:2 }).format(n)
     },
     
-    // Accessory methods
     addAccessory () {
       this.form.accessories.push({ 
         key: Date.now() + Math.random(), 
@@ -1753,7 +2090,6 @@ taxableAmountForItems(itemsTotal) {
           throw new Error(`No vehicle found for chassis ${this.searchChassis}`);
         }
         const it = data.items[0];
-        // Fill details from backend
         this.form.pk = it.pk || '';
         this.form.sk = it.sk || '';
         this.form.category = it.categoryName || '';
@@ -1765,7 +2101,6 @@ taxableAmountForItems(itemsTotal) {
           status: it.status || ''
         };
         this.form.vehicleCategory = it.categoryName || '';
-        // Optional prefill
         this.form.price = this.form.price || 0;
         this.form.rtoCharges = this.form.rtoCharges || 0;
         this.form.insuranceCharges = this.form.insuranceCharges || 0;
@@ -1784,8 +2119,6 @@ taxableAmountForItems(itemsTotal) {
       this.searchError = '';
       this.searchedOnce = false;
       this.selectedChassisInfo = {};
-
-      // Clear vehicle fields
       this.form.category = '';
       this.form.model = '';
       this.form.chassisNumber = '';
@@ -1796,19 +2129,15 @@ taxableAmountForItems(itemsTotal) {
       this.form.insuranceCharges = 0;
     },
     
-    // address helper
     copyCurrentToPermanent () { if (this.sameAsCurrent) this.form.permanentAddress = { ...this.form.customer.address } },
-    // firm custom fields
     addFirmKV () { this.form.firm.extra.push({ key: Date.now(), k:'', v:'' }) },
     removeFirmKV (i) { this.form.firm.extra.splice(i,1) },
-    // ID custom KV
     addIdKV () { this.form.ids.custom.push({ key: Date.now(), k:'', v:'' }) },
     removeIdKV (i) { this.form.ids.custom.splice(i,1) },
+
     onPaymentFilesChange(idx, payload) {
       const row = this.form.payments[idx];
       if (!row) return;
-
-      // Normalize to an array of File
       let files = [];
       if (payload instanceof File) {
         files = [payload];
@@ -1817,25 +2146,19 @@ taxableAmountForItems(itemsTotal) {
       } else if (payload && payload.target && payload.target.files) {
         files = Array.from(payload.target.files);
       } else if (payload && payload.length !== undefined) {
-        // some Vuetify builds pass a FileList-like object
         files = Array.from(payload);
       } else {
         files = [];
       }
-
-      // Helper: image check (handles empty type)
       const isImage = (f) => {
         if (f.type && f.type.startsWith('image/')) return true;
         const name = (f.name || '').toLowerCase();
         return /\.(png|jpe?g|gif|webp|bmp|heic|heif|tiff?)$/.test(name);
       };
-
       for (const f of files) {
         if (!(f instanceof File)) continue;
         if (!isImage(f)) continue;
-
         row.files.push(f);
-
         const url = URL.createObjectURL(f);
         row.previews.push({
           id: `img_${_imgUid++}`,
@@ -1845,29 +2168,20 @@ taxableAmountForItems(itemsTotal) {
           type: f.type || 'image/*'
         });
       }
-
-      // reset input so same file can be picked again
       row.inputKey = Date.now() + Math.random();
     },
 
     removePaymentImage(idx, imgId) {
       const row = this.form.payments[idx];
       if (!row) return;
-
       const pvIdx = row.previews.findIndex(p => p.id === imgId);
       if (pvIdx === -1) return;
-
       const [pv] = row.previews.splice(pvIdx, 1);
       if (pv && pv.url) URL.revokeObjectURL(pv.url);
-
-      // remove matching File (by name+size) if present
       const fIdx = row.files.findIndex(f => f && f.name === pv.name && f.size === pv.size);
       if (fIdx !== -1) row.files.splice(fIdx, 1);
-
-      // reset the per-row file input so the same file can be picked again
       row.inputKey = Date.now() + Math.random();
     },
-
 
     revokeRowPreviews(row) {
       if (!row?.previews) return;
@@ -1877,7 +2191,6 @@ taxableAmountForItems(itemsTotal) {
       row.previews = [];
     },
 
-    // --- YOUR EXISTING ROW ADD/REMOVE, extended to initialize/cleanup images ---
     addPaymentRow() {
       const n = this.form.payments.length + 1;
       this.form.payments.push({
@@ -1899,28 +2212,20 @@ taxableAmountForItems(itemsTotal) {
     },
 
     async buildPaymentsFormData(fd) {
-      // call this when constructing your payload
-      // append basic fields
       fd.append('payments', JSON.stringify(
         this.form.payments.map(({ files, previews, inputKey, ...rest }) => rest)
       ));
-
-      // append images per row with a conventional naming
       this.form.payments.forEach((row, i) => {
         row.files.forEach((f, j) => {
           fd.append(`paymentImages[${i}][]`, f, f.name);
-          // or fd.append(`payments[${i}][images][${j}]`, f, f.name)
         });
       });
-
       return fd;
     },
 
-    // due plan
     addDueRow () { this.form.duePayments.push({ key: Date.now(), date:null, amount:0, note:'', menu:false }) },
     removeDueRow (i) { this.form.duePayments.splice(i,1) },
 
-    // ID type validator (hard limits)
     validateIdByType (v) {
       const t = this.form.ids.type
       if (!t && !v) return true
@@ -1935,7 +2240,6 @@ taxableAmountForItems(itemsTotal) {
       return (m[t] ? m[t].test(s) : !!s) || `Invalid ${t} number`
     },
 
-    // Coerce ID input per type (numeric-only + length clamp where needed)
     coerceIdValue (e) {
       let val = String(e?.target?.value ?? this.form.ids.value ?? '')
       if (this.idNumericOnly) val = val.replace(/\D/g, '')
@@ -1943,7 +2247,6 @@ taxableAmountForItems(itemsTotal) {
       this.form.ids.value = val
     },
 
-    // ===== DIGIT-ONLY ENFORCERS (hard limits) =====
     onlyDigits (e) {
       if (!/[0-9]/.test(e.key)) e.preventDefault()
     },
@@ -1972,7 +2275,6 @@ taxableAmountForItems(itemsTotal) {
       }
     },
 
-    // validate all
     validateAll () {
       const errors = []
       if (!this.form.chassisNumber) errors.push('Chassis number is required (search to fill).')
@@ -2021,13 +2323,11 @@ taxableAmountForItems(itemsTotal) {
         if (!p.mode) errors.push(`Payment row ${i+1}: select a payment mode.`)
       }
 
-      // Validate accessories
       this.form.accessories.forEach((acc, i) => {
         if (acc.name && (!acc.qty || acc.qty < 0)) errors.push(`Accessory ${i+1}: quantity must be 0 or more.`)
         if (acc.name && (!acc.price || acc.price < 0)) errors.push(`Accessory ${i+1}: price must be 0 or more.`)
       })
 
-      // planned dues optional but must be valid if filled
       this.form.duePayments.forEach((d, i) => {
         if (d.amount != null && (isNaN(Number(d.amount)) || Number(d.amount) < 0)) errors.push(`Due row ${i+1}: amount must be ≥ 0.`)
       })
@@ -2038,7 +2338,7 @@ taxableAmountForItems(itemsTotal) {
 
     async onSubmit () {
       const ok = this.validateAll()
-      const vuetifyOk = this.$refs.form.validate()
+      const vuetifyOk = this.$refs.form && this.$refs.form.validate ? this.$refs.form.validate() : true
       if (!ok || !vuetifyOk) {
         this.snack = { show: true, color: 'error', text: 'Please fix highlighted errors' }
         return
@@ -2049,7 +2349,6 @@ taxableAmountForItems(itemsTotal) {
     async submit () {
       this.submitting = true;
 
-      // --- helpers --------------------------------------------------------------
       const generateBillNumber = () => {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let out = '';
@@ -2063,7 +2362,6 @@ taxableAmountForItems(itemsTotal) {
         const now = new Date();
         const billNumber = generateBillNumber();
 
-        // ----------------------- INVENTORY PAYLOAD ------------------------------
         const inventoryPayload = {
           chassisNumbers: [this.form.chassisNumber],
           pk: this.form.pk,
@@ -2075,7 +2373,6 @@ taxableAmountForItems(itemsTotal) {
             category: this.form.category,
             model: this.form.model,
             qty: Number(this.form.qty || 1),
-            // save the ex-RTO/Ins unit price as the inventory price
             price: Number(this.unitVehicleExRtoIns || 0),
             rtoCharges: Number(this.form.rtoCharges || 0),
             insuranceCharges: Number(this.form.insuranceCharges || 0),
@@ -2099,6 +2396,7 @@ taxableAmountForItems(itemsTotal) {
               billGrandTotal: Number(this.billGrandTotal || 0),
               billPriceMode: this.form?.billOptions?.billPriceMode || null
             },
+            docs: this.docs,
             totals: {
               totalAmount: Number(this.billGrandTotal || 0),
               totalPaid: Number(this.totalPaid || 0),
@@ -2141,19 +2439,43 @@ taxableAmountForItems(itemsTotal) {
           }
         };
 
-        // --------------------- CUSTOMER INVOICE PAYLOAD -------------------------
         const invoiceNumber = this.inv?.number || billNumber;
         const invoiceDate = this.inv?.date || formatDateDDMMYYYY(now);
+        const prefix = this.sanitizeLocationPrefix(); // mobile_name
+        const invNum = this.inv.number || (this.form.chassisNumber ? `INV-${this.form.chassisNumber}` : `INV-${Date.now()}`);
+        const invoiceFileName = `Invoice_${invNum}.pdf`;
+        const noDuesFileName = `NoDues_${invNum}.pdf`;
+        const gatePassFileName = `GatePass_${invNum}.pdf`;
+        // build keys
+        const keyInv = `${prefix}/invoice/${invoiceFileName}`;
+        const keyNd  = `${prefix}/nodues/${noDuesFileName}`;
+        const keyGp  = `${prefix}/gatepass/${gatePassFileName}`;
+
+        console.log('keyInv', keyInv);
+        console.log('keyNd', keyNd);
+        console.log('keyGp', keyGp);
+
+        // Ensure docs object exists (Vue 2 reactive safe)
+        if (!this.docs) {
+          // create reactive docs on the component instance
+          this.$set(this, 'docs', {});
+        }
+
+        // use the exact property names you declared in data()
+this.form.docs.invoice = keyInv;
+this.form.docs.nodues  = keyNd;
+this.form.docs.gatepass = keyGp;
+
+console.log('this.docs', JSON.stringify(this.docs, null, 2));
+
+
 
         const customerInvoicePayload = {
-          // references
-          billNumber,                 // generated
-          invoiceNumber,              // use existing or generated
-          invoiceDate,                // use existing or today
-          inventoryUpdateRef: null,   // will fill after inventory update if needed
-          billRef: null,              // (kept for compatibility; set later if you have bill API)
-
-          // customer & ownership
+          billNumber,
+          invoiceNumber,
+          invoiceDate,
+          inventoryUpdateRef: null,
+          billRef: null,
           customer: {
             name: this.form.owner?.ownershipType === 'FIRM' ? this.form.firm?.name : this.form.customer?.name,
             email: this.form.customer?.email || null,
@@ -2173,8 +2495,6 @@ taxableAmountForItems(itemsTotal) {
               .filter(x => x?.k && x?.v)
               .map(x => ({ key: x.k, value: x.v }))
           },
-
-          // vehicle & item
           vehicle: {
             category: this.form.category,
             model: this.form.model,
@@ -2185,8 +2505,6 @@ taxableAmountForItems(itemsTotal) {
             unitPriceExRtoIns: Number(this.unitVehicleExRtoIns || 0),
             lineAmount: Number(this.lineAmount || 0)
           },
-
-          // accessories
           accessories: (this.form.accessories || [])
             .filter(acc => acc?.name && Number(acc?.qty) > 0 && Number(acc?.price) > 0)
             .map(acc => ({
@@ -2195,8 +2513,6 @@ taxableAmountForItems(itemsTotal) {
               price: Number(acc.price || 0),
               amount: Number(acc.qty || 0) * Number(acc.price || 0)
             })),
-
-          // charges & tax
           charges: {
             rtoCharges: Number(this.form.rtoCharges || 0),
             insuranceCharges: Number(this.form.insuranceCharges || 0),
@@ -2215,8 +2531,6 @@ taxableAmountForItems(itemsTotal) {
             billGrandTotal: Number(this.billGrandTotal || 0),
             billPriceMode: this.form?.billOptions?.billPriceMode || null
           },
-
-          // totals, payments, dues
           totals: {
             totalAmount: Number(this.billGrandTotal || 0),
             totalPaid: Number(this.totalPaid || 0),
@@ -2227,6 +2541,7 @@ taxableAmountForItems(itemsTotal) {
             seasonalDiscount: Number(this.form?.priceStructure?.seasonalDiscount || 0),
             finalSettlement: Number(this.form?.priceStructure?.finalSettlement || 0)
           },
+          docs: this.docs,
           payments: (this.form.payments || []).map(p => ({
             mode: p.mode,
             reference: p.reference || null,
@@ -2237,19 +2552,17 @@ taxableAmountForItems(itemsTotal) {
             amount: Number(d?.amount || 0),
             note: d?.note || null
           })),
-
-          // bill options & meta
           billOptions: { ...(this.form.billOptions || {}) },
           meta: {
             createdAt: now.toISOString(),
             createdBy: (this.$store?.state?.user?.email) || null
           },
-
-          // raw form snapshot (optional)
           rawForm: { ...(this.form || {}) }
         };
 
-        // ------------------------ 1) SAVE CUSTOMER INVOICE ----------------------
+        console.log('customerInvoicePayload', JSON.stringify(customerInvoicePayload, null, 2))
+
+        // 1) SAVE CUSTOMER INVOICE
         const custInvResp = await fetch(`${this.BASE}/customerInvoice`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2259,17 +2572,14 @@ taxableAmountForItems(itemsTotal) {
         const custInvData = await custInvResp.json().catch(() => ({}));
 
         if (!custInvResp.ok) {
-          // warn and proceed to open invoice (keep your behavior)
           this.$emit('notify', { text: custInvData?.message || `Customer invoice save failed (HTTP ${custInvResp.status})`, color: 'warning' });
           this.openInvoice();
-          return; // stop here; don't try inventory update if invoice failed
+          return;
         }
 
-        // reflect generated bill number to local state if it wasn't set
         if (custInvData?.billNumber && !this.inv?.number) this.inv.number = custInvData.billNumber;
 
-        // ------------------------ 2) UPDATE INVENTORY (SOLD) --------------------
-        
+        // 2) UPDATE INVENTORY (SOLD)
         const payload = {
           "chassisNumbers" : [this.form.chassisNumber],
           "item" : {"status": "SOLD"}
@@ -2287,12 +2597,18 @@ taxableAmountForItems(itemsTotal) {
           throw new Error(invData?.message || `Inventory update failed (HTTP ${invResp.status})`);
         }
 
-        // success notifications
         this.snack = { show: true, color: 'success', text: invData?.message || 'Inventory updated (marked SOLD)' };
         this.$emit('notify', { text: custInvData?.message || 'Customer invoice saved', color: 'success' });
 
         // open invoice (existing behavior)
         this.openInvoice();
+
+        // generate + upload PDFs and inform backend about stored keys (non-blocking errors handled)
+        try {
+          await this.generateAndUploadPdfsAfterSubmit();
+        } catch (errUploads) {
+          console.warn('PDF upload error (non-fatal):', errUploads);
+        }
 
       } catch (e) {
         this.snack = { show: true, color: 'error', text: e?.message || 'Failed to save' };
@@ -2321,8 +2637,100 @@ taxableAmountForItems(itemsTotal) {
       }
       await html2pdf().set(opt).from(this.$refs.billArea).save()
     },
+    
+    async downloadNoDuesPdf () {
+      if (Number(this.dueAmount || 0) !== 0) {
+        this.snack = { show: true, color: 'error', text: 'No Dues PDF available only when Due = ₹0' };
+        return;
+      }
+      let logoSrc;
+      try {
+        logoSrc = require('@/assets/newLogoTVS.png');
+      } catch (err) {
+        logoSrc = '@/assets/newLogoTVS.png';
+      }
+      const wrapper = document.createElement('div');
+      wrapper.style.width = '794px';
+      wrapper.style.padding = '24px';
+      wrapper.style.boxSizing = 'border-box';
+      wrapper.style.fontFamily = 'Arial, Helvetica, sans-serif';
+      wrapper.style.color = '#000';
+      wrapper.style.background = '#fff';
 
-    // helpers
+      const invNum = this.inv.number || (this.form.chassisNumber ? `INV-${this.form.chassisNumber}` : 'NA');
+      const invDate = this.inv.date || new Date().toLocaleDateString('en-GB');
+
+      const customerName = this.form.owner.ownershipType === 'FIRM' ? (this.form.firm.name || '-') : (this.form.customer.name || '-');
+      const chassis = this.form.chassisNumber || '-';
+      const model = this.form.model || '-';
+      const amountWords = this.amountInWords || '';
+      const companyName = 'ANSARI AUTOMOBILES';
+
+      wrapper.innerHTML = `
+        <div style="text-align:center; margin-bottom:10px;">
+          <img src="${logoSrc}" alt="Logo" style="height:70px; display:block; margin:0 auto 8px;" />
+          <div style="font-weight:700; font-size:18px;">${companyName}</div>
+          <div style="font-size:12px; margin-top:4px;">BADI KAMHARIYA BY PASS ROAD, MAU</div>
+          <hr style="margin:16px 0; border:none; border-top:1px solid #ccc;" />
+        </div>
+
+        <div style="text-align:center; margin:8px 0 18px;">
+          <div style="font-size:22px; font-weight:700; letter-spacing:1px;">NO DUES CERTIFICATE</div>
+          <div style="font-size:12px; color:#444; margin-top:6px;">(This certifies that the customer has cleared all dues)</div>
+        </div>
+
+        <div style="font-size:14px; line-height:1.6;">
+          <div><strong>Invoice No:</strong> ${invNum}</div>
+          <div><strong>Invoice Date:</strong> ${invDate}</div>
+          <div style="margin-top:8px;"><strong>Customer Name:</strong> ${customerName}</div>
+          <div><strong>Model / Chassis:</strong> ${model} / ${chassis}</div>
+          <div style="margin-top:8px;"><strong>Bill Grand Total:</strong> ${this.money(this.billGrandTotal)}</div>
+          <div><strong>Amount Paid:</strong> ${this.money(this.totalPaid)}</div>
+          <div style="margin-top:12px; background:#f7f7f7; padding:10px; border-radius:4px;">
+            <strong>Status:</strong> <span style="color:green; font-weight:700;">No Outstanding Dues (₹0)</span>
+          </div>
+
+          <div style="margin-top:14px;">
+            This is to certify that <strong>${customerName}</strong> has no outstanding dues against the above invoice as on <strong>${invDate}</strong>. All payments have been received and the account stands settled for the referenced vehicle.
+          </div>
+
+          <div style="margin-top:10px;"><em>Amount (in words):</em> ${amountWords}</div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-top:36px; align-items:flex-end;">
+          <div style="width:60%;">
+            <div style="font-size:12px; color:#666;">This certificate is system generated and does not require a physical signature.</div>
+          </div>
+          <div style="width:35%; text-align:center;">
+            <div style="height:60px;"></div>
+            <div style="border-top:1px solid #000; padding-top:6px; font-size:13px;">Authorised Signatory</div>
+            <div style="font-size:12px; color:#666; margin-top:4px;">${companyName}</div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(wrapper);
+
+      const opt = {
+        margin: [16, 16, 16, 16],
+        filename: `NoDues_${invNum || 'NA'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, backgroundColor: '#ffffff', useCORS: true },
+        jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'] }
+      };
+
+      try {
+        await html2pdf().set(opt).from(wrapper).save();
+        this.snack = { show: true, color: 'success', text: 'No Dues PDF saved' };
+      } catch (err) {
+        console.error('No Dues PDF error', err);
+        this.snack = { show: true, color: 'error', text: 'Failed to generate No Dues PDF' };
+      } finally {
+        if (wrapper && wrapper.parentNode) wrapper.parentNode.removeChild(wrapper);
+      }
+    },
+
     numberToWordsIndian (amount) {
       if (isNaN(amount)) return ''
       const n = Number(amount).toFixed(2)
@@ -2344,8 +2752,6 @@ taxableAmountForItems(itemsTotal) {
   }
 }
 </script>
-
-
 
 <style scoped>
 /* --------------------
@@ -2503,7 +2909,7 @@ body{font-family:Inter, Arial, Helvetica, sans-serif;margin:0;color:#111}
    -------------------- */
 .bill-a4{
   border:2px solid #000;
-  margin:0 auto; background:#fff; color:#000; padding:10px 10px;
+  margin:10 auto; background:#fff; color:#000; padding:10px 10px;
   font-size:12px; box-sizing:border-box; font-family:Inter, Arial, Helvetica, sans-serif;
 }
 /* .bill-a4{ width:794px; border:2px solid #000; } /* A4 portrait @ ~96dpi */
@@ -2600,7 +3006,7 @@ body{font-family:Inter, Arial, Helvetica, sans-serif;margin:0;color:#111}
   flex:1; border:1px solid #000; padding:8px; min-height:120px;
 }
 .bank .row{ display:flex; justify-content:space-between; font-size:11px; padding:2px 8px; }
-.qr .qr-box{ width:120px; height:120px; border:1px solid #000; margin:8px auto 0; }
+.qr .qr-box{ width:120px; height:120px; margin:8px auto 0; }
 
 /* enquiry / declaration */
 .enquiry-strip{ display:flex; justify-content:space-between; border:1px solid #000; }

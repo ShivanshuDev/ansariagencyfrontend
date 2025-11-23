@@ -461,10 +461,36 @@
         >
           <template v-slot:activator>
             <v-list-item-content>
-              <v-list-item-title class="submenu-title">LEDGER</v-list-item-title>
+              <v-list-item-title class="submenu-title">Ledger</v-list-item-title>
             </v-list-item-content>
           </template>
           
+          <v-list-item 
+            link 
+            @click="$emit('tab-selected', 'VENDORACCOUNT')"
+            class="nav-item"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-eye</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Create Vendor Account</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          
+          <!-- <v-list-item 
+            link 
+            @click="$emit('tab-selected', 'ADDENTRY')"
+            class="nav-item"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-plus-circle</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Vendor Deposit Amount</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item> -->
+
           <v-list-item 
             link 
             @click="$emit('tab-selected', 'LEDGERENTRY')"
@@ -477,17 +503,17 @@
               <v-list-item-title class="item-title">View Ledger Entries</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
-          
+
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'ADDENTRY')"
+            @click="$emit('tab-selected', 'VENDORACCOUNTDetail')"
             class="nav-item"
           >
             <v-list-item-icon class="nav-icon">
-              <v-icon small>mdi-plus-circle</v-icon>
+              <v-icon small>mdi-eye</v-icon>
             </v-list-item-icon>
             <v-list-item-content>
-              <v-list-item-title class="item-title">Vendor Deposit Amount</v-list-item-title>
+              <v-list-item-title class="item-title">Vendor Accounts</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
           
@@ -541,7 +567,7 @@
       >
         <template v-slot:activator>
           <v-list-item-content>
-            <v-list-item-title class="section-title">SALES</v-list-item-title>
+            <v-list-item-title class="section-title">Sales</v-list-item-title>
           </v-list-item-content>
         </template>
 

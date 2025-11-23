@@ -322,6 +322,15 @@
 
             <v-card flat class="section-card">
               <div class="section-title">
+                <v-icon left small>mdi-credit-card-outline</v-icon> Documents
+              </div>
+              <div>
+                {{ selectedInvoice?.docs }}
+              </div>
+            </v-card>
+
+            <v-card flat class="section-card">
+              <div class="section-title">
                 <v-icon left small>mdi-credit-card-outline</v-icon> Payments
               </div>
               <div v-if="paymentRows.length">

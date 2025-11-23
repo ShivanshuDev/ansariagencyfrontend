@@ -16,9 +16,6 @@ async function http(method, url, body) {
 }
 
 export const ledgerApi = {
-  addEntry(payload) {
-    return http('POST', `${BASE}/ledger/add`, payload);
-  },
   addClientDeposit(payload) {
     return http('POST', `${BASE}/addClientDeposit`, payload);
   },

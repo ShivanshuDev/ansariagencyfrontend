@@ -67,7 +67,9 @@ import SellToVendor from '@/components/vendorSell/sellToVendor.vue';
 import SellToVendorDetails from '@/components/vendorSell/SellToVendorTable.vue';
 import LEDGER from '@/components/ledger/ledgerComponent.vue'
 import LEDGERENTRY from '@/components/ledger/AllEntriesTable.vue'
-import ADDENTRY from '@/components/ledger/AddEntryForm.vue'
+import VENDORACCOUNT from '@/components/ledger/CreateVendorAccount.vue'
+import VENDORACCOUNTDetail from '@/components/ledger/AccountsTable.vue'
+// import ADDENTRY from '@/components/ledger/AddEntryForm.vue'
 import CLIENTSUMMERY from '@/components/ledger/ClientSummaryCard.vue'
 import DAYBOOK from '@/components/ledger/DayBook.vue'
 import QUICKINVOICE from '@/components/sales/QuickInvoice.vue'
@@ -90,7 +92,9 @@ export default {
     SellToVendorDetails,
     LEDGER,
     LEDGERENTRY,
-    ADDENTRY,
+    VENDORACCOUNT,
+    VENDORACCOUNTDetail,
+    // ADDENTRY,
     CLIENTSUMMERY,
     DAYBOOK,
     QUICKINVOICE,
@@ -126,7 +130,9 @@ export default {
       if(this.selectedTab === 'SellToVendorDetails') return 'SellToVendorDetails';
       if(this.selectedTab === 'LEDGER') return 'LEDGER';
       if(this.selectedTab === 'LEDGERENTRY') return 'LEDGERENTRY';
-      if(this.selectedTab === 'ADDENTRY') return 'ADDENTRY';
+      if(this.selectedTab === 'VENDORACCOUNT') return 'VENDORACCOUNT';
+      if(this.selectedTab === 'VENDORACCOUNTDetail') return 'VENDORACCOUNTDetail';
+      // if(this.selectedTab === 'ADDENTRY') return 'ADDENTRY';
       if(this.selectedTab === 'CLIENTSUMMERY') return 'CLIENTSUMMERY';
       if(this.selectedTab === 'DAYBOOK') return 'DAYBOOK';
       if(this.selectedTab === 'QUICKINVOICE') return 'QUICKINVOICE';
