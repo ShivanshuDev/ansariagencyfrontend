@@ -60,7 +60,9 @@
               size="small"
             >
               <template #opposite>
-                <div class="caption text-medium-emphasis">{{ formatDate(ev.at) }}</div>
+                <div class="caption text-medium-emphasis">
+                  {{ formatDate(ev.at) }}
+                </div>
               </template>
 
               <v-card class="event-card mb-4" elevation="0">
@@ -101,9 +103,9 @@
                       {{ key }}
                     </v-chip>
                     <div class="arrow">
-                      <span class="from">{{ pretty(chg.from) }}</span>
+                      <span class="from">{{ pretty(chg.from, key) }}</span>
                       <v-icon size="16" class="mx-2">mdi-arrow-right</v-icon>
-                      <span class="to">{{ pretty(chg.to) }}</span>
+                      <span class="to">{{ pretty(chg.to, key) }}</span>
                     </div>
                   </div>
                 </div>
@@ -117,7 +119,7 @@
                   >
                     <div class="snap-key">{{ key }}</div>
                     <div class="snap-val">
-                      {{ pretty(ev.snapshot?.[key]) }}
+                      {{ pretty(ev.snapshot?.[key], key) }}
                     </div>
                   </div>
                 </div>
@@ -159,12 +161,16 @@ function hasChanges(ev) {
 }
 
 const filteredItems = computed(() =>
-  (items.value || []).filter(hasChanges).sort((a, b) => (b.at ?? 0) - (a.at ?? 0))
+  (items.value || [])
+    .filter(hasChanges)
+    .sort((a, b) => (b.at ?? 0) - (a.at ?? 0))
 );
 
-function statusOf(ev){ return ev?.snapshot?.status || ev?.status || null; }
+function statusOf(ev) {
+  return ev?.snapshot?.status || ev?.status || null;
+}
 
-function chipColor(a){
+function chipColor(a) {
   const x = String(a || '').toUpperCase();
   if (x === 'CREATED') return 'pink';
   if (x === 'UPDATED') return 'primary';
@@ -172,7 +178,7 @@ function chipColor(a){
   if (x === 'SOLD') return 'green';
   return 'grey';
 }
-function actionIcon(a){
+function actionIcon(a) {
   const x = String(a || '').toUpperCase();
   if (x === 'CREATED') return 'mdi-plus';
   if (x === 'UPDATED') return 'mdi-pencil';
@@ -180,7 +186,7 @@ function actionIcon(a){
   if (x === 'SOLD') return 'mdi-cash-check';
   return 'mdi-dots-horizontal';
 }
-function statusColor(s){
+function statusColor(s) {
   const v = String(s || '').toLowerCase();
   if (['done','completed','sold','delivered'].includes(v)) return 'green';
   if (['inprogress','in-progress','processing'].includes(v)) return 'blue';
@@ -188,7 +194,7 @@ function statusColor(s){
   if (['cancelled','rejected','failed'].includes(v)) return 'red';
   return 'grey';
 }
-function keyColor(key){
+function keyColor(key) {
   const k = String(key || '').toLowerCase();
   if (k.includes('status')) return 'indigo';
   if (k.includes('warehouse')) return 'teal';
@@ -198,13 +204,57 @@ function keyColor(key){
   if (k.includes('sold')) return 'green';
   return 'blue';
 }
-function pretty(val){
-  if (val === null || val === undefined || val === '') return '—';
-  return typeof val === 'object' ? JSON.stringify(val) : String(val);
-}
-function formatDate(epoch){
+
+/**
+ * Format epoch/epoch-like value into DD/MM/YYYY HH:mm:ss
+ * Accepts seconds or milliseconds.
+ */
+function formatDateTime(epoch) {
   const n = Number(epoch);
-  return n ? new Date(n).toLocaleString() : '—';
+  if (!Number.isFinite(n) || n <= 0) return '—';
+
+  // If value looks like seconds (1e9 range), convert to ms
+  const ms = n < 1e12 ? n * 1000 : n;
+
+  const d = new Date(ms);
+  const pad = v => String(v).padStart(2, '0');
+
+  const day = pad(d.getDate());
+  const month = pad(d.getMonth() + 1);
+  const year = d.getFullYear();
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  const seconds = pad(d.getSeconds());
+
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Used in the timeline header for each event (at).
+ */
+function formatDate(epoch) {
+  return formatDateTime(epoch);
+}
+
+/**
+ * Pretty-print for values shown in diff/snapshot.
+ * If key suggests time/date (lastModified, updatedAt, createdAt, ...),
+ * and value is numeric, we format it using formatDateTime.
+ */
+function pretty(val, key) {
+  if (val === null || val === undefined || val === '') return '—';
+
+  const lowerKey = String(key || '').toLowerCase();
+  const looksLikeTimeField = /time|date|at|created|updated|modified/.test(lowerKey);
+
+  if (looksLikeTimeField) {
+    const num = Number(val);
+    if (Number.isFinite(num) && num > 0) {
+      return formatDateTime(num);
+    }
+  }
+
+  return typeof val === 'object' ? JSON.stringify(val) : String(val);
 }
 
 async function fetchHistory() {
@@ -213,12 +263,15 @@ async function fetchHistory() {
   items.value = [];
   try {
     const base = process.env.VUE_APP_AGENCY_BACKEND_URL || '';
-    const endpoint = props.inventoryEndpoint.startsWith('') ? props.inventoryEndpoint : `/${props.inventoryEndpoint}`;
+    // keep existing behavior (do not break current URLs)
+    const endpoint = props.inventoryEndpoint.startsWith('')
+      ? props.inventoryEndpoint
+      : `/${props.inventoryEndpoint}`;
     const url =
       `${base}${endpoint}` +
       `?invoiceNumber=${encodeURIComponent(props.invoiceNumber)}` +
       `&chassisNumber=${encodeURIComponent(props.chassisNumber)}`;
-    console.log('url', url)
+    console.log('url', url);
     const res = await fetch(url, { method: 'GET' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json(); // { items: [...] }

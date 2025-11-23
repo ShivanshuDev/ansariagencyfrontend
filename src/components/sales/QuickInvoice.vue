@@ -131,6 +131,14 @@
             </v-row>
           </section>
 
+           <section class="section-wrap">
+            <div class="section-head">Choose Sales Mode</div>
+            <v-radio-group v-model="form.salesMode" row>
+              <v-radio label="Cash" value="CASH"></v-radio>
+              <v-radio label="Finance" value="FINANCE"></v-radio>
+            </v-radio-group>
+          </section>
+
           <!-- Owner Information -->
           <section class="section-wrap">
             <div class="section-head">Owner Information</div>
@@ -243,9 +251,9 @@
                 <div class="mini-title">Current Address</div>
                 <v-row dense>
                   <v-col cols="12"><v-text-field v-model="form.customer.address.line1" :rules="[rReq]" label="House No. & Street Name" dense outlined hide-details="auto"/></v-col>
-                  <v-col cols="12"><v-text-field v-model="form.customer.address.line2" label="Landmark/Police Station" dense outlined hide-details="auto"/></v-col>
+                  <v-col cols="12"><v-text-field v-model="form.customer.address.line2" label="Landmark" dense outlined hide-details="auto"/></v-col>
                   <v-col cols="12" sm="6"><v-text-field v-model="form.customer.address.village" label="Village/Town/City" dense outlined hide-details="auto"/></v-col>
-                  <v-col cols="12" sm="6"><v-text-field v-model="form.customer.address.postOffice" label="Post / Dharahan" dense outlined hide-details="auto"/></v-col>
+                  <v-col cols="12" sm="6"><v-text-field v-model="form.customer.address.postOffice" label="Post" dense outlined hide-details="auto"/></v-col>
                   <v-col cols="12" sm="6"><v-text-field v-model="form.customer.address.tahsil" label="Tahsil" dense outlined hide-details="auto"/></v-col>
                   <v-col cols="12" sm="6"><v-text-field v-model="form.customer.address.district" label="District" dense outlined hide-details="auto"/></v-col>
                   <v-col cols="12" sm="6"><v-text-field v-model="form.customer.address.state" :rules="[rReq]" label="State" dense outlined hide-details="auto"/></v-col>
@@ -276,7 +284,7 @@
 
                 <v-row dense>
                   <v-col cols="12"><v-text-field v-model="form.permanentAddress.line1" label="House No. & Street Name" dense outlined hide-details="auto"/></v-col>
-                  <v-col cols="12"><v-text-field v-model="form.permanentAddress.line2" label="Landmark/Police Station" dense outlined hide-details="auto"/></v-col>
+                  <v-col cols="12"><v-text-field v-model="form.permanentAddress.line2" label="Landmark" dense outlined hide-details="auto"/></v-col>
                   <v-col cols="12" sm="6"><v-text-field v-model="form.permanentAddress.village" label="Village/Town/City" dense outlined hide-details="auto"/></v-col>
                   <v-col cols="12" sm="6"><v-text-field v-model="form.permanentAddress.postOffice" label="Post" dense outlined hide-details="auto"/></v-col>
                   <v-col cols="12" sm="6"><v-text-field v-model="form.permanentAddress.tahsil" label="Tahsil" dense outlined hide-details="auto"/></v-col>
@@ -856,7 +864,10 @@
             <!-- BILL TO -->
             <div class="addr-wrap">
               <div class="addr">
-                <div class="b">Bill To -</div>
+                <div style="display:flex; flex-direction:row; justify-content:space-between; align-items:center;">
+                  <div class="b">Bill To -</div>
+                  <div>Purchase Mode : {{form.salesMode}}</div>
+                </div>
                 <table style="width:100%; border-collapse:collapse; margin-top:10px;">
                   <tr>
                     <td style="font-weight:700; padding:1px 0; width:200px;">CUSTOMER NAME</td>
@@ -1217,7 +1228,7 @@ export default {
       },
       idTypes: ['AADHAAR','PAN','VOTER','DL','PASSPORT'],
       ownershipTypes: ['INDIVIDUAL','FIRM'],
-      relations: ['Son', 'Husband', 'Wife',],
+      relations: ['Father','Mother','Husband','Wife','Brother','Sister','Son','Daughter','Other'],
       insuranceTypes: ['THIRD PARTY','ZERO DEP','BASIC'],
       financeCompanies: [
         'TVS CREDIT SERVICES LIMITED',
@@ -1801,39 +1812,6 @@ export default {
 
         // NEW ROBUST GATEPASS CAPTURE + UPLOAD
         try {
-          // const gpRef = this.$refs.gatepassRef;
-          // if (gpRef && typeof gpRef.show === 'function') {
-
-          //   // 1) Open gatepass dialog with correct data
-          //   gpRef.show(this.form, this.selectedChassisInfo || {}, this.billGrandTotal || 0);
-
-          //   // 2) Wait for Vue to render the dialog
-          //   await this.$nextTick();
-          //   await new Promise(r => setTimeout(r, 300));
-
-          //   // 3) Capture the correct element: <div ref="sheet">
-          //   const gpSheetEl = gpRef.$refs?.sheet ?? gpRef.$el ?? null;
-
-          //   if (!gpSheetEl) {
-          //     console.warn("GatePass printable <div ref='sheet'> not found");
-          //   } else {
-          //     const gpBlob = await this.generatePdfBlobFromElement(gpSheetEl);
-
-          //     if (gpBlob && gpBlob.size > 100) {
-          //       const keyGp = `${prefix}/gatepass/${gatePassFileName}`;
-          //       const presignGp = await this.requestPresign(keyGp, gpBlob.type || 'application/pdf');
-          //       const putUrl = (typeof presignGp === 'string') ? presignGp : (presignGp.url || presignGp);
-
-          //       const urlGpPublic = await this.uploadBlobToPresignedUrl(gpBlob, putUrl, 'application/pdf');
-          //       results.push({ type: 'gatepass', key: keyGp, url: urlGpPublic, status: 'success' });
-          //     } else {
-          //       console.warn("GatePass blob too small → capture failed");
-          //     }
-          //   }
-
-          // } else {
-          //   console.warn("gatepassRef not found or show() not available");
-          // }
           const gpRef = this.$refs.gatepassRef;
           if (gpRef && typeof gpRef.show === 'function') {
 
@@ -3031,5 +3009,10 @@ body{font-family:Inter, Arial, Helvetica, sans-serif;margin:0;color:#111}
   .container, .bill-a4, .bill-a4-landscape{ padding:12px; }
   .thumb img{ height:80px; }
   .nominee-thumb{ grid-template-columns: 100px 1fr; }
+}
+
+
+.big-label >>> .v-label {
+  font-size: 16px !important;  /* adjust as you like */
 }
 </style>

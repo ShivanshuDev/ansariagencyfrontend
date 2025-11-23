@@ -3,7 +3,7 @@
     <v-card class="rounded-lg elevation-2">
       <!-- Header -->
       <v-sheet class="daybook-header rounded-t-lg" color="indigo darken-4" dark>
-        <div class="d-flex align-center">
+        <div class="d-flex align-center" style="padding:5px 20px;">
           <div class="d-flex align-center">
             <v-avatar size="36" class="mr-3" v-if="brandLogo">
               <img :src="brandLogo" :alt="brandName">
@@ -413,6 +413,7 @@
       <table class="pdf-table">
         <thead>
           <tr>
+            <th class="w-sno text-center">S.No.</th>
             <th class="w-when">Time</th>
             <th class="w-client">Account</th>
             <th class="w-narration">Narration</th>
@@ -425,6 +426,7 @@
         </thead>
         <tbody>
           <tr v-for="r in rows" :key="r.sk || r.id">
+            <td class="w-sno text-center">{{ r.sno }}</td>
             <td class="w-when">{{ fmtDateTime(r.createdAt) }}</td>
             <td class="w-client">{{ r.clientId || '' }}</td>
             <td class="w-narration">{{ r.narration || '' }}</td>
@@ -449,7 +451,7 @@
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="4" class="text-right">Totals</td>
+            <td colspan="5" class="text-right">Totals</td>
             <td class="w-money text-right">{{ money(totals.debit) }}</td>
             <td class="w-money text-right">{{ money(totals.credit) }}</td>
             <td colspan="2"></td>
@@ -472,7 +474,6 @@
 </template>
 
 <script>
-// npm i html2pdf.js
 import html2pdf from 'html2pdf.js'
 
 export default {
@@ -488,9 +489,9 @@ export default {
       preset: 'today',
       from: '',
       to: '',
-      type: '',      // DEBIT / CREDIT
-      mode: '',      // CASH / UPI / ...
-      source: '',    // DEPOSIT / etc (based on backend "type")
+      type: '',
+      mode: '',
+      source: '',
       q: '',
 
       fromMenu: false,
@@ -517,7 +518,6 @@ export default {
         { text: 'CHEQUE', value: 'CHEQUE' },
         { text: 'OTHER', value: 'OTHER' }
       ],
-      // tweak based on your actual "type" values in DynamoDB
       sourceItems: [
         { text: 'All', value: '' },
         { text: 'DEPOSIT', value: 'DEPOSIT' },
@@ -526,6 +526,7 @@ export default {
       ],
 
       headers: [
+        { text: 'S.No.', value: 'sno', sortable: false, align: 'center' },
         { text: 'Time', value: 'createdAt' },
         { text: 'Account', value: 'clientId' },
         { text: 'Narration', value: 'narration' },
@@ -590,7 +591,7 @@ export default {
   },
 
   methods: {
-    rowClass(item) {
+    rowClass (item) {
       if (!item || !item.entryType) return ''
       return item.entryType === 'DEBIT' ? 'row-debit' : 'row-credit'
     },
@@ -609,9 +610,8 @@ export default {
         this.from = this.toStr(d)
         this.to = this.toStr(d)
       } else if (key === 'week') {
-        // Monday–Sunday of current week
         const start = new Date(today)
-        const dow = start.getDay() === 0 ? 6 : start.getDay() - 1 // 0=Sun → 6
+        const dow = start.getDay() === 0 ? 6 : start.getDay() - 1
         start.setDate(start.getDate() - dow)
         const end = new Date(start)
         end.setDate(start.getDate() + 6)
@@ -670,10 +670,8 @@ export default {
 
         this.loading = true
         try {
-          // 1) Opening balance (placeholder for now)
           this.opening = 0
 
-          // 2) Build params for /getDayBook
           const params = { pageSize: 1000 }
 
           if (this.from && this.to && this.from === this.to) {
@@ -694,35 +692,32 @@ export default {
           }
           const res = await resp.json()
 
-          // sync UI date range with backend
           if (res.startISO) this.from = res.startISO
           if (res.endISO) this.to = res.endISO
 
           let items = Array.isArray(res.items) ? res.items : []
 
-          // Normalize backend data → table shape
           items = items.map(r => {
             const created =
               typeof r.createdAt === 'number'
-                ? r.createdAt * 1000   // epoch seconds -> ms
+                ? r.createdAt * 1000
                 : r.createdAt
 
             return {
               ...r,
-              entryType: r.leg,               // 'DEBIT' / 'CREDIT'
-              clientId: r.accountId,          // show accountId in Account column
-              mode: r.meta?.paymentType,      // for Mode column
+              entryType: r.leg,
+              clientId: r.accountId,
+              mode: r.meta?.paymentType,
               extra: {
                 ...(r.extra || {}),
                 paymentType: r.meta?.paymentType
               },
-              sourceType: r.type,             // e.g. 'DEPOSIT'
-              sourceId: r.meta?.sourceId,     // e.g. 'DEP-2025...'
+              sourceType: r.type,
+              sourceId: r.meta?.sourceId,
               createdAt: created
             }
           })
 
-          // 3) Client-side filters
           if (this.type) {
             items = items.filter(r => r.entryType === this.type)
           }
@@ -744,13 +739,10 @@ export default {
             )
           }
 
-          // 4) Sort latest first
           items.sort(
             (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           )
 
-
-          // 5) Flags (duplicate ref & large amounts)
           const refSeen = new Set()
           for (const it of items) {
             const ref = `${it.sourceType || ''}#${it.sourceId || ''}`
@@ -761,9 +753,14 @@ export default {
             it._large = Number(it.amount || 0) >= 100000
           }
 
+          // assign serial numbers after all filters & sort
+          items = items.map((r, idx) => ({
+            ...r,
+            sno: idx + 1
+          }))
+
           this.rows = items
 
-          // 6) Totals
           const totals = items.reduce((acc, r) => {
             if (r.entryType === 'DEBIT') acc.debit += Number(r.amount || 0)
             else if (r.entryType === 'CREDIT') acc.credit += Number(r.amount || 0)
@@ -771,7 +768,6 @@ export default {
           }, { debit: 0, credit: 0 })
           this.totals = totals
 
-          // Mode-wise totals
           const modeTotals = {}
           for (const r of items) {
             const m = r.mode
@@ -799,6 +795,7 @@ export default {
 
     exportCsv () {
       const headers = [
+        'SNo',
         'Time',
         'Account',
         'EntryType',
@@ -810,10 +807,14 @@ export default {
         'SourceId'
       ]
       const lines = [headers.join(',')]
-      for (const r of this.rows) {
+
+      for (let i = 0; i < this.rows.length; i++) {
+        const r = this.rows[i]
+        const sno = r.sno || (i + 1)
         const debit = r.entryType === 'DEBIT' ? r.amount : ''
         const credit = r.entryType === 'CREDIT' ? r.amount : ''
         lines.push([
+          this.csv(sno),
           this.csv(this.fmtDateTime(r.createdAt)),
           this.csv(r.clientId),
           this.csv(r.entryType),
@@ -825,6 +826,7 @@ export default {
           this.csv(r.sourceId || '')
         ].join(','))
       }
+
       const name = `daybook_${this.from || 'na'}_${this.to || 'na'}.csv`
       this.downloadCsv(lines.join('\n'), name)
     },
@@ -843,18 +845,190 @@ export default {
 
     // --- PDF ---
     async downloadPdf () {
-      if (!this.$refs.pdfArea) return
+      // how many ledger rows per PDF page (NOT related to A4 size)
+      const pageSize = 40
+
+      // helper to format date like 9/01/18
+      const formatDate = (value) => {
+        if (!value && value !== 0) return ''
+        const d = new Date(value)
+        if (Number.isNaN(d.getTime())) return ''
+        return d.toLocaleDateString('en-US', {
+          year: '2-digit',
+          month: 'numeric',
+          day: '2-digit'
+        })
+      }
+
+      // helper to format amount like 3,000.00
+      const formatAmount = (v) => {
+        const n = Number(v || 0)
+        return n.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        })
+      }
+
+      const safe = (txt) =>
+        String(txt == null ? '' : txt)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+
+      // split rows into pages of `pageSize`
+      const pages = []
+      for (let i = 0; i < this.rows.length; i += pageSize) {
+        pages.push(this.rows.slice(i, i + pageSize))
+      }
+
+      // build HTML for all pages
+      const pagesHtml = pages.map((rows, pageIndex) => {
+        const pageNo = pageIndex + 1
+        const totalPages = pages.length
+        const isLast = pageIndex === totalPages - 1
+
+        const rowsHtml = rows.map(r => `
+          <tr>
+            <td class="col-date">${safe(formatDate(r.createdAt))}</td>
+            <td class="col-journal">${safe(r.sourceType || '')}</td>
+            <td class="col-ref">${safe(r.sourceId || '')}</td>
+            <td class="col-desc">${safe(r.narration || '')}</td>
+            <td class="col-account">${safe(r.clientId || '')}</td>
+            <td class="col-debit">${r.entryType === 'DEBIT' ? formatAmount(r.amount) : ''}</td>
+            <td class="col-credit">${r.entryType === 'CREDIT' ? formatAmount(r.amount) : ''}</td>
+          </tr>
+        `).join('')
+
+        const footerHtml = isLast
+          ? `
+            <tfoot>
+              <tr>
+                <td class="col-date"></td>
+                <td class="col-journal"></td>
+                <td class="col-ref"></td>
+                <td class="col-desc ledger-totals-label">TOTALS</td>
+                <td class="col-account"></td>
+                <td class="col-debit">${formatAmount(this.totals.debit)}</td>
+                <td class="col-credit">${formatAmount(this.totals.credit)}</td>
+              </tr>
+            </tfoot>`
+          : ''
+
+        return `
+          <div class="ledger-page">
+            <div class="ledger-top-row">
+              <span>Page: ${pageNo} of ${totalPages}</span>
+              <span>As of: ${safe(formatDate(this.to || this.nowIso))}</span>
+            </div>
+            <div class="ledger-top-row">
+              <span>Report: R-4-3</span>
+              <span></span>
+            </div>
+
+            <div class="ledger-title">GENERAL LEDGER TRANSACTIONS</div>
+            <div class="ledger-subtitle">
+              All transactions for ${safe(this.brandName)} (${safe(this.from || 'Start')} to ${safe(this.to || 'End')})
+            </div>
+
+            <table class="ledger-table">
+              <thead>
+                <tr class="ledger-header-row">
+                  <th class="col-date">DATE</th>
+                  <th class="col-journal">JOURNL</th>
+                  <th class="col-ref">REFERENCE</th>
+                  <th class="col-desc">DESCRIPTION</th>
+                  <th class="col-account">ACCOUNT</th>
+                  <th class="col-debit">DEBIT</th>
+                  <th class="col-credit">CREDIT</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+              ${footerHtml}
+            </table>
+          </div>
+        `
+      }).join('')
+
+      // container with styles + all pages (ledger look, white background)
+      const container = document.createElement('div')
+      container.innerHTML = `
+        <style>
+          .ledger-root {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 10px;
+            color: #000;
+            background: #fff;
+            padding: 18px;
+          }
+          .ledger-page {
+            page-break-after: always;
+          }
+          .ledger-page:last-child {
+            page-break-after: auto;
+          }
+          .ledger-top-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+          }
+          .ledger-title {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 8px;
+          }
+          .ledger-subtitle {
+            text-align: center;
+            margin-bottom: 8px;
+          }
+          .ledger-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          .ledger-table th,
+          .ledger-table td {
+            padding: 2px 4px;
+            white-space: nowrap;
+          }
+          .ledger-header-row th {
+            border-bottom: 1px solid #000;
+          }
+          .ledger-totals-label {
+            text-align: right;
+            padding-right: 6px;
+          }
+          .col-date    { width: 70px; }
+          .col-journal { width: 60px; }
+          .col-ref     { width: 70px; }
+          .col-desc    { width: 260px; }
+          .col-account { width: 110px; }
+          .col-debit   { width: 80px; text-align: right; }
+          .col-credit  { width: 80px; text-align: right; }
+        </style>
+        <div class="ledger-root">
+          ${pagesHtml}
+        </div>
+      `
+
+      document.body.appendChild(container)
+
       const filename = `daybook_${this.from || 'na'}_${this.to || 'na'}.pdf`
       const opt = {
         margin: [16, 18, 16, 18],
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
+        jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' } // A4 + landscape
       }
-      await html2pdf().set(opt).from(this.$refs.pdfArea).save()
+
+      try {
+        await html2pdf().set(opt).from(container).save()
+      } finally {
+        document.body.removeChild(container)
+      }
     }
+
   }
 }
 </script>
@@ -974,6 +1148,7 @@ export default {
 .bg-credit { background:#e8f5e9; }
 .text-center { text-align:center; }
 .text-right  { text-align:right; }
+.w-sno { width: 40px; }
 .w-when { width: 120px; }
 .w-client { width: 110px; }
 .w-narration { width: 220px; }
@@ -1006,23 +1181,17 @@ export default {
   color:#333;
 }
 
-
-/* Row background colors - use deep selector because of scoped styles */
+/* Row background colors */
 .ledger-table >>> .row-debit {
-  background-color: rgba(255, 0, 0, 0.07) !important; /* very light red */
+  background-color: rgba(255, 0, 0, 0.07) !important;
 }
-
 .ledger-table >>> .row-credit {
-  background-color: rgba(0, 128, 0, 0.07) !important; /* very light green */
+  background-color: rgba(0, 128, 0, 0.07) !important;
 }
-
-/* Optional: tweak text color inside those rows */
 .ledger-table >>> .row-debit td {
   color: #b00000;
 }
-
 .ledger-table >>> .row-credit td {
   color: #0a7f00;
 }
-
 </style>
