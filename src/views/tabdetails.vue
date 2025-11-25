@@ -75,6 +75,8 @@ import DAYBOOK from '@/components/ledger/DayBook.vue'
 import QUICKINVOICE from '@/components/sales/QuickInvoice.vue'
 import AllCustomerInvoices from '@/components/sales/CustomerInvoiceTable.vue'
 import RTODetails from '@/components/sales/FinanceAndRto.vue'
+import CUSTOMERACCOUNTDetail from '@/components/ledger/CustomerAccount.vue'
+import STOCK from '@/components/stock/AllStock.vue'
 
 export default {
   components:{
@@ -99,7 +101,9 @@ export default {
     DAYBOOK,
     QUICKINVOICE,
     AllCustomerInvoices,
-    RTODetails
+    RTODetails,
+    CUSTOMERACCOUNTDetail,
+    STOCK
   },
   props: {
     selectedTab: {
@@ -138,6 +142,8 @@ export default {
       if(this.selectedTab === 'QUICKINVOICE') return 'QUICKINVOICE';
       if(this.selectedTab === 'AllCustomerInvoices') return 'AllCustomerInvoices';
       if(this.selectedTab === 'RTODetails') return 'RTODetails';
+      if(this.selectedTab === 'CUSTOMERACCOUNTDetail') return 'CUSTOMERACCOUNTDetail';
+      if(this.selectedTab === 'STOCK') return 'STOCK';
       return null;
     },
     displayName() {

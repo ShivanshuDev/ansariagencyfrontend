@@ -19,6 +19,18 @@
           Deposit
         </v-btn>
 
+        <!-- 🔹 Open Account button (new) -->
+        <v-btn
+          small
+          color="success"
+          class="mr-2"
+          @click="openAccountDialog = true"
+          title="Open a new vendor account"
+        >
+          <v-icon left>mdi-account-plus</v-icon>
+          Open Account
+        </v-btn>
+
         <!-- Existing refresh button (unchanged) -->
         <v-btn icon :loading="loading" @click="fetchAccounts" title="Refresh list">
           <v-icon>mdi-refresh</v-icon>
@@ -127,7 +139,7 @@
       </template>
     </v-card-text>
 
-    <!-- details dialog -->
+    <!-- details dialog (unchanged) -->
     <v-dialog persistent v-model="detailsDialog" max-width="1700px">
       <v-card>
         <v-card-title>
@@ -139,7 +151,6 @@
         </v-card-title>
 
         <v-card-text>
-          <!-- 🔹 Skeleton loader for details & ledger while loading -->
           <div v-if="detailsLoading" class="pa-4">
             <v-skeleton-loader
               type="article"
@@ -155,7 +166,6 @@
             />
           </div>
 
-          <!-- 🔹 Actual content once details are loaded -->
           <div v-else-if="selectedDetails">
             <v-row dense>
               <v-col cols="12" sm="4">
@@ -186,28 +196,74 @@
 
             <v-divider class="my-4" />
 
-            <!-- 🔹 Range filter + download buttons -->
             <v-row dense class="mb-2">
               <v-col cols="12" sm="3">
-                <v-text-field
-                  v-model="dateFrom"
-                  label="From Date"
-                  type="date"
-                  dense
-                  outlined
-                  hide-details="auto"
-                />
+                <v-menu
+                  ref="menuFrom"
+                  v-model="menuFrom"
+                  :close-on-content-click="false"
+                  transition="slide-y-transition"
+                  offset-y
+                  max-width="290px"
+                  min-width="290px"
+                >
+                  <template #activator="{ on, attrs }">
+                    <v-text-field
+                      v-model="dateFromDisplay"
+                      label="From Date"
+                      placeholder="dd/mm/yyyy"
+                      dense
+                      outlined
+                      readonly
+                      v-bind="attrs"
+                      v-on="on"
+                      clearable
+                      hide-details
+                    />
+                  </template>
+
+                  <v-date-picker
+                    v-model="dateFrom"
+                    :max="todayISO" 
+                    @input="onFromDateSelected"
+                  />
+                </v-menu>
               </v-col>
+
               <v-col cols="12" sm="3">
-                <v-text-field
-                  v-model="dateTo"
-                  label="To Date"
-                  type="date"
-                  dense
-                  outlined
-                  hide-details="auto"
-                />
+                <v-menu
+                  ref="menuTo"
+                  v-model="menuTo"
+                  :close-on-content-click="false"
+                  transition="slide-y-transition"
+                  offset-y
+                  max-width="290px"
+                  min-width="290px"
+                >
+                  <template #activator="{ on, attrs }">
+                    <v-text-field
+                      v-model="dateToDisplay"
+                      label="To Date"
+                      placeholder="dd/mm/yyyy"
+                      dense
+                      outlined
+                      readonly
+                      v-bind="attrs"
+                      v-on="on"
+                      clearable
+                      hide-details
+                    />
+                  </template>
+
+                  <v-date-picker
+                    v-model="dateTo"
+                    :min="dateFrom || null" 
+                    :max="todayISO"
+                    @input="menuTo = false"
+                  />
+                </v-menu>
               </v-col>
+
               <v-col cols="12" sm="6" class="d-flex align-end justify-end">
                 <v-btn small class="mr-2" text @click="clearDateFilter">Clear Range</v-btn>
                 <v-btn small class="mr-2" outlined @click="downloadPdf">Download PDF</v-btn>
@@ -217,13 +273,12 @@
 
             <div class="subtitle-2 mb-2">Ledger / Transactions</div>
 
-            <!-- 🔹 Ledger table with running balance -->
             <v-data-table
               :headers="ledgerHeaders"
               :items="filteredLedgerRows"
               dense
               class="elevation-1"
-              :items-per-page="50"
+              :items-per-page="12"
               :mobile-breakpoint="0"
             >
               <template #item.date="{ item }">
@@ -271,6 +326,7 @@
                 </div>
               </template>
             </v-data-table>
+
           </div>
 
           <div v-else>
@@ -286,12 +342,53 @@
     </v-dialog>
 
     <!-- 🔹 New Deposit dialog with existing VendorDepositForm -->
-    <v-dialog v-model="depositDialog" max-width="900px" persistent>
-      <vendor-deposit-form
-        @notify="$emit('notify', $event)"
-        @created="onDepositCreated"
-      />
+    <v-dialog v-model="depositDialog" max-width="1200px" persistent>
+      <v-card>
+        <v-card-title>
+          <div class="d-flex align-center" style="width:100%;">
+            <div style="flex:1;">
+              <span class="headline">Deposit to Vendor</span>
+              <div class="text-caption">Create a new deposit entry</div>
+            </div>
+            <v-btn icon @click="depositDialog = false" title="Close dialog">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+        </v-card-title>
+
+        <v-card-text style="padding-top: 0;">
+          <vendor-deposit-form
+            @notify="$emit('notify', $event)"
+            @created="onDepositCreated"
+          />
+        </v-card-text>
+      </v-card>
     </v-dialog>
+
+    <!-- 🔹 Open Account dialog (new) -->
+    <v-dialog v-model="openAccountDialog" max-width="1200px" persistent>
+      <v-card>
+        <v-card-title>
+          <div class="d-flex align-center" style="width:100%;">
+            <div style="flex:1;">
+              <span class="headline">Open Vendor Account</span>
+              <div class="text-caption">Create a new vendor account</div>
+            </div>
+            <v-btn icon @click="openAccountDialog = false" title="Close dialog">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+        </v-card-title>
+
+        <v-card-text style="padding-top: 0;">
+          <create-vendor-account
+            @notify="$emit('notify', $event)"
+            @created="onAccountCreated"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
   </v-card>
 </template>
 
@@ -300,16 +397,18 @@ import axios from "axios";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx-js-style";
-import logoSrc from "@/assets/newLogoTVS.png";
+import logoSrc from "@/assets/newLogoTVS.png"; // still imported, but not required for layout
 
-// 🔹 Import your existing VendorDepositForm component
-// Adjust the path as per your project structure
+// existing deposit form
 import VendorDepositForm from "@/components/ledger/AddEntryForm.vue";
+// NEW: create vendor account component - adjust path if necessary
+import CreateVendorAccount from "@/components/ledger/CreateVendorAccount.vue";
 
 export default {
   name: "AccountsTable",
   components: {
-    VendorDepositForm
+    VendorDepositForm,
+    CreateVendorAccount
   },
   data() {
     return {
@@ -339,10 +438,36 @@ export default {
       dateTo: "",
 
       // 🔹 controls the new Deposit popup
-      depositDialog: false
+      depositDialog: false,
+
+      // 🔹 NEW: controls the create account dialog
+      openAccountDialog: false,
+      menuFrom: false,
+menuTo: false,
     };
   },
   computed: {
+    todayISO() {
+    // Today in yyyy-mm-dd (Vuetify v-date-picker format)
+    return new Date().toISOString().slice(0, 10);
+  },
+  dateFromDisplay: {
+    get() {
+      return this.formatISOToDisplay(this.dateFrom);
+    },
+    set(val) {
+      this.dateFrom = this.parseDisplayToISO(val);
+    }
+  },
+
+  dateToDisplay: {
+    get() {
+      return this.formatISOToDisplay(this.dateTo);
+    },
+    set(val) {
+      this.dateTo = this.parseDisplayToISO(val);
+    }
+  },
     BASE() {
       return (process.env.VUE_APP_AGENCY_BACKEND_URL || "").replace(/\/$/, "");
     },
@@ -360,6 +485,7 @@ export default {
     },
 
     ledgerHeaders() {
+      // UI table remains SAME
       return [
         { text: "Date", value: "date" },
         { text: "Time", value: "time" },
@@ -384,16 +510,35 @@ export default {
       return this.items;
     },
 
+    // filteredLedgerRows() {
+    //   let rows = this.ledgerRows || [];
+    //   if (this.dateFrom) {
+    //     rows = rows.filter(r => r.dateKey && r.dateKey >= this.dateFrom);
+    //   }
+    //   if (this.dateTo) {
+    //     rows = rows.filter(r => r.dateKey && r.dateKey <= this.dateTo);
+    //   }
+    //   return rows;
+    // },
     filteredLedgerRows() {
       let rows = this.ledgerRows || [];
+
       if (this.dateFrom) {
         rows = rows.filter(r => r.dateKey && r.dateKey >= this.dateFrom);
       }
       if (this.dateTo) {
         rows = rows.filter(r => r.dateKey && r.dateKey <= this.dateTo);
       }
-      return rows;
+
+      // 🔽 NEW: sort by dateKey (latest first)
+      return rows.slice().sort((a, b) => {
+        const aKey = a.dateKey || "";
+        const bKey = b.dateKey || "";
+        // newer (b) should come before older (a)
+        return bKey.localeCompare(aKey);
+      });
     },
+
 
     totalDebit() {
       return this.filteredLedgerRows.reduce(
@@ -426,6 +571,41 @@ export default {
     this.fetchAccounts();
   },
   methods: {
+     onFromDateSelected(value) {
+    this.dateFrom = value;
+
+    // if current To Date is before new From Date, auto-adjust it
+    if (this.dateTo && this.dateTo < this.dateFrom) {
+      this.dateTo = this.dateFrom;
+    }
+
+    this.menuFrom = false;
+  },
+    parseDisplayToISO(display) {
+  if (!display) return "";
+  const m = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(display);
+  if (!m) return "";
+  let [_, dd, mm, yyyy] = m;
+  return `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+}
+,
+    // ---------- small helpers ----------
+    formatISOToDisplay(iso) {
+      if (!iso) return "";
+      const parts = iso.split("-");
+      if (parts.length !== 3) return iso;
+      const [year, month, day] = parts;
+      return `${day}/${month}/${year}`;
+    },
+    formatAmount(value) {
+      if (value === null || value === undefined || value === "") return "";
+      const num = Number(value) || 0;
+      return num.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    },
+
     applyNameFilter() {
       if (this.selectedName) {
         this.nameFilterApplied = true;
@@ -528,7 +708,7 @@ export default {
         let displayDate = "";
         if (dateKey) {
           const [year, month, day] = dateKey.split("-");
-          displayDate = `${day}/${month}/${year}`;
+          displayDate = `${day}/${month}/${year}`; // dd/mm/yyyy for table + pdf
         }
 
         const time = d ? d.toLocaleTimeString() : "";
@@ -542,6 +722,15 @@ export default {
           debit: !isCredit ? amount : 0,
           credit: isCredit ? amount : 0,
           runningBalance: running,
+          // extra fields for PDF layout (do NOT affect UI table)
+          journal: t.journal || t.type || "",
+          account: t.accountId || vendorAccountId,
+          sold:
+            t.soldToType ||
+            t.soldType ||
+            t.partyRole ||
+            t.soldTo ||
+            "",
           type: t.type,
           leg: t.leg,
           refNo: t.refNo
@@ -553,7 +742,7 @@ export default {
       this.loading = true;
       this.clientsError = "";
       try {
-        const url = `${this.BASE}/getAllAccount`;
+        const url = `${this.BASE}/getAllAccountVendors`;
         const res = await fetch(url);
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
@@ -712,7 +901,38 @@ export default {
       }
     },
 
-    // ========== PDF DOWNLOAD WITH LOGO & COLORS ==========
+    // 🔹 NEW: called when CreateVendorAccount emits 'created'
+    async onAccountCreated(payload) {
+      // payload is whatever CreateVendorAccount emits (likely response object)
+      this.openAccountDialog = false;
+
+      // notify user
+      this.$emit("notify", {
+        text: (payload && payload.message) || "Vendor account created",
+        color: "success"
+      });
+
+      // refresh accounts list so the new account appears
+      await this.fetchAccounts();
+
+      // optional: if payload contains vendorId open its details automatically
+      const newVendorId =
+        (payload &&
+          (payload.vendorId ||
+            payload.clientId ||
+            payload.vendor?.vendorId)) ||
+        null;
+      if (newVendorId) {
+        const found = this.items.find(
+          i => i.vendorId === newVendorId || i.pk === newVendorId
+        );
+        if (found) {
+          this.onRowClick(found);
+        }
+      }
+    },
+
+    // ========== PDF / Excel functions (UPDATED PDF ONLY) ==========
     downloadPdf() {
       if (!this.filteredLedgerRows.length) {
         this.$emit("notify", {
@@ -722,310 +942,156 @@ export default {
         return;
       }
 
-      const img = new Image();
-      img.src = logoSrc;
-
-      img.onload = () => {
-        const doc = new jsPDF("l", "pt", "a4");
-        const pageWidth = doc.internal.pageSize.getWidth();
-
-        const vendorName = this.selectedDetails?.vendor?.name || "";
-        const vendorId = this.selectedDetails?.vendor?.vendorId || "";
-        const hasPeriod = this.dateFrom || this.dateTo;
-        const periodFrom = this.dateFrom || "";
-        const periodTo = this.dateTo || "";
-
-        // Logo top-left
-        doc.addImage(img, "PNG", 40, 25, 100, 50);
-
-        // Title
-        doc.setFontSize(16);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(0, 0, 0);
-        doc.text("Ansari Automobile", pageWidth / 2, 40, { align: "center" });
-
-        // Address block
-        doc.setFontSize(10);
-        doc.setFont("helvetica", "normal");
-        const addressLines = [
-          "Ansari Automobile",
-          "BADI KAMHARIYA BY PASS ROAD, MAU"
-        ];
-        let addrY = 30;
-        addressLines.forEach(line => {
-          doc.text(line, pageWidth - 40, addrY, { align: "right" });
-          addrY += 12;
-        });
-
-        // Vendor details
-        let infoY = 95;
-        doc.text(`Vendor Name: ${vendorName}`, 40, infoY);
-        infoY += 15;
-        doc.text(`Vendor ID: ${vendorId}`, 40, infoY);
-        infoY += 15;
-
-        if (hasPeriod) {
-          doc.text(
-            `Time Period: ${periodFrom || "-"} to ${periodTo || "-"}`,
-            40,
-            infoY
-          );
-          infoY += 15;
-        }
-
-        const headers = [
-          "Date",
-          "Description",
-          "Debit",
-          "Credit",
-          "Dr or Cr",
-          "Closing Balance"
-        ];
-
-        const body = this.filteredLedgerRows.map(r => {
-          const drCr = r.debit ? "Dr" : r.credit ? "Cr" : "";
-          return [
-            r.date || "",
-            r.narration || "",
-            r.debit || "",
-            r.credit || "",
-            drCr,
-            r.runningBalance || ""
-          ];
-        });
-
-        const closingBalance = this.filteredLedgerRows.length
-          ? this.filteredLedgerRows[this.filteredLedgerRows.length - 1]
-              .runningBalance
-          : 0;
-
-        const foot = [
-          [
-            "",
-            "Total",
-            this.totalDebit || 0,
-            this.totalCredit || 0,
-            "",
-            closingBalance || 0
-          ]
-        ];
-
-        autoTable(doc, {
-          head: [headers],
-          body,
-          foot,
-          startY: infoY + 10,
-          styles: {
-            fontSize: 9,
-            halign: "center",
-            valign: "middle",
-            lineColor: [0, 0, 0],
-            lineWidth: 0.5,
-            textColor: [0, 0, 0]
-          },
-          headStyles: {
-            textColor: [0, 0, 0],
-            fillColor: [255, 255, 255]
-          },
-          footStyles: {
-            textColor: [0, 0, 0],
-            fillColor: [255, 255, 255],
-            fontStyle: "bold"
-          },
-          didParseCell: data => {
-            if (data.section === "body") {
-              const rowIndex = data.row.index;
-              const row = this.filteredLedgerRows[rowIndex];
-              if (!row) return;
-
-              if (row.debit) {
-                data.cell.styles.fillColor = [255, 230, 230];
-              } else if (row.credit) {
-                data.cell.styles.fillColor = [230, 255, 230];
-              }
-            }
-          }
-        });
-
-        const watermarkText = "Ansari Automobile";
-        const totalPages = doc.getNumberOfPages();
-
-        for (let i = 1; i <= totalPages; i++) {
-          doc.setPage(i);
-          const pw = doc.internal.pageSize.getWidth();
-          const ph = doc.internal.pageSize.getHeight();
-
-          if (doc.GState) {
-            const gs = doc.GState({ opacity: 0.08 });
-            doc.setGState(gs);
-          }
-
-          doc.setFontSize(70);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(180, 180, 180);
-          doc.text(watermarkText, pw / 2, ph / 2, {
-            align: "center",
-            angle: 45
-          });
-        }
-
-        const fileName = `Ledger_${vendorName || vendorId || "vendor"}.pdf`;
-        doc.save(fileName);
-      };
-
-      img.onerror = () => {
-        this.$emit("notify", {
-          text: "Logo failed to load, exporting without logo",
-          color: "warning"
-        });
-        this.downloadPdfWithoutLogo();
-      };
-    },
-
-    downloadPdfWithoutLogo() {
-      if (!this.filteredLedgerRows.length) return;
-
       const doc = new jsPDF("l", "pt", "a4");
       const pageWidth = doc.internal.pageSize.getWidth();
 
       const vendorName = this.selectedDetails?.vendor?.name || "";
       const vendorId = this.selectedDetails?.vendor?.vendorId || "";
-      const hasPeriod = this.dateFrom || this.dateTo;
-      const periodFrom = this.dateFrom || "";
-      const periodTo = this.dateTo || "";
 
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(0, 0, 0);
-      doc.text("Ansari Automobile", pageWidth / 2, 40, { align: "center" });
+      // determine period: use selected range, otherwise full ledger range
+      const firstRow = this.filteredLedgerRows[0];
+      const lastRow =
+        this.filteredLedgerRows[this.filteredLedgerRows.length - 1];
+
+      const periodFromISO = this.dateFrom || (firstRow && firstRow.dateKey) || "";
+      const periodToISO = this.dateTo || (lastRow && lastRow.dateKey) || "";
+
+      const periodFromDisplay = this.formatISOToDisplay(periodFromISO);
+      const periodToDisplay = this.formatISOToDisplay(periodToISO);
+
+      // ===== Header like attached image (monospaced look) =====
+      doc.setFont("courier", "bold");
+      doc.setFontSize(14);
+      doc.text("Ansari Automobiles", pageWidth / 2, 30, { align: "center" });
 
       doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      const addressLines = [
-        "Ansari Automobile",
-        "Full Address Line 1",
-        "Full Address Line 2",
-        "City, State, PIN"
-      ];
-      let addrY = 30;
-      addressLines.forEach(line => {
-        doc.text(line, pageWidth - 40, addrY, { align: "right" });
-        addrY += 12;
-      });
+      doc.text(
+        "BADI KAMHARIYA BY PASS ROAD MAU",
+        pageWidth / 2,
+        44,
+        { align: "center" }
+      );
+      doc.text(
+        "GSTIN/UIN- 09AJBEA0437B1ZY",
+        pageWidth / 2,
+        58,
+        { align: "center" }
+      );
 
-      let infoY = 90;
-      doc.text(`Vendor Name: ${vendorName}`, 40, infoY);
-      infoY += 15;
-      doc.text(`Vendor ID: ${vendorId}`, 40, infoY);
-      infoY += 15;
+      doc.setFontSize(10);
+      doc.text(
+        "GENERAL LEDGER TRANSACTIONS",
+        pageWidth / 2,
+        74,
+        { align: "center" }
+      );
 
-      if (hasPeriod) {
-        doc.text(
-          `Time Period: ${periodFrom || "-"} to ${periodTo || "-"}`,
-          40,
-          infoY
-        );
-        infoY += 15;
+      const periodLine = `All transactions for (${periodFromDisplay || "-"} to ${periodToDisplay || "-"})`;
+      doc.setFontSize(9);
+      doc.text(periodLine, pageWidth / 2, 90, { align: "center" });
+
+      // Optional: vendor info in small text below (left side)
+      let infoY = 106;
+      doc.setFontSize(9);
+      doc.setFont("courier", "normal");
+      if (vendorName) {
+        doc.text(`Vendor : ${vendorName}`, 40, infoY);
+        infoY += 12;
+      }
+      if (vendorId) {
+        doc.text(`Account: ${vendorId}`, 40, infoY);
+        infoY += 12;
       }
 
-      const headers = [
-        "Date",
-        "Description",
-        "Debit",
-        "Credit",
-        "Dr or Cr",
-        "Closing Balance"
-      ];
+      const startTableY = infoY + 8;
+
+      // ===== Table data: DATE, JOURNAL, REFERENCE, DESCRIPTION, ACCOUNT, SOLD, DEBIT, CREDIT =====
+      const head = [[
+        "DATE",
+        "JOURNAL",
+        "DESCRIPTION",
+        "DEBIT",
+        "CREDIT"
+      ]];
 
       const body = this.filteredLedgerRows.map(r => {
-        const drCr = r.debit ? "Dr" : r.credit ? "Cr" : "";
+        const debitStr = r.debit ? this.formatAmount(r.debit) : "";
+        const creditStr = r.credit ? this.formatAmount(r.credit) : "";
         return [
           r.date || "",
+          r.journal || "",
           r.narration || "",
-          r.debit || "",
-          r.credit || "",
-          drCr,
-          r.runningBalance || ""
+          debitStr,
+          creditStr
         ];
       });
 
-      const closingBalance = this.filteredLedgerRows.length
-        ? this.filteredLedgerRows[this.filteredLedgerRows.length - 1]
-            .runningBalance
-        : 0;
+      const closingDebit = this.totalDebit || 0;
+      const closingCredit = this.totalCredit || 0;
 
-      const foot = [
-        [
-          "",
-          "Total",
-          this.totalDebit || 0,
-          this.totalCredit || 0,
-          "",
-          closingBalance || 0
-        ]
-      ];
+      const foot = [[
+        "",
+        "",
+        "Total",
+        this.formatAmount(closingDebit),
+        this.formatAmount(closingCredit)
+      ]];
 
       autoTable(doc, {
-        head: [headers],
+        head,
         body,
         foot,
-        startY: infoY + 10,
+        startY: startTableY,
         styles: {
+          font: "courier",
           fontSize: 9,
-          halign: "center",
-          valign: "middle",
-          lineColor: [0, 0, 0],
-          lineWidth: 0.5,
-          textColor: [0, 0, 0]
+          halign: "left",
+          textColor: [0, 0, 0],
+          lineWidth: 0 // 🔸 no borders like dot-matrix style
         },
         headStyles: {
+          fontStyle: "bold",
           textColor: [0, 0, 0],
           fillColor: [255, 255, 255]
         },
         footStyles: {
+          fontStyle: "bold",
           textColor: [0, 0, 0],
           fillColor: [255, 255, 255],
-          fontStyle: "bold"
+          halign: "right"
         },
-        didParseCell: data => {
-          if (data.section === "body") {
-            const rowIndex = data.row.index;
-            const row = this.filteredLedgerRows[rowIndex];
-            if (!row) return;
-
-            if (row.debit) {
-              data.cell.styles.fillColor = [255, 230, 230];
-            } else if (row.credit) {
-              data.cell.styles.fillColor = [230, 255, 230];
-            }
-          }
-        }
+        columnStyles: {
+          0: { halign: "left" },   // DATE
+          1: { halign: "left" },   // JOURNAL
+          2: { halign: "left" },   // DESCRIPTION
+          4: { halign: "left" },   // SOLD
+          5: { halign: "right" },  // DEBIT
+          6: { halign: "right" }   // CREDIT
+        },
+        margin: { left: 40, right: 40 }
       });
 
-      const watermarkText = "Ansari Automobile";
+      // ===== Page numbers at top-right (Page X of Y) =====
       const totalPages = doc.getNumberOfPages();
-
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-        const pw = doc.internal.pageSize.getWidth();
-        const ph = doc.internal.pageSize.getHeight();
-
-        if (doc.GState) {
-          const gs = doc.GState({ opacity: 0.08 });
-          doc.setGState(gs);
-        }
-
-        doc.setFontSize(70);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(180, 180, 180);
-        doc.text(watermarkText, pw / 2, ph / 2, {
-          align: "center",
-          angle: 45
-        });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text(
+          `Page ${i} of ${totalPages}`,
+          pageWidth - 40,
+          30,
+          { align: "right" }
+        );
       }
 
       const fileName = `Ledger_${vendorName || vendorId || "vendor"}.pdf`;
       doc.save(fileName);
+    },
+
+    // keep function so nothing else breaks (not used now, but safe)
+    downloadPdfWithoutLogo() {
+      this.downloadPdf();
     },
 
     downloadExcel() {

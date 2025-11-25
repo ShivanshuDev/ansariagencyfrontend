@@ -1,7 +1,5 @@
 <template>
   <v-card>
-    <v-card-title>Vendor Deposit</v-card-title>
-
     <v-card-text>
       <v-form ref="form" v-model="valid" lazy-validation>
         <v-row dense>

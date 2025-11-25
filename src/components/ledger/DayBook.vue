@@ -1,5 +1,5 @@
 <template>
-  <div class="pa-3">
+  <div class="pa-1">
     <v-card class="rounded-lg elevation-2">
       <!-- Header -->
       <v-sheet class="daybook-header rounded-t-lg" color="indigo darken-4" dark>
@@ -46,7 +46,7 @@
               <v-text-field
                 v-bind="attrs"
                 v-on="on"
-                v-model="from"
+                :value="formatDDMMYYYY(from)"
                 label="From"
                 dense
                 outlined
@@ -56,7 +56,7 @@
                 class="mr-2 mb-2"
                 style="max-width:170px"
                 clearable
-                @click:clear="from=''"
+                @click:clear="from = ''"
               />
             </template>
             <v-date-picker
@@ -81,7 +81,7 @@
               <v-text-field
                 v-bind="attrs"
                 v-on="on"
-                v-model="to"
+                :value="formatDDMMYYYY(to)"
                 label="To"
                 dense
                 outlined
@@ -91,7 +91,7 @@
                 class="mr-2 mb-2"
                 style="max-width:170px"
                 clearable
-                @click:clear="to=''"
+                @click:clear="to = ''"
               />
             </template>
             <v-date-picker
@@ -103,7 +103,22 @@
             />
           </v-menu>
 
-          <!-- Type (DEBIT/CREDIT) -->
+          <!-- Sold To (client-side) -->
+          <v-select
+            v-model="soldTo"
+            :items="soldToItems"
+            item-text="text"
+            item-value="value"
+            dense
+            outlined
+            hide-details
+            clearable
+            class="mr-2 mb-2"
+            label="Sold To"
+            style="max-width:150px"
+          />
+
+          <!-- Type -->
           <v-select
             v-model="type"
             :items="typeItems"
@@ -118,7 +133,7 @@
             style="max-width:150px"
           />
 
-          <!-- Mode (CASH/UPI/etc) -->
+          <!-- Mode -->
           <v-select
             v-model="mode"
             :items="modeItems"
@@ -133,7 +148,7 @@
             style="max-width:170px"
           />
 
-          <!-- Source (DEPOSIT/WITHDRAW/etc) -->
+          <!-- Source -->
           <v-select
             v-model="source"
             :items="sourceItems"
@@ -158,12 +173,12 @@
             clearable
             prepend-inner-icon="mdi-magnify"
             class="mr-2 mb-2"
-            style="max-width:260px"
+            style="max-width:205px"
           />
 
           <v-btn
             color="primary"
-            class="mb-2 mr-2"
+            class="mb-2 mr-0"
             :loading="loading"
             @click="load(true)"
           >
@@ -186,22 +201,13 @@
             <v-icon left>mdi-file-pdf-box</v-icon>PDF
           </v-btn>
 
-          <!-- Optional: Lock day -->
-          <v-btn
-            outlined
-            color="indigo darken-2"
-            class="mb-2"
-            @click="$emit('lock-day', { from, to })"
-          >
-            <v-icon left>mdi-lock-check</v-icon>Mark As Verified
-          </v-btn>
         </div>
 
         <!-- Status line -->
         <div class="mt-1 mb-3 grey--text text--darken-1">
           <v-chip small label class="mr-2">
             Range:
-            <b class="ml-1">{{ from || '—' }}</b> — <b>{{ to || '—' }}</b>
+            <b class="ml-1">{{ formatDDMMYYYY(from) || '—' }}</b> — <b>{{ formatDDMMYYYY(to) || '—' }}</b>
           </v-chip>
           <v-chip small label class="mr-2">
             Preset:
@@ -209,6 +215,9 @@
           </v-chip>
           <v-chip v-if="type" small label class="mr-2">
             Type: <b class="ml-1">{{ type }}</b>
+          </v-chip>
+          <v-chip v-if="soldTo" small label class="mr-2">
+            Sold To: <b class="ml-1">{{ soldTo }}</b>
           </v-chip>
           <v-chip v-if="mode" small label class="mr-2">
             Mode: <b class="ml-1">{{ mode }}</b>
@@ -288,7 +297,7 @@
         <v-data-table
           :headers="headers"
           :items="rows"
-          :items-per-page="15"
+          :items-per-page="13"
           :loading="loading"
           dense
           class="elevation-1 rounded-lg ledger-table"
@@ -323,22 +332,9 @@
             {{ fmtDateTime(item.createdAt) }}
           </template>
 
-          <template #item.flags="{ item }">
-            <v-chip
-              v-if="item._dupRef"
-              x-small
-              color="red lighten-4"
-              class="mr-1"
-            >
-              Duplicate Ref
-            </v-chip>
-            <v-chip
-              v-if="item._large"
-              x-small
-              color="amber lighten-4"
-            >
-              Large
-            </v-chip>
+          <!-- Sold column -->
+          <template #item.sold="{ item }">
+            {{ item.sold || '' }}
           </template>
 
           <template #no-data>
@@ -350,125 +346,13 @@
       </div>
     </v-card>
 
-    <!-- HIDDEN PDF AREA (used by html2pdf) -->
+    <!-- HIDDEN PDF AREA (kept for compatibility) -->
     <div
       ref="pdfArea"
       class="pdf-root"
       style="position:absolute; left:-9999px; top:-9999px;"
     >
-      <div class="pdf-header">
-        <div class="pdf-brand">
-          <img
-            v-if="brandLogo"
-            :src="brandLogo"
-            :alt="brandName"
-            class="pdf-logo"
-          />
-          <div>
-            <div class="pdf-brand-title">{{ brandName }}</div>
-            <div class="pdf-brand-sub">{{ brandSubtitle }}</div>
-          </div>
-        </div>
-        <div class="pdf-meta">
-          <div><b>Day Book</b></div>
-          <div>Range: {{ from || '—' }} — {{ to || '—' }}</div>
-          <div>Generated: {{ fmtDateTime(nowIso) }}</div>
-        </div>
-      </div>
-
-      <div class="pdf-summary">
-        <div class="pill">
-          Preset: <b>{{ presetLabel }}</b>
-        </div>
-        <div class="pill">
-          Opening:
-            <span :class="opening>=0 ? 'plus' : 'minus'">
-              {{ money(opening) }}
-            </span>
-        </div>
-        <div class="pill debit">
-          Debit: <span class="minus">{{ money(totals.debit) }}</span>
-        </div>
-        <div class="pill credit">
-          Credit: <span class="plus">{{ money(totals.credit) }}</span>
-        </div>
-        <div class="pill">
-          Closing:
-          <span :class="closing>=0 ? 'plus' : 'minus'">
-            {{ money(closing) }}
-          </span>
-        </div>
-      </div>
-
-      <div class="pdf-modes" v-if="modeKeys.length">
-        <div
-          class="pill"
-          v-for="m in modeKeys"
-          :key="m"
-        >
-          {{ m }}: <b>{{ money(modeTotals[m] || 0) }}</b>
-        </div>
-      </div>
-
-      <table class="pdf-table">
-        <thead>
-          <tr>
-            <th class="w-sno text-center">S.No.</th>
-            <th class="w-when">Time</th>
-            <th class="w-client">Account</th>
-            <th class="w-narration">Narration</th>
-            <th class="w-type text-center">Type</th>
-            <th class="w-money text-right">Debit (₹)</th>
-            <th class="w-money text-right">Credit (₹)</th>
-            <th class="w-mode">Mode</th>
-            <th class="w-ref">Ref</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in rows" :key="r.sk || r.id">
-            <td class="w-sno text-center">{{ r.sno }}</td>
-            <td class="w-when">{{ fmtDateTime(r.createdAt) }}</td>
-            <td class="w-client">{{ r.clientId || '' }}</td>
-            <td class="w-narration">{{ r.narration || '' }}</td>
-            <td class="w-type text-center">{{ r.entryType || '' }}</td>
-            <td
-              class="w-money text-right"
-              :class="r.entryType==='DEBIT' ? 'bg-debit' : ''"
-            >
-              {{ r.entryType==='DEBIT' ? money(r.amount) : '' }}
-            </td>
-            <td
-              class="w-money text-right"
-              :class="r.entryType==='CREDIT' ? 'bg-credit' : ''"
-            >
-              {{ r.entryType==='CREDIT' ? money(r.amount) : '' }}
-            </td>
-            <td class="w-mode">{{ r.mode || '' }}</td>
-            <td class="w-ref">
-              {{ (r.sourceType || '') + (r.sourceId ? (' #' + r.sourceId) : '') }}
-            </td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="5" class="text-right">Totals</td>
-            <td class="w-money text-right">{{ money(totals.debit) }}</td>
-            <td class="w-money text-right">{{ money(totals.credit) }}</td>
-            <td colspan="2"></td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <div class="pdf-sign">
-        <div class="sig">
-          <div class="sig-line"></div>
-          <div class="sig-label">Prepared By</div>
-        </div>
-        <div class="sig">
-          <div class="sig-line"></div>
-          <div class="sig-label">Verified By</div>
-        </div>
-      </div>
+      <!-- pdf preview (kept for compatibility) -->
     </div>
   </div>
 </template>
@@ -493,21 +377,30 @@ export default {
       mode: '',
       source: '',
       q: '',
+      soldTo: '',               // client-side filter
 
       fromMenu: false,
       toMenu: false,
 
       loading: false,
-      rows: [],
+      rows: [],                 // final displayed rows (single per logical transaction)
       opening: 0,
       totals: { debit: 0, credit: 0 },
       modeTotals: {},
+
+      // buffer of normalized fetched items (before client-side filters)
+      fetchedItems: [],
 
       // selects
       typeItems: [
         { text: 'All', value: '' },
         { text: 'DEBIT', value: 'DEBIT' },
         { text: 'CREDIT', value: 'CREDIT' }
+      ],
+      soldToItems: [
+        { text: 'All', value: '' },
+        { text: 'Customer', value: 'Customer' },
+        { text: 'Vendor', value: 'Vendor' }
       ],
       modeItems: [
         { text: 'All', value: '' },
@@ -525,16 +418,17 @@ export default {
         { text: 'TRANSFER', value: 'TRANSFER' }
       ],
 
+      // headers (Flags removed)
       headers: [
         { text: 'S.No.', value: 'sno', sortable: false, align: 'center' },
         { text: 'Time', value: 'createdAt' },
         { text: 'Account', value: 'clientId' },
+        { text: 'Sold', value: 'sold' },
         { text: 'Narration', value: 'narration' },
         { text: 'Type', value: 'entryType' },
         { text: 'Debit (₹)', value: 'debit', align: 'end' },
         { text: 'Credit (₹)', value: 'credit', align: 'end' },
-        { text: 'Mode', value: 'mode' },
-        { text: 'Flags', value: 'flags' }
+        { text: 'Mode', value: 'mode' }
       ],
 
       _debounceT: null,
@@ -584,6 +478,8 @@ export default {
     mode () { this.load() },
     source () { this.load() },
     q () { this.load() },
+    // soldTo is client-side filter only; do not change server request parameters
+    soldTo () { this.applyFilters() },
     preset (n) {
       this.applyPreset(n)
       this.load(true)
@@ -600,6 +496,19 @@ export default {
     toStr (d) {
       const p = n => String(n).padStart(2, '0')
       return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+    },
+
+    formatDDMMYYYY (isoOrYmd) {
+      if (!isoOrYmd) return ''
+      const iso = String(isoOrYmd)
+      const ymdMatch = iso.match(/^(\d{4})-(\d{2})-(\d{2})/)
+      if (ymdMatch) {
+        return `${ymdMatch[3]}/${ymdMatch[2]}/${ymdMatch[1]}`
+      }
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return ''
+      const p = n => String(n).padStart(2, '0')
+      return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`
     },
 
     applyPreset (key) {
@@ -648,10 +557,57 @@ export default {
       return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
     },
 
-    // --- data loaders ---
     debounced (fn, delay = 350) {
       clearTimeout(this._debounceT)
       this._debounceT = setTimeout(fn, delay)
+    },
+
+    // DEDUPE: pick single logical row for mirrored groups while preserving DEBIT/CREDIT
+    dedupeItems (items) {
+      const groups = new Map()
+      for (const it of items) {
+        // stable key: sourceType|sourceId|amount|createdAt
+        const srcId = it.sourceId || (it.meta && it.meta.sourceId) || ''
+        const key = `${it.sourceType || ''}|${srcId}|${Number(it.amount || 0).toFixed(2)}|${it.createdAt || ''}`
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key).push(it)
+      }
+
+      const chosen = []
+      for (const [k, group] of groups.entries()) {
+        if (group.length === 1) {
+          chosen.push(group[0])
+          continue
+        }
+
+        // helpers
+        const isCash = (row) => String(row.clientId || '').toUpperCase() === 'CASH_OR_BANK'
+        const isAccountLike = (row) => /^ACCOUNT/i.test(String(row.clientId || '')) || /SALES_ACCOUNT/i.test(String(row.clientId || ''))
+        // find non-cash debit
+        const nonCashDebit = group.find(r => !isCash(r) && r.entryType === 'DEBIT')
+        if (nonCashDebit) { chosen.push(nonCashDebit); continue }
+
+        // find non-cash credit
+        const nonCashCredit = group.find(r => !isCash(r) && r.entryType === 'CREDIT')
+        if (nonCashCredit) { chosen.push(nonCashCredit); continue }
+
+        // else prefer any non-cash (prefer account-like)
+        const nonCash = group.filter(r => !isCash(r))
+        if (nonCash.length) {
+          const accLike = nonCash.find(isAccountLike)
+          chosen.push(accLike || nonCash[0])
+          continue
+        }
+
+        // else no non-cash rows; prefer DEBIT if present
+        const anyDebit = group.find(r => r.entryType === 'DEBIT')
+        if (anyDebit) { chosen.push(anyDebit); continue }
+
+        // fallback to first
+        chosen.push(group[0])
+      }
+
+      return chosen
     },
 
     async load (immediate = false) {
@@ -664,6 +620,7 @@ export default {
           mode: this.mode,
           source: this.source,
           q: this.q
+          // soldTo intentionally not included here (client-side)
         })
         if (!immediate && sig === this._lastSig) return
         this._lastSig = sig
@@ -673,7 +630,6 @@ export default {
           this.opening = 0
 
           const params = { pageSize: 1000 }
-
           if (this.from && this.to && this.from === this.to) {
             params.date = this.from
           } else {
@@ -697,83 +653,42 @@ export default {
 
           let items = Array.isArray(res.items) ? res.items : []
 
-          items = items.map(r => {
+          // normalize items
+          items = items.map((r, idx) => {
             const created =
               typeof r.createdAt === 'number'
                 ? r.createdAt * 1000
                 : r.createdAt
 
+            const soldLabel =
+              r.type === 'SALE_TO_CUSTOMER' ? 'Customer' :
+              r.type === 'SALE_TO_VENDOR' || r.type === 'DEPOSIT' ? 'Vendor' : ''
+
             return {
               ...r,
               entryType: r.leg,
               clientId: r.accountId,
+              sold: soldLabel,
               mode: r.meta?.paymentType,
               extra: {
                 ...(r.extra || {}),
                 paymentType: r.meta?.paymentType
               },
               sourceType: r.type,
-              sourceId: r.meta?.sourceId,
-              createdAt: created
+              sourceId: r.meta?.sourceId || (r.meta && r.meta.sourceId) || '',
+              createdAt: created,
+              _fetchedIndex: idx
             }
           })
 
-          if (this.type) {
-            items = items.filter(r => r.entryType === this.type)
-          }
+          // dedupe mirrored rows but keep correct DEBIT/CREDIT row per group
+          items = this.dedupeItems(items)
 
-          if (this.mode) {
-            items = items.filter(r => r.mode === this.mode)
-          }
+          // store raw fetched items (unfiltered)
+          this.fetchedItems = items
 
-          if (this.source) {
-            items = items.filter(r => (r.sourceType || '') === this.source)
-          }
-
-          if (this.q && this.q.trim()) {
-            const ql = this.q.trim().toLowerCase()
-            items = items.filter(r =>
-              String(r.clientId || '').toLowerCase().includes(ql) ||
-              String(r.narration || '').toLowerCase().includes(ql) ||
-              String(r.sourceId || '').toLowerCase().includes(ql)
-            )
-          }
-
-          items.sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
-
-          const refSeen = new Set()
-          for (const it of items) {
-            const ref = `${it.sourceType || ''}#${it.sourceId || ''}`
-            if (it.sourceType && it.sourceId) {
-              it._dupRef = refSeen.has(ref)
-              refSeen.add(ref)
-            }
-            it._large = Number(it.amount || 0) >= 100000
-          }
-
-          // assign serial numbers after all filters & sort
-          items = items.map((r, idx) => ({
-            ...r,
-            sno: idx + 1
-          }))
-
-          this.rows = items
-
-          const totals = items.reduce((acc, r) => {
-            if (r.entryType === 'DEBIT') acc.debit += Number(r.amount || 0)
-            else if (r.entryType === 'CREDIT') acc.credit += Number(r.amount || 0)
-            return acc
-          }, { debit: 0, credit: 0 })
-          this.totals = totals
-
-          const modeTotals = {}
-          for (const r of items) {
-            const m = r.mode
-            if (m) modeTotals[m] = (modeTotals[m] || 0) + Number(r.amount || 0)
-          }
-          this.modeTotals = modeTotals
+          // apply filters and compute rows/totals
+          this.applyFilters()
         } catch (e) {
           this.$emit('notify', {
             text: e.message || 'Failed to load day book',
@@ -787,7 +702,45 @@ export default {
       this.debounced(exec)
     },
 
-    // --- CSV helpers ---
+    applyFilters () {
+      let items = Array.isArray(this.fetchedItems) ? [...this.fetchedItems] : []
+
+      if (this.type) items = items.filter(r => r.entryType === this.type)
+      if (this.mode) items = items.filter(r => r.mode === this.mode)
+      if (this.source) items = items.filter(r => (r.sourceType || '') === this.source)
+
+      if (this.soldTo) items = items.filter(r => r.sold === this.soldTo)
+
+      if (this.q && this.q.trim()) {
+        const ql = this.q.trim().toLowerCase()
+        items = items.filter(r =>
+          String(r.clientId || '').toLowerCase().includes(ql) ||
+          String(r.narration || '').toLowerCase().includes(ql) ||
+          String(r.sourceId || '').toLowerCase().includes(ql)
+        )
+      }
+
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+      items = items.map((r, idx) => ({ ...r, sno: idx + 1 }))
+
+      this.rows = items
+
+      const totals = items.reduce((acc, r) => {
+        if (r.entryType === 'DEBIT') acc.debit += Number(r.amount || 0)
+        else if (r.entryType === 'CREDIT') acc.credit += Number(r.amount || 0)
+        return acc
+      }, { debit: 0, credit: 0 })
+      this.totals = totals
+
+      const modeTotals = {}
+      for (const r of items) {
+        const m = r.mode
+        if (m) modeTotals[m] = (modeTotals[m] || 0) + Number(r.amount || 0)
+      }
+      this.modeTotals = modeTotals
+    },
+
     csv (v) {
       const s = (v == null) ? '' : String(v)
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
@@ -798,11 +751,12 @@ export default {
         'SNo',
         'Time',
         'Account',
+        'Sold',
+        'Narration',
         'EntryType',
         'Debit',
         'Credit',
         'Mode',
-        'Narration',
         'SourceType',
         'SourceId'
       ]
@@ -817,11 +771,12 @@ export default {
           this.csv(sno),
           this.csv(this.fmtDateTime(r.createdAt)),
           this.csv(r.clientId),
+          this.csv(r.sold || ''),
+          this.csv(r.narration || ''),
           this.csv(r.entryType),
           this.csv(debit),
           this.csv(credit),
           this.csv(r.mode || ''),
-          this.csv(r.narration || ''),
           this.csv(r.sourceType || ''),
           this.csv(r.sourceId || '')
         ].join(','))
@@ -843,12 +798,9 @@ export default {
       URL.revokeObjectURL(url)
     },
 
-    // --- PDF ---
     async downloadPdf () {
-      // how many ledger rows per PDF page (NOT related to A4 size)
-      const pageSize = 40
+      const pageSize = 38
 
-      // helper to format date like 9/01/18
       const formatDate = (value) => {
         if (!value && value !== 0) return ''
         const d = new Date(value)
@@ -860,7 +812,6 @@ export default {
         })
       }
 
-      // helper to format amount like 3,000.00
       const formatAmount = (v) => {
         const n = Number(v || 0)
         return n.toLocaleString('en-US', {
@@ -875,13 +826,15 @@ export default {
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
 
+      const rowsForPdf = Array.isArray(this.rows) ? [...this.rows] : []
+
       // split rows into pages of `pageSize`
       const pages = []
-      for (let i = 0; i < this.rows.length; i += pageSize) {
-        pages.push(this.rows.slice(i, i + pageSize))
+      for (let i = 0; i < rowsForPdf.length; i += pageSize) {
+        pages.push(rowsForPdf.slice(i, i + pageSize))
       }
 
-      // build HTML for all pages
+      // build HTML for pages
       const pagesHtml = pages.map((rows, pageIndex) => {
         const pageNo = pageIndex + 1
         const totalPages = pages.length
@@ -893,7 +846,7 @@ export default {
             <td class="col-journal">${safe(r.sourceType || '')}</td>
             <td class="col-ref">${safe(r.sourceId || '')}</td>
             <td class="col-desc">${safe(r.narration || '')}</td>
-            <td class="col-account">${safe(r.clientId || '')}</td>
+            <td class="col-sold">${safe(r.sold || '')}</td>
             <td class="col-debit">${r.entryType === 'DEBIT' ? formatAmount(r.amount) : ''}</td>
             <td class="col-credit">${r.entryType === 'CREDIT' ? formatAmount(r.amount) : ''}</td>
           </tr>
@@ -907,7 +860,7 @@ export default {
                 <td class="col-journal"></td>
                 <td class="col-ref"></td>
                 <td class="col-desc ledger-totals-label">TOTALS</td>
-                <td class="col-account"></td>
+                <td class="col-sold"></td>
                 <td class="col-debit">${formatAmount(this.totals.debit)}</td>
                 <td class="col-credit">${formatAmount(this.totals.credit)}</td>
               </tr>
@@ -925,9 +878,12 @@ export default {
               <span></span>
             </div>
 
-            <div class="ledger-title">GENERAL LEDGER TRANSACTIONS</div>
+            <div class="ledger-title"><h2>Ansari Automobiles</h2></div>
+            <div class="ledger-subtitle">BADI KAMHARIYA BY PASS ROAD MAU</div>
+            <div class="ledger-subtitle">GSTIN/UIN- 09AJBPA4037B1ZY</div>
+            <div class="ledger-subtitle">GENERAL LEDGER TRANSACTIONS</div>
             <div class="ledger-subtitle">
-              All transactions for ${safe(this.brandName)} (${safe(this.from || 'Start')} to ${safe(this.to || 'End')})
+              All transactions for (${safe(this.from || 'Start')} to ${safe(this.to || 'End')})
             </div>
 
             <table class="ledger-table">
@@ -937,7 +893,7 @@ export default {
                   <th class="col-journal">JOURNL</th>
                   <th class="col-ref">REFERENCE</th>
                   <th class="col-desc">DESCRIPTION</th>
-                  <th class="col-account">ACCOUNT</th>
+                  <th class="col-sold">SOLD</th>
                   <th class="col-debit">DEBIT</th>
                   <th class="col-credit">CREDIT</th>
                 </tr>
@@ -951,7 +907,7 @@ export default {
         `
       }).join('')
 
-      // container with styles + all pages (ledger look, white background)
+      // container with styles: CLEAN ledger look (NO table cell borders)
       const container = document.createElement('div')
       container.innerHTML = `
         <style>
@@ -962,55 +918,56 @@ export default {
             background: #fff;
             padding: 18px;
           }
-          .ledger-page {
-            page-break-after: always;
-          }
-          .ledger-page:last-child {
-            page-break-after: auto;
-          }
-          .ledger-top-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 2px;
-          }
-          .ledger-title {
-            text-align: center;
-            font-weight: bold;
-            margin-top: 8px;
-          }
-          .ledger-subtitle {
-            text-align: center;
-            margin-bottom: 8px;
-          }
+          .ledger-page { page-break-after: always; }
+          .ledger-page:last-child { page-break-after: auto; }
+          .ledger-top-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+          .ledger-title { text-align: center; font-weight: bold; margin-top: 8px; }
+          .ledger-subtitle { text-align: center; margin-bottom: 8px; }
+
+          /* clean table: no outer borders, only header divider */
           .ledger-table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 10px;
           }
           .ledger-table th,
           .ledger-table td {
-            padding: 2px 4px;
+            padding: 2px 6px;
             white-space: nowrap;
+            border: none; /* <- remove borders */
           }
           .ledger-header-row th {
-            border-bottom: 1px solid #000;
+            border-bottom: 1px solid #000; /* thin divider under header */
+            background: #f4f6fb;
+            color: #2a2a2a;
+            font-weight: 700 !important;
           }
-          .ledger-totals-label {
-            text-align: right;
-            padding-right: 6px;
+
+          /* footer style */
+          .ledger-table tfoot td {
+            padding-top: 6px;
+            font-weight: 700;
+            background: #f6f7fb;
           }
+
+          .ledger-totals-label { text-align: right; padding-right: 6px; }
+
           .col-date    { width: 70px; }
           .col-journal { width: 60px; }
           .col-ref     { width: 70px; }
-          .col-desc    { width: 260px; }
+          .col-desc    { width: 350px; }
           .col-account { width: 110px; }
+          .col-sold    { width: 70px; text-align: center; }
           .col-debit   { width: 80px; text-align: right; }
           .col-credit  { width: 80px; text-align: right; }
         </style>
+
         <div class="ledger-root">
           ${pagesHtml}
         </div>
       `
 
+      // append, generate, remove
       document.body.appendChild(container)
 
       const filename = `daybook_${this.from || 'na'}_${this.to || 'na'}.pdf`
@@ -1019,7 +976,7 @@ export default {
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' } // A4 + landscape
+        jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }
       }
 
       try {
@@ -1034,164 +991,47 @@ export default {
 </script>
 
 <style scoped>
-.daybook-header {
-  background: linear-gradient(135deg, #1a237e, #283593);
-}
+.pdf-table .w-sold { width: 80px; text-align: center; }
+
+.daybook-header { background: linear-gradient(135deg, #1a237e, #283593); }
 .preset-btn { text-transform: none; }
 .stat-card { min-width: 150px; }
 
-.ledger-table >>> thead th {
-  background: #f4f6fb;
-  color: #2a2a2a;
-  font-weight: 700 !important;
-}
-.ledger-table >>> tbody tr:hover {
-  background: #f9fbff !important;
-}
+.ledger-table >>> thead th { background: #f4f6fb; color: #2a2a2a; font-weight: 700 !important; }
+.ledger-table >>> tbody tr:hover { background: #f9fbff !important; }
 
-.debit-cell {
-  color: #c62828;
-  font-weight: 600;
-}
-.credit-cell {
-  color: #2e7d32;
-  font-weight: 600;
-}
+.debit-cell { color: #c62828; font-weight: 600; }
+.credit-cell { color: #2e7d32; font-weight: 600; }
 
 /* PDF */
-.pdf-root {
-  background:#fff;
-  color:#000;
-  font-family: Inter, Arial, Helvetica, sans-serif;
-  border:1px solid #e8eaf0;
-  border-radius: 10px;
-  padding: 16px;
-}
-.pdf-header {
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  border-bottom:1px solid #111;
-  padding-bottom:8px;
-  margin-bottom:10px;
-}
-.pdf-brand {
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-.pdf-logo {
-  width:38px;
-  height:38px;
-  object-fit:contain;
-}
-.pdf-brand-title {
-  font-weight:800;
-  font-size:16px;
-}
-.pdf-brand-sub {
-  font-size:11px;
-  color:#666;
-}
-.pdf-meta {
-  text-align:right;
-  font-size:11px;
-}
-.pdf-summary {
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin:8px 0 12px;
-}
-.pill {
-  padding:6px 10px;
-  border-radius:16px;
-  background:#f6f7fb;
-  border:1px solid #e6e8f3;
-  font-size:11px;
-}
-.pill.debit {
-  background:#ffebee;
-  border-color:#ffcdd2;
-}
-.pill.credit {
-  background:#e8f5e9;
-  border-color:#c8e6c9;
-}
-.plus { color:#2e7d32; }
-.minus { color:#c62828; }
+.pdf-root { background:#fff; color:#000; font-family: Inter, Arial, Helvetica, sans-serif; border:1px solid #e8eaf0; border-radius: 10px; padding: 16px; }
+.pdf-header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #111; padding-bottom:8px; margin-bottom:10px; }
+.pdf-brand { display:flex; align-items:center; gap:10px; }
+.pdf-logo { width:38px; height:38px; object-fit:contain; }
+.pdf-brand-title { font-weight:800; font-size:16px; }
+.pdf-brand-sub { font-size:11px; color:#666; }
+.pdf-meta { text-align:right; font-size:11px; }
+.pdf-summary { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 12px; }
+.pill { padding:6px 10px; border-radius:16px; background:#f6f7fb; border:1px solid #e6e8f3; font-size:11px; }
+.pill.debit { background:#ffebee; border-color:#ffcdd2; }
+.pill.credit { background:#e8f5e9; border-color:#c8e6c9; }
+.plus { color:#2e7d32; } .minus { color:#c62828; }
 
-.pdf-table {
-  width:100%;
-  border-collapse:separate;
-  border-spacing:0;
-  font-size:11px;
-}
-.pdf-table thead th {
-  background:#f0f2f8;
-  border:1px solid #aeb7c6;
-  padding:6px;
-  text-align:left;
-  font-weight:700;
-}
-.pdf-table tbody td {
-  border:1px solid #cfd6e2;
-  padding:6px;
-}
-.pdf-table tfoot td {
-  border:1px solid #aeb7c6;
-  padding:6px;
-  background:#f6f7fb;
-  font-weight:700;
-}
-.bg-debit  { background:#ffebee; }
-.bg-credit { background:#e8f5e9; }
-.text-center { text-align:center; }
-.text-right  { text-align:right; }
-.w-sno { width: 40px; }
-.w-when { width: 120px; }
-.w-client { width: 110px; }
-.w-narration { width: 220px; }
-.w-type { width: 60px; }
-.w-money { width: 110px; }
-.w-mode { width: 110px; }
-.w-ref { width: 170px; }
+.pdf-table { width:100%; border-collapse:separate; border-spacing:0; font-size:11px; }
+.pdf-table thead th { background:#f0f2f8; border:1px solid #aeb7c6; padding:6px; text-align:left; font-weight:700; }
+.pdf-table tbody td { border:1px solid #cfd6e2; padding:6px; }
+.pdf-table tfoot td { border:1px solid #aeb7c6; padding:6px; background:#f6f7fb; font-weight:700; }
+.bg-debit  { background:#ffebee; } .bg-credit { background:#e8f5e9; }
+.text-center { text-align:center; } .text-right  { text-align:right; }
+.w-sno { width: 40px; } .w-when { width: 120px; } .w-client { width: 110px; } .w-narration { width: 220px; }
+.w-type { width: 60px; } .w-money { width: 110px; } .w-mode { width: 110px; } .w-ref { width: 170px; }
 
-.pdf-modes {
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-top:8px;
-}
-.pdf-sign {
-  display:flex;
-  justify-content:space-between;
-  gap:18px;
-  margin-top:18px;
-}
-.sig { flex:1; }
-.sig-line {
-  border-bottom:1px solid #000;
-  height:38px;
-}
-.sig-label {
-  text-align:center;
-  font-size:11px;
-  margin-top:4px;
-  color:#333;
-}
+.pdf-modes { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.pdf-sign { display:flex; justify-content:space-between; gap:18px; margin-top:18px; }
+.sig { flex:1; } .sig-line { border-bottom:1px solid #000; height:38px; } .sig-label { text-align:center; font-size:11px; margin-top:4px; color:#333; }
 
-/* Row background colors */
-.ledger-table >>> .row-debit {
-  background-color: rgba(255, 0, 0, 0.07) !important;
-}
-.ledger-table >>> .row-credit {
-  background-color: rgba(0, 128, 0, 0.07) !important;
-}
-.ledger-table >>> .row-debit td {
-  color: #b00000;
-}
-.ledger-table >>> .row-credit td {
-  color: #0a7f00;
-}
+.ledger-table >>> .row-debit { background-color: rgba(255, 0, 0, 0.07) !important; }
+.ledger-table >>> .row-credit { background-color: rgba(0, 128, 0, 0.07) !important; }
+.ledger-table >>> .row-debit td { color: #b00000; }
+.ledger-table >>> .row-credit td { color: #0a7f00; }
 </style>

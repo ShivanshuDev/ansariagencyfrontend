@@ -1,7 +1,5 @@
 <template>
-  <v-card style="margin:10px;">
-    <v-card-title>Create Vendor Account</v-card-title>
-
+  <v-card>
     <v-card-text>
       <v-form ref="form" v-model="valid" lazy-validation>
         <v-row dense>

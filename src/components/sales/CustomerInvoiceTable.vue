@@ -24,6 +24,12 @@
         label="Global search"
         class="input-compact"
       />
+
+      <!-- Columns Picker button (before Refresh) -->
+      <v-btn small class="ml-2 btn-soft" @click="columnsDialog = true" :title="'Choose columns'">
+        <v-icon left small>mdi-view-column</v-icon> Columns
+      </v-btn>
+
       <v-btn small class="ml-2 btn-soft" :loading="loading" @click="fetchRows(true)">
         <v-icon left small>mdi-refresh</v-icon>Refresh
       </v-btn>
@@ -32,8 +38,61 @@
       </v-btn>
     </v-toolbar>
 
+    <!-- Columns dialog -->
+    <v-dialog v-model="columnsDialog" max-width="520px" persistent>
+      <v-card>
+        <v-toolbar flat dense>
+          <v-toolbar-title>Show / Hide Columns</v-toolbar-title>
+          <v-spacer/>
+          <v-btn icon @click="columnsDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+        </v-toolbar>
+
+        <v-card-text>
+          <div class="mb-3 d-flex justify-space-between align-center">
+            <div class="caption">Toggle columns to show them in the table</div>
+            <div>
+              <v-btn small text @click="selectAllColumns">Select All</v-btn>
+              <v-btn small text @click="resetColumnVisibility">Reset</v-btn>
+            </div>
+          </div>
+
+          <v-row>
+            <v-col cols="12">
+              <v-simple-table dense>
+                <tbody>
+                  <tr v-for="(h, idx) in headers" :key="h.value">
+                    <td style="width: 40px; vertical-align: middle;">
+                      <v-checkbox
+                        dense
+                        :input-value="columnVisibility[h.value]"
+                        @change="(v) => toggleColumn(h.value, v)"
+                        hide-details
+                        :aria-label="`Toggle ${h.text}`"
+                      />
+                    </td>
+                    <td>
+                      <div class="font-weight-medium">{{ h.text }}</div>
+                      <div class="caption grey--text">{{ h.value }}</div>
+                    </td>
+                    <td class="text-right grey--text caption" style="width:120px">
+                      <span v-if="defaultVisibility[h.value] === false">(hidden by default)</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </v-simple-table>
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <v-card-actions class="justify-end">
+          <v-btn text @click="columnsDialog = false">Close</v-btn>
+          <v-btn color="primary" @click="applyColumns">Apply</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-data-table
-      :headers="headers"
+      :headers="visibleHeaders"
       :items="rows"
       :items-per-page="options.itemsPerPage"
       :page.sync="options.page"
@@ -417,6 +476,12 @@ export default {
         phone: '',
         chassis: ''
       },
+
+      // ===== new: columns dialog state & visibility map =====
+      columnsDialog: false,
+      columnVisibility: {},        // populated in initColumnVisibility()
+      defaultVisibility: {},       // preserves initial defaults
+
       dateMenu: false,
       datePicker: null,
       statusItems: ['SOLD', 'PENDING', 'PAID', 'DELIVERED', 'CANCELLED'],
@@ -443,17 +508,68 @@ export default {
         'status-delivered': s === 'delivered',
         'status-cancelled': s === 'cancelled'
       }
+    },
+
+    // Visible headers used by v-data-table (preserves order)
+    visibleHeaders () {
+      // if columnVisibility not initialized yet, return full headers
+      if (!this.columnVisibility || Object.keys(this.columnVisibility).length === 0) return this.headers;
+      return this.headers.filter(h => {
+        // show header if visibility is true or undefined (default to true)
+        return this.columnVisibility[h.value] !== false;
+      });
     }
   },
   watch: {
     filters: { handler () { this.debouncedFetch() }, deep: true },
     options: { handler () { this.debouncedFetch() }, deep: true }
   },
+  created () {
+    this.initColumnVisibility();
+  },
   mounted () {
     this.debouncedFetch = this.debounce(() => this.fetchRows(), 350);
     this.fetchRows(true);
   },
   methods: {
+    // Initialize columnVisibility & defaultVisibility from headers
+    initColumnVisibility () {
+      const map = {};
+      const def = {};
+      this.headers.forEach(h => {
+        // default: show all columns except internal ones? keep them visible by default
+        // If you want some hidden by default, set def[h.value] = false here.
+        map[h.value] = true;
+        def[h.value] = true;
+      });
+      // keep actions column visible (you can toggle it)
+      this.columnVisibility = map;
+      this.defaultVisibility = def;
+    },
+
+    // Toggle single column
+    toggleColumn (value, checked) {
+      // checked may be undefined when using @change callback signature; normalize
+      const v = (typeof checked === 'boolean') ? checked : !this.columnVisibility[value];
+      this.$set(this.columnVisibility, value, v);
+    },
+
+    // Select all visible
+    selectAllColumns () {
+      Object.keys(this.columnVisibility).forEach(k => { this.$set(this.columnVisibility, k, true); });
+    },
+
+    // Reset to saved defaults
+    resetColumnVisibility () {
+      Object.keys(this.defaultVisibility).forEach(k => { this.$set(this.columnVisibility, k, this.defaultVisibility[k]); });
+    },
+
+    // Apply (closes dialog) — state is live so no extra action required
+    applyColumns () {
+      this.columnsDialog = false;
+    },
+
+    // ========= Existing methods unchanged below (kept exactly as provided) =========
     downloadInvoiceAsExcel (inv) {
     if (!inv) { this.toast('No invoice to export.'); return; }
     const rows = [
@@ -775,7 +891,6 @@ export default {
     }, 100);
   }
 },
-
 
     openDetails (item) {
       this.selectedInvoice = item;

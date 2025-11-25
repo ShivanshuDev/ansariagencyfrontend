@@ -4,65 +4,96 @@
     <template v-if="!embedded.show">
       <v-card class="pa-4" elevation="6">
         <v-toolbar flat dense class="mb-3">
-          <v-toolbar-title class="subtitle-1 font-weight-medium">Sell To Vendor — Records</v-toolbar-title>
+          <v-toolbar-title class="subtitle-1 font-weight-medium">
+            Sell To Vendor — Records
+          </v-toolbar-title>
           <v-spacer />
-          <v-btn small depressed color="primary" @click="loadAll" :loading="loading">Refresh</v-btn>
+
+          <!-- Download buttons -->
+          <v-btn
+            small
+            depressed
+            class="mr-2"
+            color="secondary"
+            @click="downloadPdf"
+            :disabled="loading || !rows.length"
+          >
+            <v-icon left>mdi-file-pdf-box</v-icon>
+            PDF
+          </v-btn>
+          <v-btn
+            small
+            depressed
+            class="mr-4"
+            color="success"
+            @click="downloadExcel"
+            :disabled="loading || !rows.length"
+          >
+            <v-icon left>mdi-microsoft-excel</v-icon>
+            Excel
+          </v-btn>
+
+          <v-btn small depressed color="primary" @click="loadAll" :loading="loading">
+            Refresh
+          </v-btn>
         </v-toolbar>
 
         <!-- Filters -->
         <v-card class="pa-3 mb-3" outlined>
           <v-row dense>
             <v-col cols="12" md="3">
-              <v-text-field dense outlined clearable
+              <v-text-field dense outlined clearable hide-details
                 v-model.trim="filters.invoiceNumber"
                 label="Invoice number" prepend-inner-icon="mdi-pound"
                 @click:clear="loadAll"/>
             </v-col>
             <v-col cols="12" md="3">
-              <v-text-field dense outlined clearable
+              <v-text-field dense outlined clearable hide-details
                 v-model.trim="filters.clientId"
                 label="Client ID" prepend-inner-icon="mdi-account"
                 @click:clear="loadAll"/>
             </v-col>
             <v-col cols="12" md="3">
-              <v-select dense outlined clearable
+              <v-select dense outlined clearable hide-details
                 v-model="filters.statusD"
                 label="Select Status" prepend-inner-icon="mdi-clock"
                 :items="['SOLD', 'ACTIVE', 'PENDING', 'CANCELLED', 'INACTIVE']"
                 @click:clear="loadAll"/>
             </v-col>
             <v-col cols="12" md="3">
-              <v-text-field dense outlined clearable
+              <v-text-field dense outlined clearable hide-details
                 v-model.trim="filters.chassisNumber"
                 label="Chassis Number"
                 prepend-inner-icon="mdi-account"
                 @click:clear="loadAll"/>
             </v-col>
             <v-col cols="12" md="3">
-              <v-text-field dense outlined clearable
+              <v-text-field dense outlined clearable hide-details
                 v-model.trim="filters.name"
                 label="Exact Name (vendor/buyer/consignee)"
                 prepend-inner-icon="mdi-card-account-details"
                 @click:clear="loadAll"/>
             </v-col>
 
+            <!-- From date: display dd/mm/yyyy but keep v-model as YYYY-MM-DD -->
             <v-col cols="12" md="3">
               <v-menu v-model="menus.from" :close-on-content-click="false" max-width="320" offset-y>
                 <template v-slot:activator="{ on, attrs }">
-                  <v-text-field v-bind="attrs" v-on="on" dense outlined readonly clearable
-                    label="From (YYYY-MM-DD)" prepend-inner-icon="mdi-calendar"
-                    :value="filters.from" @click:clear="filters.from=null"/>
+                  <v-text-field v-bind="attrs" v-on="on" dense outlined readonly clearable hide-details
+                    label="From (DD/MM/YYYY)" prepend-inner-icon="mdi-calendar"
+                    :value="displayDateSlash(filters.from)" @click:clear="filters.from=null"/>
                 </template>
                 <v-date-picker v-model="filters.from" @input="menus.from=false" scrollable />
               </v-menu>
             </v-col>
 
+            <!-- To date: display dd/mm/yyyy but keep v-model as YYYY-MM-DD -->
             <v-col cols="12" md="3">
               <v-menu v-model="menus.to" :close-on-content-click="false" max-width="320" offset-y>
                 <template v-slot:activator="{ on, attrs }">
-                  <v-text-field v-bind="attrs" v-on="on" dense outlined readonly clearable
-                    label="To (YYYY-MM-DD)" prepend-inner-icon="mdi-calendar"
-                    :value="filters.to" @click:clear="filters.to=null"/>
+                  <v-text-field v-bind="attrs" v-on="on" dense outlined readonly clearable hide-details
+                    label="To (DD/MM/YYYY)" prepend-inner-icon="mdi-calendar"
+                    :value="displayDateSlash(filters.to)" @click:clear="filters.to=null"/>
                 </template>
                 <v-date-picker v-model="filters.to" @input="menus.to=false" scrollable />
               </v-menu>
@@ -82,13 +113,18 @@
           :headers="headers"
           :items="rows"
           :loading="loading"
-          :items-per-page="10"
-          :footer-props="{ itemsPerPageOptions: [10, 20, 30, 40] }"
+          :items-per-page="15"
+          :footer-props="{ itemsPerPageOptions: [15, 30, 45, 60] }"
           class="elevation-1"
           item-key="pk"
           dense
         >
-          <!-- @click:row="onRowClick" -->
+          <!-- Serial number column (first) - now global index across rows -->
+          <template v-slot:item.serial="{ item }">
+            {{ getSerial(item) }}
+          </template>
+
+          <!-- Date column formatted as dd/mm/yyyy -->
           <template v-slot:item.invoiceDate="{ item }">
             {{ fmtDate(item.invoiceDate) }}
           </template>
@@ -97,12 +133,28 @@
             ₹{{ money(item.totals && item.totals.grandTotal) }}
           </template>
 
-          <template v-slot:item.payment.amountPaid="{ item }">
-            ₹{{ money(item.payment && item.payment.amountPaid) }}
-          </template>
-
-          <template v-slot:item.payment.dueAmount="{ item }">
-            ₹{{ money(item.payment && item.payment.dueAmount) }}
+          <!-- Items column: show item count and tooltip with labels -->
+          <template v-slot:item.itemsDisplay="{ item }">
+            <div>
+              <v-tooltip top>
+                <template v-slot:activator="{ on, attrs }">
+                  <span v-bind="attrs" v-on="on">
+                    <span v-if="item.items && item.items.length">
+                      {{ item.items.length }}
+                    </span>
+                    <span v-else>0 items</span>
+                  </span>
+                </template>
+                <div style="max-width:320px; white-space:normal;">
+                  <div v-if="item.items && item.items.length">
+                    <div v-for="(it, idx) in item.items" :key="idx">
+                      • {{ it.label || it.modelName || '—' }}
+                    </div>
+                  </div>
+                  <div v-else>—</div>
+                </div>
+              </v-tooltip>
+            </div>
           </template>
 
           <template v-slot:item.meta.statusType="{ item }">
@@ -141,7 +193,9 @@
           </template>
 
           <template v-slot:no-data>
-            <div class="pa-6 text-center grey--text">No records. Try changing filters or click Refresh.</div>
+            <div class="pa-6 text-center grey--Text">
+              No records. Try changing filters or click Refresh.
+            </div>
           </template>
         </v-data-table>
 
@@ -292,8 +346,10 @@
         </v-toolbar>
         <v-divider />
         <div style="padding:8px;">
-          <!-- Use compiled SFC, no runtime compile -->
-          <SellToVendorEmbedded :passed-invoice-number="embedded.invoiceNumber" @done="closeEmbeddedAndRefresh"/>
+          <SellToVendorEmbedded
+            :passed-invoice-number="embedded.invoiceNumber"
+            @done="closeEmbeddedAndRefresh"
+          />
         </div>
       </v-card>
     </template>
@@ -302,16 +358,9 @@
 
 <script>
 import axios from 'axios'
-// Adjust path/case if needed:
+import html2pdf from 'html2pdf.js'
 import SellToVendor from './sellToVendor.vue'
 
-/**
- * Embedded editor that:
- *  - loads by invoice number
- *  - forces "edit mode"
- *  - overrides updateSellToVendor to send FULL BODY (items, totals, buyer/consignee, payment, meta)
- *    so edit/update behaves exactly like save/add (recalcs included)
- */
 const SellToVendorEmbedded = {
   name: 'SellToVendorEmbedded',
   extends: SellToVendor,
@@ -345,7 +394,6 @@ const SellToVendorEmbedded = {
     }
   },
   methods: {
-    // Build the SAME payload shape as addSellToVendor()
     __buildFullPayload () {
       const invoiceNumber = this.invoiceNumber || this.ensureInvoiceNumber()
       return {
@@ -360,7 +408,7 @@ const SellToVendorEmbedded = {
           dueAmount: Number(this.dueAmount || 0),
           changeDue: Number(this.changeDue || 0)
         },
-        items: this.mapItemsForSellToVendor(),   // uses current selectedItems (recalculated)
+        items: this.mapItemsForSellToVendor(),
         totals: {
           subtotal: Number(this.subtotal || 0),
           discount: Number(this.totalDiscount || 0),
@@ -392,7 +440,6 @@ const SellToVendorEmbedded = {
       }
     },
 
-    // FORCE "edit" path in saveStatus()
     async saveStatus () {
       if (!this.canSave) { this.showSnack('Select a status first.', 'error'); return }
 
@@ -402,7 +449,6 @@ const SellToVendorEmbedded = {
 
       this.saving = true
       try {
-        // 1) Update inventory statuses
         const res = await fetch(this.updateEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -411,24 +457,19 @@ const SellToVendorEmbedded = {
         const data = await res.json()
         if (!res.ok) throw new Error(data?.message || 'Update failed')
 
-        // 2) UPDATE the SellToVendor record with FULL BODY (not partial)
-        const ok = await this.updateSellToVendor()   // overridden below
+        const ok = await this.updateSellToVendor()
         if (!ok) throw new Error('Sell-to-vendor update failed')
 
-        // 3) Export PDF & upload
         const exported = await this.renderPdf('export')
         if (!exported || !exported.blob) throw new Error('PDF export failed')
         const uploadOk = await this.uploadPdfToS3(exported.blob)
 
-        // 4) Save invoice record
         const invoiceOk = await this.saveInvoiceRecord()
         if (uploadOk) this.showSnack('Invoice PDF uploaded to S3.', 'success')
         else this.showSnack('Status saved, but PDF upload failed.', 'warning')
 
-        // 5) Ledger entry
         if (invoiceOk) await this.createLedgerEntry()
 
-        // close embedded after a successful full flow
         this.$emit('done')
 
       } catch (e) {
@@ -438,11 +479,9 @@ const SellToVendorEmbedded = {
       }
     },
 
-    // ✅ Override: update full record (items + totals + parties + payment + meta)
     async updateSellToVendor () {
       try {
         const body = this.__buildFullPayload()
-        // Use same endpoint name your original update used
         const res = await fetch(`${process.env.VUE_APP_AGENCY_BACKEND_URL}updateselltovendor`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -468,23 +507,22 @@ export default {
       base: process.env.VUE_APP_AGENCY_BACKEND_URL,
       loading: false,
       rows: [],
+      allRows: [],
       headers: [
-        { text: 'Invoice', value: 'invoiceNumber', width: 140 },
+        { text: 'S.No', value: 'serial', width: 100 },
+        { text: 'Invoice', value: 'invoiceNumber', width: 230 },
         { text: 'Date', value: 'invoiceDate', width: 120 },
         { text: 'Vendor', value: 'vendorName' },
-        { text: 'Client ID', value: 'clientId', width: 140 },
+        { text: 'Client ID', value: 'clientId', width: 160 },
         { text: 'Grand Total', value: 'totals.grandTotal', align: 'end', width: 140 },
-        { text: 'Paid', value: 'payment.amountPaid', align: 'end', width: 120 },
-        { text: 'Due', value: 'payment.dueAmount', align: 'end', width: 120 },
-        { text: 'Status', value: 'meta.statusType', width: 130 },
-        { text: 'Actions', value: 'actions', sortable: false, align: 'end', width: 170 }
+        { text: 'Vehicle Count', value: 'itemsDisplay', align: 'center', width: 140 },
+        { text: 'Status', value: 'meta.statusType', width: 100 },
+        { text: 'Actions', value: 'actions', sortable: false, align: 'end', width: 150 }
       ],
-      filters: { invoiceNumber: null, chassisNumber:null, clientId: null, name: null, from: null, to: null, statusD: null },
+      filters: { invoiceNumber: null, chassisNumber: null, clientId: null, name: null, from: null, to: null, statusD: null },
       menus: { from: false, to: false },
-
       dialogs: { view: false, update: false },
       current: null,
-
       quickModel: {
         invoiceNumber: null,
         vendorName: null,
@@ -497,25 +535,38 @@ export default {
       paymentTypes: ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Other'],
       updateValid: true,
       saving: false,
-
       embedded: { show: false, invoiceNumber: null },
-
       snack: { show: false, color: 'success', text: '' }
+    }
+  },
+
+  computed: {
+    currentDate() {
+      return new Date().toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    },
+    totalGrandTotal() {
+      return this.rows.reduce((sum, row) => sum + (row.totals?.grandTotal || 0), 0)
+    },
+    totalVehicleCount() {
+      return this.rows.reduce((sum, row) => sum + (row.items?.length || 0), 0)
     }
   },
 
   created () { this.loadAll() },
 
   watch: {
-    'embedded.show'(now, prev) { if (prev && !now) this.loadAll() }
+    'embedded.show' (now, prev) { if (prev && !now) this.loadAll() }
   },
 
   methods: {
-    // ---- endpoints ----
     url (name, arg) {
       const B = this.base
-      console.log('name', name)
-      console.log('arg', arg)
       switch (name) {
         case 'getAll': return `${B}getallselltovendor`
         case 'getByInvoice': return `${B}getselltovendorbyinvoicenumber/${encodeURIComponent(arg)}`
@@ -540,58 +591,240 @@ export default {
       }
     },
 
+    sortByDateDesc (arr) {
+      return arr.slice().sort((a, b) => {
+        const ta = toTime(a?.invoiceDate)
+        const tb = toTime(b?.invoiceDate)
+        return tb - ta
+      })
+    },
+
     async loadAll () {
       this.loading = true
       try {
         const { data } = await axios.get(this.url('getAll'))
-        this.rows = data?.items || []
+        const items = data?.items || []
+        this.allRows = this.sortByDateDesc(items)
+        this.rows = this.allRows.slice()
       } catch (e) {
         this.notify('Failed to load records', 'error')
       } finally { this.loading = false }
     },
 
     async runSearch () {
-      const { invoiceNumber, chassisNumber, clientId, name, from, to, statusD } = this.filters
       this.loading = true
-      console.log('chassisNumber', chassisNumber)
       try {
-        let data
-        if (invoiceNumber) {
-          const r = await axios.get(this.url('getByInvoice', invoiceNumber))
-          const item = r.data?.item
-          data = item ? [item] : []
-        } else if (clientId) {
-          const r = await axios.get(this.url('getByClient', { clientId, from, to }))
-          data = r.data?.items || []
-        } else if (statusD) {
-          const r = await axios.get(this.url('getByStatus', statusD))
-          data = r.data?.items || []
-        } else if (name) {
-          const r = await axios.get(this.url('getByName', { name }))
-          data = r.data?.items || []
-        } else if (chassisNumber) {
-          const r = await axios.get(this.url('getSellToVendorByChassis', { chassisNumber }))
-          data = r.data?.items || []
-        } else if (from && to) {
-          const r = await axios.get(this.url('getByDates', { from, to }))
-          data = r.data?.items || []
-        } else {
-          const r = await axios.get(this.url('getAll'))
-          data = r.data?.items || []
+        if (!this.allRows || !this.allRows.length) {
+          await this.loadAll()
         }
-        this.rows = data
-        if (!data.length) this.notify('No records found', 'warning')
+
+        const {
+          invoiceNumber,
+          chassisNumber,
+          clientId,
+          name,
+          from,
+          to,
+          statusD
+        } = this.filters
+
+        let filtered = this.allRows.slice()
+
+        if (invoiceNumber && String(invoiceNumber).trim()) {
+          const q = String(invoiceNumber).trim()
+          filtered = filtered.filter(it => String(it.invoiceNumber || '').trim() === q)
+        }
+
+        if (clientId && String(clientId).trim()) {
+          const q = String(clientId).trim()
+          filtered = filtered.filter(it => String(it.clientId || '').trim() === q)
+        }
+
+        if (statusD && String(statusD).trim()) {
+          const q = String(statusD).trim().toUpperCase()
+          filtered = filtered.filter(it => String((it.meta && it.meta.statusType) || '').toUpperCase() === q)
+        }
+
+        if (chassisNumber && String(chassisNumber).trim()) {
+          const q = String(chassisNumber).trim().toLowerCase()
+          filtered = filtered.filter(it => {
+            const c = String(it.chassisNumber || it.chassisNo || '').toLowerCase()
+            return c.includes(q)
+          })
+        }
+
+        if (name && String(name).trim()) {
+          const q = String(name).trim().toLowerCase()
+          filtered = filtered.filter(it => {
+            const vendor = String(it.vendorName || '').toLowerCase()
+            const buyer = String((it.buyer && it.buyer.name) || '').toLowerCase()
+            const consignee = String((it.consignee && it.consignee.name) || '').toLowerCase()
+            return vendor.includes(q) || buyer.includes(q) || consignee.includes(q)
+          })
+        }
+
+        if (from || to) {
+          const itemDateYmd = (iso) => {
+            if (!iso) return null
+            try {
+              const d = new Date(iso)
+              if (isNaN(d.getTime())) return null
+              const yyyy = d.getFullYear()
+              const mm = String(d.getMonth() + 1).padStart(2, '0')
+              const dd = String(d.getDate()).padStart(2, '0')
+              return `${yyyy}-${mm}-${dd}`
+            } catch {
+              return null
+            }
+          }
+
+          const fromYmd = from ? String(from).slice(0, 10) : null
+          const toYmd = to ? String(to).slice(0, 10) : null
+
+          filtered = filtered.filter(it => {
+            const itYmd = itemDateYmd(it.invoiceDate)
+            if (!itYmd) return false
+            if (fromYmd && toYmd) {
+              return itYmd >= fromYmd && itYmd <= toYmd
+            } else if (fromYmd) {
+              return itYmd >= fromYmd
+            } else if (toYmd) {
+              return itYmd <= toYmd
+            }
+            return true
+          })
+        }
+
+        this.rows = this.sortByDateDesc(filtered)
+        if (!this.rows.length) this.notify('No records found', 'warning')
       } catch (e) {
+        console.error(e)
         this.notify('Search failed', 'error')
-      } finally { this.loading = false }
+      } finally {
+        this.loading = false
+      }
     },
 
     resetFilters () {
-      this.filters = { invoiceNumber: null, chassisNumber:null, clientId: null, name: null, from: null, to: null, statusD: null }
-      this.loadAll()
+      this.filters = { invoiceNumber: null, chassisNumber: null, clientId: null, name: null, from: null, to: null, statusD: null }
+      this.rows = this.allRows.slice()
     },
 
-    // ---- actions ----
+    // FIXED PDF DOWNLOAD - Creates HTML content dynamically
+async downloadPdf() {
+  if (!this.rows.length) {
+    this.notify('No records to export', 'warning');
+    return;
+  }
+
+  try {
+    const printWindow = window.open('', '_blank');
+    const html = `
+      <html>
+        <head><title>Sell To Vendor Records</title></head>
+        <body>
+          <h2 style="text-align:center;">ANSARI AUTOMOBILES</h2>
+          <h3 style="text-align:center;">Sell To Vendor Records</h3>
+          <p style="text-align:center;">Generated: ${new Date().toLocaleString()}</p>
+          <table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f0f0f0;">
+                <th>S.No</th><th>Invoice</th><th>Date</th><th>Vendor</th>
+                <th>Client ID</th><th>Grand Total</th><th>Vehicles</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${this.rows.map((row, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${row.invoiceNumber || ''}</td>
+                  <td>${this.fmtDate(row.invoiceDate)}</td>
+                  <td>${row.vendorName || ''}</td>
+                  <td>${row.clientId || ''}</td>
+                  <td>₹${this.money(row.totals?.grandTotal || 0)}</td>
+                  <td>${row.items?.length || 0}</td>
+                  <td>${row.meta?.statusType || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
+    
+  } catch (error) {
+    this.notify('PDF generation failed', 'error');
+  }
+},
+
+    downloadExcel () {
+      if (!this.rows.length) {
+        this.notify('No records to export', 'warning')
+        return
+      }
+
+      try {
+        const excelHeaders = [
+          'S.No',
+          'Invoice Number',
+          'Date (DD/MM/YYYY)',
+          'Vendor Name',
+          'Client ID',
+          'Grand Total (₹)',
+          'Vehicle Count',
+          'Status'
+        ]
+
+        const dataRows = this.rows.map((row, index) => [
+          index + 1,
+          row.invoiceNumber || '',
+          this.fmtDate(row.invoiceDate),
+          row.vendorName || '',
+          row.clientId || '',
+          this.money(row.totals?.grandTotal || 0),
+          row.items?.length || 0,
+          row.meta?.statusType || ''
+        ])
+
+        const escapeCsv = (value) => {
+          if (value === null || value === undefined) return ''
+          const str = String(value)
+          if (/[",\n\r\t]/.test(str)) {
+            return '"' + str.replace(/"/g, '""') + '"'
+          }
+          return str
+        }
+
+        const csvContent = [
+          excelHeaders.map(escapeCsv).join(','),
+          ...dataRows.map(row => row.map(escapeCsv).join(','))
+        ].join('\r\n')
+
+        const blob = new Blob(['\uFEFF' + csvContent], { 
+          type: 'text/csv;charset=utf-8;' 
+        })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        const timestamp = new Date().toISOString().slice(0, 10)
+        
+        link.href = url
+        link.setAttribute('download', `sell-to-vendor-records-${timestamp}.csv`)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+
+        this.notify('Excel file downloaded successfully', 'success')
+      } catch (error) {
+        console.error('Excel download failed:', error)
+        this.notify('Failed to generate Excel file', 'error')
+      }
+    },
+
     onRowClick (item) { this.openEmbeddedEditor(item) },
     openEmbeddedEditor (item) {
       const inv = item?.invoiceNumber
@@ -654,18 +887,55 @@ export default {
         if (updated) {
           const i = this.rows.findIndex(r => r.pk === updated.pk && r.sk === updated.sk)
           if (i >= 0) this.$set(this.rows, i, updated)
-          else this.loadAll()
+
+          const j = this.allRows.findIndex(r => r.pk === updated.pk && r.sk === updated.sk)
+          if (j >= 0) this.$set(this.allRows, j, updated)
+
+          this.allRows = this.sortByDateDesc(this.allRows)
+          this.rows = this.sortByDateDesc(this.rows)
         } else {
-          this.loadAll()
+          await this.loadAll()
         }
       } catch (e) {
         this.notify('Update failed', 'error')
       } finally { this.saving = false }
     },
 
-    // ---- helpers ----
     money (v) { return Number(v || 0).toFixed(2) },
-    fmtDate (iso) { if (!iso) return '—'; try { return new Date(iso).toISOString().slice(0, 10) } catch { return '—' } },
+
+    fmtDate (iso) {
+      if (!iso) return '—'
+      try {
+        const d = new Date(iso)
+        if (isNaN(d.getTime())) return '—'
+        const dd = String(d.getDate()).padStart(2, '0')
+        const mm = String(d.getMonth() + 1).padStart(2, '0')
+        const yyyy = d.getFullYear()
+        return `${dd}/${mm}/${yyyy}`
+      } catch {
+        return '—'
+      }
+    },
+
+    displayDateSlash (iso) {
+      if (!iso) return ''
+      try {
+        const d = new Date(iso)
+        if (isNaN(d.getTime())) return ''
+        const dd = String(d.getDate()).padStart(2, '0')
+        const mm = String(d.getMonth() + 1).padStart(2, '0')
+        const yyyy = d.getFullYear()
+        return `${dd}/${mm}/${yyyy}`
+      } catch {
+        return ''
+      }
+    },
+
+    getSerial (item) {
+      const idx = this.rows.findIndex(r => r.pk === item.pk && r.sk === item.sk)
+      return idx >= 0 ? (idx + 1) : '—'
+    },
+
     statusColor (s) {
       const k = String(s || '').toUpperCase()
       if (k === 'SOLD') return 'green'
@@ -674,7 +944,18 @@ export default {
       if (k === 'ACTIVE') return 'blue'
       return 'grey'
     },
+
     notify (text, color = 'success') { this.snack = { show: true, color, text } }
+  }
+}
+
+function toTime (iso) {
+  if (!iso) return 0
+  try {
+    const t = new Date(iso).getTime()
+    return isNaN(t) ? 0 : t
+  } catch {
+    return 0
   }
 }
 </script>
