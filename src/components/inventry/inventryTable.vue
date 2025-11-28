@@ -765,7 +765,7 @@ export default {
 
 <style scoped>
 .tableData{
-  margin:20px;
+  margin:12px;
 }
 .tableData .v-card-title {
   align-items: center;

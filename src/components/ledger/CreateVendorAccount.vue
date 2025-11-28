@@ -22,10 +22,12 @@
                 <div v-else>—</div>
               </template>
             </v-select>
-            <div class="text-caption mt-1">You can pick an existing client to prefill fields or enter new details below.</div>
+            <div class="text-caption mt-1">
+              You can pick an existing client to prefill fields or enter new details below.
+            </div>
           </v-col>
 
-          <!-- Vendor ID -->
+          <!-- Vendor ID (required) -->
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="form.vendorId"
@@ -36,7 +38,7 @@
             />
           </v-col>
 
-          <!-- Vendor Name -->
+          <!-- Vendor Name (required) -->
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="form.name"
@@ -47,51 +49,55 @@
             />
           </v-col>
 
-          <!-- Phone -->
+          <!-- Phone (required) -->
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="form.phone"
               label="Phone"
+              :rules="[rReq]"
               outlined dense
               clearable
             />
           </v-col>
 
-          <!-- Email -->
+          <!-- Email (required) -->
           <v-col cols="12" sm="6">
             <v-text-field
               v-model="form.email"
               label="Email"
+              :rules="[rReq]"
               outlined dense
               clearable
             />
           </v-col>
 
-          <!-- Initial balance -->
+          <!-- Initial balance (required, >= 0, Indian format while typing) -->
           <v-col cols="12" sm="4">
             <v-text-field
-              v-model.number="form.initialBalance"
+              :value="formattedInitialBalance"
               label="Initial Balance"
-              type="number"
+              type="text"
               :rules="[rNumNonNeg]"
               outlined dense
               prefix="₹"
               clearable
+              @input="onInitialBalanceInput"
             />
           </v-col>
 
-          <!-- Currency -->
+          <!-- Currency (required) -->
           <v-col cols="12" sm="4">
             <v-select
               v-model="form.currency"
               :items="currencyOptions"
               label="Currency"
+              :rules="[rReq]"
               outlined dense
               clearable
             />
           </v-col>
 
-          <!-- Notes / narration -->
+          <!-- Notes / narration (optional) -->
           <v-col cols="12">
             <v-textarea
               v-model="form.notes"
@@ -135,34 +141,49 @@ export default {
         name: '',
         phone: '',
         email: '',
-        initialBalance: 0,
+        initialBalance: 0, // kept numeric for backend
         currency: 'INR',
         notes: ''
       },
+
+      // raw string typed for amount (without formatting control)
+      rawInitialBalance: '',
 
       currencyOptions: ['INR', 'USD', 'EUR'],
 
       // validation rules
       rReq: v => !!(v && String(v).trim()) || 'Required',
-      rNumNonNeg: v => (v === null || v === undefined || v === '' || (!isNaN(Number(v)) && Number(v) >= 0)) || 'Must be ≥ 0'
+      // allow empty (treated as 0), but if not empty must be a number ≥ 0
+      rNumNonNeg: v => {
+        const str = (v === null || v === undefined) ? '' : String(v)
+        if (!str.trim()) return true // empty is allowed -> will be treated as 0
+        const num = Number(str.replace(/,/g, ''))
+        return (!isNaN(num) && num >= 0) || 'Must be ≥ 0'
+      }
     }
   },
 
   computed: {
-    BASE () { return (process.env.VUE_APP_AGENCY_BACKEND_URL || '').replace(/\/$/, '') },
+    BASE () {
+      return (process.env.VUE_APP_AGENCY_BACKEND_URL || '').replace(/\/$/, '')
+    },
 
     // show only clients which do NOT have accountCreated === true
     clientOptions () {
-        return (this.clients || [])
-            .filter(c => { return !('accountCreated' in c) || c.accountCreated === false })
-            .map(c => ({
-                label: `${c.name || '—'} (${c.clientId || c.pk || '—'})`,
-                value: c.clientId,
-                payload: c
-            })
-        )
-    }
+      return (this.clients || [])
+        .filter(c => { return !('accountCreated' in c) || c.accountCreated === false })
+        .map(c => ({
+          label: `${c.name || '—'} (${c.clientId || c.pk || '—'})`,
+          value: c.clientId,
+          payload: c
+        }))
+    },
 
+    // what is shown in the Initial Balance field (Indian format)
+    formattedInitialBalance () {
+      if (!this.rawInitialBalance) return ''
+      return this.formatIndianNumber(this.rawInitialBalance)
+    }
   },
 
   watch: {
@@ -173,10 +194,41 @@ export default {
   },
 
   mounted () {
+    // initialize rawInitialBalance from numeric value, but keep field visually empty if 0
+    if (this.form.initialBalance && Number(this.form.initialBalance) > 0) {
+      this.rawInitialBalance = String(this.form.initialBalance)
+    } else {
+      this.rawInitialBalance = ''
+    }
     this.fetchClients()
   },
 
   methods: {
+    // format number string in Indian style (10,00,000)
+    formatIndianNumber (value) {
+      let x = String(value || '').replace(/[^\d]/g, '')
+      if (!x) return ''
+      // remove leading zeros, but keep a single 0 if everything is zeros
+      x = x.replace(/^0+/, '') || '0'
+      const lastThree = x.slice(-3)
+      const other = x.slice(0, -3)
+      if (!other) return lastThree
+      return other.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + lastThree
+    },
+
+    // handle typing in Initial Balance field
+    onInitialBalanceInput (val) {
+      const digits = (val || '').replace(/[^\d]/g, '')
+      this.rawInitialBalance = digits
+
+      if (!digits) {
+        // if nothing typed, treat as 0 internally
+        this.form.initialBalance = 0
+      } else {
+        this.form.initialBalance = Number(digits)
+      }
+    },
+
     // fetch all clients/vendors to populate selector
     async fetchClients () {
       this.clientsLoading = true
@@ -233,7 +285,12 @@ export default {
         name: String(this.form.name || '').trim(),
         phone: this.form.phone || null,
         email: this.form.email || null,
-        initialBalance: this.form.initialBalance || 0,
+        // if user left field empty, this.form.initialBalance will be 0
+        initialBalance: (this.form.initialBalance === null ||
+                         this.form.initialBalance === undefined ||
+                         this.form.initialBalance === '')
+          ? 0
+          : this.form.initialBalance,
         currency: this.form.currency || 'INR',
         notes: this.form.notes || ''
       }
@@ -266,13 +323,25 @@ export default {
       const ok = await this.$refs.form.validate()
       if (!ok) return
 
-      // basic vendorId/name check
+      // basic vendorId/name check (extra safety)
       if (!this.form.vendorId || !String(this.form.vendorId).trim()) {
         this.$emit('notify', { text: 'Vendor ID is required', color: 'warning' })
         return
       }
       if (!this.form.name || !String(this.form.name).trim()) {
         this.$emit('notify', { text: 'Vendor name is required', color: 'warning' })
+        return
+      }
+      if (!this.form.phone || !String(this.form.phone).trim()) {
+        this.$emit('notify', { text: 'Phone is required', color: 'warning' })
+        return
+      }
+      if (!this.form.email || !String(this.form.email).trim()) {
+        this.$emit('notify', { text: 'Email is required', color: 'warning' })
+        return
+      }
+      if (!this.form.currency || !String(this.form.currency).trim()) {
+        this.$emit('notify', { text: 'Currency is required', color: 'warning' })
         return
       }
 
@@ -323,7 +392,10 @@ export default {
         } else {
           // fallback: could not find pk immediately — user can retry via client list or backend sync
           console.warn('PK not found for newly created vendor:', newVendorId)
-          this.$emit('notify', { text: 'Vendor created but pk not found to mark accountCreated. Refresh list to retry.', color: 'warning' })
+          this.$emit('notify', {
+            text: 'Vendor created but pk not found to mark accountCreated. Refresh list to retry.',
+            color: 'warning'
+          })
         }
 
         // reset form lightly (keep list cached)
@@ -334,7 +406,7 @@ export default {
         this.form.initialBalance = 0
         this.form.notes = ''
         this.selectedOption = null
-
+        this.rawInitialBalance = ''
       } catch (err) {
         console.error('createVendorAccount error', err)
         this.$emit('notify', { text: err?.message || 'Failed to create vendor account', color: 'error' })
@@ -347,5 +419,8 @@ export default {
 </script>
 
 <style scoped>
-.text-caption { font-size: 0.8rem; color: rgba(0,0,0,.6); }
+.text-caption {
+  font-size: 0.8rem;
+  color: rgba(0,0,0,.6);
+}
 </style>

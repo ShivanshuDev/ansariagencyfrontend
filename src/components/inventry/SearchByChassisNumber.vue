@@ -1,0 +1,485 @@
+<template>
+  <div style="background-color:white; height:91vh; padding:12px; margin:12px; border-radius:5px;">
+    <!-- SEARCH FIELD (use this inside your v-row) -->
+    <v-col cols="12" md="3" class="pa-0 pr-2">
+      <v-text-field
+        v-model="chassisQuery"
+        @input="onChassisInput"
+        label="Search by chassis Number"
+        dense
+        outlined
+        clearable
+        hide-details
+        placeholder="Chassis or Engine number..."
+      />
+    </v-col>
+
+    <!-- SEARCH RESULT DIALOG -->
+    <v-dialog v-model="dialogOpen" max-width="1800px" persistent>
+      <v-card>
+        <v-card-title class="d-flex align-center justify-space-between">
+          <div>
+            <span class="headline">Search results for: "{{ chassisQuery }}"</span>
+            <div v-if="!loadingChassis && !localChassisResults.length" class="subtitle-2">
+              No results found
+            </div>
+            <div v-if="loadingChassis" class="subtitle-2">
+              Searching...
+            </div>
+          </div>
+
+          <div class="d-flex align-center" style="gap:8px;">
+            <!-- Downloads operate on selectedRows inside the dialog -->
+            <DownloadPdf
+              :items="selectedRows"
+              :headers="dialogHeaders"
+            />
+            <DownloadXlsx
+              :items="selectedRows"
+              :headers="dialogHeaders"
+              filename="chassis_search_results"
+              @downloaded="onDialogDownloaded"
+              :disabled="loadingChassis || !selectedRows.length"
+            />
+            <v-btn icon @click="closeDialog">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
+          </div>
+        </v-card-title>
+
+        <v-card-text>
+          <v-skeleton-loader v-if="loadingChassis" type="table" />
+          <div v-else>
+            <v-simple-table dense>
+              <thead style="background-color:#dff3f79c; color:white;">
+                <tr>
+                  <!-- Checkbox header -->
+                  <th style="width:48px; text-align:center;">
+                    <v-checkbox
+                      :input-value="allSelected"
+                      @change="toggleSelectAll"
+                      hide-details
+                      density="compact"
+                    />
+                  </th>
+
+                  <!-- Dynamic headers -->
+                  <th v-for="h in dialogHeaders" :key="h.value">
+                    {{ h.text }}
+                  </th>
+
+                  <!-- Actions column -->
+                  <th style="width:160px; text-align:center;">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <!-- Empty state -->
+                <tr v-if="!localChassisResults.length">
+                  <td :colspan="dialogHeaders.length + 2" class="text-center">
+                    No items found
+                  </td>
+                </tr>
+
+                <!-- Rows -->
+                <tr
+                  v-for="(row, idx) in localChassisResults"
+                  :key="row.pk || row.chassisNumber || row.engineNumber || idx"
+                >
+                  <!-- Row checkbox -->
+                  <td style="text-align:center;">
+                    <v-checkbox
+                      :input-value="isSelected(row)"
+                      @change="toggleRowSelection(row)"
+                      hide-details
+                      density="compact"
+                    />
+                  </td>
+
+                  <!-- Data cells -->
+                  <td v-for="h in dialogHeaders" :key="h.value">
+                    {{ getValue(row, h.value) }}
+                  </td>
+
+                  <!-- Actions -->
+                  <td style="text-align:center; white-space:nowrap;">
+                    <!-- Edit -->
+                    <v-tooltip text="Edit Item" location="top">
+                      <template #activator="{ props }">
+                        <v-btn
+                          v-bind="props"
+                          color="primary"
+                          size="x-small"
+                          variant="tonal"
+                          class="mr-1"
+                          @click="openEdit(row)"
+                        >
+                          <v-icon size="16" start>mdi-pencil</v-icon>
+                          Edit
+                        </v-btn>
+                      </template>
+                    </v-tooltip>
+
+                    <!-- Inventory History -->
+                    <v-tooltip text="View Inventory History" location="top">
+                      <template #activator="{ props }">
+                        <v-btn
+                          v-bind="props"
+                          color="teal"
+                          size="x-small"
+                          variant="tonal"
+                          @click="openHistory(row)"
+                        >
+                          <v-icon size="16" start>mdi-history</v-icon>
+                          History
+                        </v-btn>
+                      </template>
+                    </v-tooltip>
+                  </td>
+                </tr>
+              </tbody>
+            </v-simple-table>
+          </div>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+          <div class="mr-4">
+            <small v-if="selectedRows.length">
+              {{ selectedRows.length }} selected
+            </small>
+          </div>
+
+          <InventoryHistoryDialog
+            v-if="true"
+            v-model="historyDialogOpen"
+            :invoiceNumber="historyInvoiceNumber"
+            :chassisNumber="historyChassisNumber"
+          />
+
+          <v-btn text @click="closeDialog">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Edit dialog (internal) -->
+    <v-dialog v-model="editDialog" persistent max-width="920px">
+      <v-card>
+        <v-card-title>
+          Edit Inventory Item
+          <v-spacer />
+          <v-btn icon @click="closeEdit">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-card-text>
+          <EditInventory
+            v-if="editItem"
+            :item="editItem"
+            @saved="onEditSaved"
+            @cancel="closeEdit"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+  </div>
+</template>
+
+<script>
+import axios from 'axios';
+import DownloadPdf from '@/views/DownloadPdf.vue'; // adjust path if needed
+import DownloadXlsx from '@/views/DownloadXlsx.vue';
+import EditInventory from './EditInventory.vue'; // adjust path if needed
+import InventoryHistoryDialog from './InventoryHistoryDialog.vue';
+
+export default {
+  name: 'ChassisSearch',
+  components: {
+    DownloadPdf,
+    DownloadXlsx,
+    EditInventory,
+    InventoryHistoryDialog
+  },
+  props: {
+    // to keep same columns as invoice table (minus inventoryHoldDays)
+    invoiceDetailHeaders: {
+      type: Array,
+      default: () => []
+    }
+  },
+  emits: ['inventory-saved', 'downloaded'],
+  data() {
+    return {
+      // history dialog state
+      historyDialogOpen: false,
+      historyInvoiceNumber: '',
+      historyChassisNumber: '',
+
+      // chassis search local state
+      chassisQuery: '',
+      _chassisTimer: null,
+      engineDebounceMs: 420,
+      loadingChassis: false,
+      chassisResults: [],
+      dialogOpen: false,
+
+      // selection state
+      selectedRowKeys: [],
+      selectedRows: [],
+
+      // edit dialog
+      editDialog: false,
+      editItem: null
+    };
+  },
+  computed: {
+    dialogHeaders() {
+      const fallback = [
+        { text: 'Chassis Number', value: 'chassisNumber' },
+        { text: 'Engine Number', value: 'engineNumber' },
+        { text: 'Model Name', value: 'modelName' },
+        { text: 'Color', value: 'color' },
+        { text: 'Invoice Number', value: 'invoiceNumber' },
+        { text: 'Added By', value: 'addedBy' },
+        { text: 'Status', value: 'status' }
+      ];
+
+      if (Array.isArray(this.invoiceDetailHeaders) && this.invoiceDetailHeaders.length) {
+        return JSON.parse(JSON.stringify(this.invoiceDetailHeaders))
+          .filter(h => h && h.value !== 'inventoryHoldDays');
+      }
+
+      return fallback;
+    },
+
+    localChassisResults() {
+      return this.chassisResults || [];
+    },
+
+    allSelected() {
+      if (!this.localChassisResults.length) return false;
+      return this.localChassisResults.every(r =>
+        this.selectedRowKeys.includes(this._rowKey(r))
+      );
+    }
+  },
+  methods: {
+    openHistory(row) {
+      if (!row) return;
+      this.historyInvoiceNumber = row.invoiceNumber || row.invoice_no || '';
+      this.historyChassisNumber = row.chassisNumber || row.chassis || '';
+      this.historyDialogOpen = true;
+    },
+
+    // debounce handler
+    onChassisInput() {
+      if (this._chassisTimer) {
+        clearTimeout(this._chassisTimer);
+        this._chassisTimer = null;
+      }
+
+      const v = this.chassisQuery == null ? '' : String(this.chassisQuery).trim();
+
+      if (!v) {
+        this.chassisResults = [];
+        this.dialogOpen = false;
+        this.loadingChassis = false;
+        this.clearSelection();
+        return;
+      }
+
+      const isCandidate = /[A-Za-z0-9]{3,}/.test(v);
+      if (!isCandidate) return;
+
+      this._chassisTimer = setTimeout(() => {
+        this._chassisTimer = null;
+        this._searchChassisApi(v);
+      }, this.engineDebounceMs);
+    },
+
+    async _searchChassisApi(q) {
+      this.loadingChassis = true;
+      try {
+        const resSearch = await axios.get(
+          `${process.env.VUE_APP_AGENCY_BACKEND_URL}searchInventoryByChassis`,
+          { params: { query: q } }
+        );
+
+        const items = (resSearch && resSearch.data && Array.isArray(resSearch.data.items))
+          ? resSearch.data.items
+          : [];
+
+        const now = Date.now();
+        const normalized = items.map(it => {
+          const out = { ...(it || {}) };
+
+          if (!out.chassisNumber && out.chassis) out.chassisNumber = out.chassis;
+          if (!out.engineNumber && out.engine) out.engineNumber = out.engine;
+          if (!out.modelName && out.model) out.modelName = out.model;
+          if (!out.addedBy && out.added_by) out.addedBy = out.added_by;
+          if (!out.invoiceNumber && out.invoice_no) out.invoiceNumber = out.invoice_no;
+
+          const created = out.createdAt || out.created_at || out.created_date;
+          let createdMs = null;
+          if (created != null && !Number.isNaN(Number(created))) {
+            const n = Number(created);
+            createdMs = n < 1e12 ? n * 1000 : n;
+          }
+          out.inventoryHoldDays = (createdMs != null)
+            ? Math.floor(Math.max(0, now - createdMs) / (1000 * 60 * 60 * 24))
+            : '';
+
+          return out;
+        });
+
+        normalized.sort((a, b) => {
+          const aCt = Number(a.createdAt || a.created_at || a.created_date) || 0;
+          const bCt = Number(b.createdAt || b.created_at || b.created_date) || 0;
+          const aMs = aCt < 1e12 ? aCt * 1000 : aCt;
+          const bMs = bCt < 1e12 ? bCt * 1000 : bCt;
+          return bMs - aMs;
+        });
+
+        this.chassisResults = normalized;
+        this.clearSelection();
+        this.dialogOpen = true;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('searchInventoryByChassis failed', err);
+        this.chassisResults = [];
+        this.clearSelection();
+        this.dialogOpen = true;
+      } finally {
+        this.loadingChassis = false;
+      }
+    },
+
+    _rowKey(row) {
+      if (!row) return null;
+      if (row.pk) return String(row.pk);
+      return `${row.chassisNumber || ''}::${row.engineNumber || ''}::${row.invoiceNumber || ''}`;
+    },
+
+    isSelected(row) {
+      const k = this._rowKey(row);
+      return !!k && this.selectedRowKeys.includes(k);
+    },
+
+    toggleRowSelection(row) {
+      const k = this._rowKey(row);
+      if (!k) return;
+      const idx = this.selectedRowKeys.indexOf(k);
+      if (idx === -1) {
+        this.selectedRowKeys.push(k);
+        this.selectedRows.push(row);
+      } else {
+        this.selectedRowKeys.splice(idx, 1);
+        const idx2 = this.selectedRows.findIndex(r => this._rowKey(r) === k);
+        if (idx2 !== -1) this.selectedRows.splice(idx2, 1);
+      }
+    },
+
+    toggleSelectAll() {
+      if (!this.localChassisResults.length) return;
+      if (this.allSelected) {
+        this.clearSelection();
+      } else {
+        this.selectedRowKeys = this.localChassisResults
+          .map(r => this._rowKey(r))
+          .filter(Boolean);
+        this.selectedRows = this.localChassisResults.slice();
+      }
+    },
+
+    clearSelection() {
+      this.selectedRowKeys = [];
+      this.selectedRows = [];
+    },
+
+    getValue(row, key) {
+      if (!row) return '';
+      const v = row[key];
+      if (v === null || typeof v === 'undefined') return '';
+      if (key === 'createdAt') {
+        const n = Number(v);
+        if (Number.isNaN(n)) return v;
+        const ms = n < 1e12 ? n * 1000 : n;
+        const d = new Date(ms);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
+      return v;
+    },
+
+    openEdit(row) {
+      if (!row) return;
+      this.editItem = JSON.parse(JSON.stringify(row));
+      this.editDialog = true;
+    },
+
+    closeEdit() {
+      this.editDialog = false;
+      this.editItem = null;
+    },
+
+    onEditSaved(payload) {
+      let updated = null;
+      if (!payload) {
+        this.closeEdit();
+        return;
+      }
+      if (payload.item) updated = payload.item;
+      else if (payload.updated) updated = payload.updated;
+      else if (payload.data) updated = payload.data;
+      else if (payload && typeof payload === 'object') updated = payload;
+
+      if (updated) {
+        const keyFor = r =>
+          (r.pk
+            ? String(r.pk)
+            : `${r.chassisNumber || ''}::${r.engineNumber || ''}::${r.invoiceNumber || ''}`);
+        const updatedKey = keyFor(updated);
+        const idx = this.chassisResults.findIndex(r => keyFor(r) === updatedKey);
+
+        if (idx !== -1) {
+          this.$set(this.chassisResults, idx, {
+            ...this.chassisResults[idx],
+            ...updated
+          });
+        } else {
+          this.chassisResults.unshift(updated);
+        }
+
+        const selIdx = this.selectedRows.findIndex(r => keyFor(r) === updatedKey);
+        if (selIdx !== -1) {
+          this.$set(this.selectedRows, selIdx, {
+            ...this.selectedRows[selIdx],
+            ...updated
+          });
+        }
+
+        this.$emit('inventory-saved', { item: updated });
+      }
+
+      this.closeEdit();
+    },
+
+    closeDialog() {
+      this.dialogOpen = false;
+    },
+
+    onDialogDownloaded() {
+      this.$emit('downloaded');
+    }
+  }
+};
+</script>
+
+<style scoped>
+.headline {
+  font-weight: 600;
+}
+</style>

@@ -3,7 +3,7 @@
     <v-card-text>
       <v-form ref="form" v-model="valid" lazy-validation>
         <v-row dense>
-          <!-- Vendor dropdown -->
+          <!-- Vendor dropdown (required) -->
           <v-col cols="12" sm="6">
             <v-select
               v-model="form.clientId"
@@ -12,7 +12,8 @@
               item-value="value"
               label="Select Vendor"
               :rules="[rReq]"
-              outlined dense
+              outlined
+              dense
               clearable
               :loading="clientsLoading"
               return-object
@@ -23,27 +24,50 @@
                 <div v-else>—</div>
               </template>
             </v-select>
-            <div v-if="clientsError" class="red--text text-caption mt-1">{{ clientsError }}</div>
+            <div v-if="clientsError" class="red--text text-caption mt-1">
+              {{ clientsError }}
+            </div>
           </v-col>
 
           <!-- Vendor quick details card (shown when vendor selected) -->
           <v-col cols="12">
             <v-card v-if="selectedClient" class="pa-3" outlined>
               <v-row>
-                <v-col cols="12" sm="4"><strong>Name</strong><div>{{ selectedClient.name }}</div></v-col>
-                <v-col cols="12" sm="4"><strong>Client ID</strong><div>{{ selectedClient.clientId }}</div></v-col>
-                <v-col cols="12" sm="4"><strong>Phone</strong><div>{{ selectedClient.phone || selectedClient.altphone || '—' }}</div></v-col>
+                <v-col cols="12" sm="4">
+                  <strong>Name</strong>
+                  <div>{{ selectedClient.name }}</div>
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <strong>Client ID</strong>
+                  <div>{{ selectedClient.clientId }}</div>
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <strong>Phone</strong>
+                  <div>{{ selectedClient.phone || selectedClient.altphone || '—' }}</div>
+                </v-col>
 
-                <v-col cols="12" sm="4"><strong>Email</strong><div>{{ selectedClient.email || '—' }}</div></v-col>
-                <v-col cols="12" sm="4"><strong>GSTIN</strong><div>{{ selectedClient.gstin || '—' }}</div></v-col>
-                <v-col cols="12" sm="4"><strong>Status</strong><div>{{ selectedClient.status || '—' }}</div></v-col>
+                <v-col cols="12" sm="4">
+                  <strong>Email</strong>
+                  <div>{{ selectedClient.email || '—' }}</div>
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <strong>GSTIN</strong>
+                  <div>{{ selectedClient.gstin || '—' }}</div>
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <strong>Status</strong>
+                  <div>{{ selectedClient.status || '—' }}</div>
+                </v-col>
 
                 <!-- Billing address short -->
                 <v-col cols="12">
                   <strong>Billing Address</strong>
                   <div v-if="selectedClient.billing">
-                    {{ selectedClient.billing.line1 || '' }} {{ selectedClient.billing.line2 || '' }},
-                    {{ selectedClient.billing.city || '' }} {{ selectedClient.billing.state || '' }} {{ selectedClient.billing.pincode || '' }}
+                    {{ selectedClient.billing.line1 || '' }}
+                    {{ selectedClient.billing.line2 || '' }},
+                    {{ selectedClient.billing.city || '' }}
+                    {{ selectedClient.billing.state || '' }}
+                    {{ selectedClient.billing.pincode || '' }}
                   </div>
                   <div v-else>—</div>
                 </v-col>
@@ -55,19 +79,21 @@
             </v-card>
           </v-col>
 
-          <!-- Amount -->
+          <!-- Amount (required, Indian format 10,00,000) -->
           <v-col cols="12" sm="4">
             <v-text-field
-              v-model.number="form.amount"
+              v-model="form.amountDisplay"
               label="Amount"
-              type="number"
               :rules="[rReq, rNumPos]"
-              outlined dense
+              outlined
+              dense
               prefix="₹"
+              @input="onAmountInput"
+              @blur="formatAmountDisplay"
             />
           </v-col>
 
-          <!-- Payment Mode -->
+          <!-- Payment Mode (required) -->
           <v-col cols="12" sm="4">
             <v-select
               v-model="form.extra.paymentType"
@@ -75,22 +101,26 @@
               item-text="text"
               item-value="value"
               label="Payment Mode"
-              outlined dense
+              :rules="[rReq]"
+              outlined
+              dense
               clearable
             />
           </v-col>
 
-          <!-- Reference -->
+          <!-- Reference (required) -->
           <v-col cols="12" sm="4">
             <v-text-field
               v-model="form.extra.referenceNo"
               label="Reference (UPI/Bank/Cheque)"
-              outlined dense
+              outlined
+              dense
               clearable
+              :rules="[rReq]"
             />
           </v-col>
 
-          <!-- Date -->
+          <!-- Date (required) -->
           <v-col cols="12" sm="4">
             <v-menu
               v-model="dateMenu"
@@ -110,7 +140,7 @@
                   dense
                   outlined
                   readonly
-                  hide-details
+                  :rules="[rReq]"
                 />
               </template>
               <v-date-picker
@@ -122,14 +152,16 @@
             </v-menu>
           </v-col>
 
-          <!-- Narration -->
+          <!-- Narration (required) -->
           <v-col cols="12">
             <v-text-field
               v-model="form.narration"
               label="Narration"
               placeholder="Deposit by vendor"
-              outlined dense
+              outlined
+              dense
               clearable
+              :rules="[rReq]"
             />
           </v-col>
         </v-row>
@@ -170,8 +202,9 @@ export default {
       dateOnly: toISODate(today),
 
       form: {
-        clientId: null,       // will hold the selected option object (see v-select return-object)
-        amount: null,
+        clientId: null,       // v-select value (object first, then we map to clientId)
+        amount: null,         // pure number for backend
+        amountDisplay: '',    // formatted string for UI (10,00,000)
         sourceId: '',
         date: new Date().toISOString(),
         narration: 'Deposit received from vendor name',
@@ -190,22 +223,38 @@ export default {
         { text: 'OTHER', value: 'OTHER' }
       ],
 
-      // validation rules
-      rReq: v => !!(v && (typeof v === 'object' ? v.value : String(v).trim())) || 'Required',
-      rNumPos: v => (!isNaN(Number(v)) && Number(v) > 0) || 'Enter a positive amount'
+      // validation rules (generic, works for text/select/date)
+      rReq: v =>
+        (v !== null && v !== undefined && String(v).trim() !== '') ||
+        'Required',
+
+      // amount must be positive; accepts formatted value with commas
+      rNumPos: v => {
+        if (v === null || v === undefined || String(v).trim() === '') {
+          return 'Required'
+        }
+        const cleaned = String(v).replace(/,/g, '')
+        const n = Number(cleaned)
+        return (!isNaN(n) && n > 0) || 'Enter a positive amount'
+      }
     }
   },
 
   computed: {
-    dateDisplay () { return this.dateOnly },
-    BASE () { return (process.env.VUE_APP_AGENCY_BACKEND_URL || '').replace(/\/$/, '') },
+    dateDisplay() {
+      if (!this.dateOnly) return "";
+      const [y, m, d] = this.dateOnly.split("-");
+      return `${d}/${m}/${y}`;
+    },
+    BASE () {
+      return (process.env.VUE_APP_AGENCY_BACKEND_URL || '').replace(/\/$/, '')
+    },
     // transform clients into v-select-friendly items
     clientOptions () {
       return this.clients.map(c => ({
         label: `${c.name || '—'} (${c.clientId || c.pk || '—'})`,
         value: c.clientId,
         payload: c,
-        // keep quick access to object as return-object
         name: c.name
       }))
     }
@@ -216,6 +265,51 @@ export default {
   },
 
   methods: {
+
+    formatAmountLive(value) {
+      if (!value) {
+        this.form.amountDisplay = "";
+        this.form.amount = null;
+        return;
+      }
+      // Remove commas
+      let cleaned = value.replace(/,/g, '');
+      // Allow only numbers
+      cleaned = cleaned.replace(/[^\d]/g, '');
+      if (!cleaned) {
+        this.form.amountDisplay = "";
+        this.form.amount = null;
+        return;
+      }
+      // convert string → number
+      const num = Number(cleaned);
+      this.form.amount = num;
+      // Format in Indian system
+      this.form.amountDisplay = num.toLocaleString("en-IN");
+    },
+    // == Amount handling (Indian format) ==
+    onAmountInput (val) {
+      // Remove anything except digits and dot, also strip commas
+      const cleaned = String(val || '').replace(/,/g, '').replace(/[^\d.]/g, '')
+      // Update numeric value for backend
+      this.form.amount = cleaned ? Number(cleaned) : null
+      // Keep unformatted value while typing; we format on blur
+      this.form.amountDisplay = cleaned
+    },
+
+    formatAmountDisplay () {
+      const num = this.form.amount
+      if (num === null || num === undefined || isNaN(num)) {
+        this.form.amountDisplay = ''
+        return
+      }
+      // Indian style: 10,00,000 etc.
+      this.form.amountDisplay = num.toLocaleString('en-IN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      })
+    },
+
     applyDate (val) {
       this.dateOnly = val
       const [y, m, d] = val.split('-').map(Number)
@@ -241,7 +335,6 @@ export default {
         const r = await fetch(url)
         const data = await r.json().catch(() => ({}))
         if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`)
-        // expecting data.items array (as you posted)
         this.clients = Array.isArray(data.items) ? data.items : []
       } catch (e) {
         this.clientsError = 'Failed to load vendors'
@@ -251,11 +344,8 @@ export default {
       }
     },
 
-    // when v-select returns the selected object (because return-object is set),
-    // here we map to selectedClient object from clients list
+    // when vendor selected
     onVendorSelect (selected) {
-      // selected is the entire option object from clientOptions (because return-object),
-      // we stored value as clientId — so look up the original client item
       if (!selected) {
         this.selectedClient = null
         this.form.clientId = null
@@ -263,13 +353,15 @@ export default {
       }
 
       const clientId = selected.value || selected
-      const found = this.clients.find(c => c.clientId === clientId || c.pk === clientId)
+      const found = this.clients.find(
+        c => c.clientId === clientId || c.pk === clientId
+      )
+
       if (found) {
         this.selectedClient = found
-        // ensure the form.clientId is the simple clientId value for backend
+        // For backend we want pure clientId string
         this.form.clientId = found.clientId
       } else {
-        // fallback: if selected value is already clientId string
         this.selectedClient = null
         this.form.clientId = clientId
       }
@@ -284,8 +376,24 @@ export default {
         this.$emit('notify', { text: 'Select vendor', color: 'warning' })
         return
       }
-      if (Number(this.form.amount) <= 0) {
+      if (!(this.form.amount > 0)) {
         this.$emit('notify', { text: 'Amount must be greater than 0', color: 'warning' })
+        return
+      }
+      if (!this.form.extra.paymentType) {
+        this.$emit('notify', { text: 'Select payment mode', color: 'warning' })
+        return
+      }
+      if (!this.form.extra.referenceNo) {
+        this.$emit('notify', { text: 'Enter reference number', color: 'warning' })
+        return
+      }
+      if (!this.form.date) {
+        this.$emit('notify', { text: 'Select deposit date', color: 'warning' })
+        return
+      }
+      if (!this.form.narration || !String(this.form.narration).trim()) {
+        this.$emit('notify', { text: 'Narration is required', color: 'warning' })
         return
       }
 
@@ -298,7 +406,7 @@ export default {
           vendorId: this.form.clientId,   // backend expects vendorId (clientId)
           amount: Number(this.form.amount),
           date: this.form.date,
-          narration: this.form.narration +'  '+ this.selectedClient.name,
+          narration: this.form.narration + '  ' + (this.selectedClient?.name || ''),
           meta: {
             sourceId: this.form.sourceId,
             paymentType: this.form.extra.paymentType,
@@ -317,13 +425,14 @@ export default {
         if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`)
 
         this.$emit('notify', { text: data.message || 'Deposit successful', color: 'success' })
-        // emit created info so parent can refresh ledgers etc
         this.$emit('created', data)
 
         // reset simple fields
         this.form.amount = null
+        this.form.amountDisplay = ''
         this.form.extra.referenceNo = ''
         this.form.sourceId = ''
+        // keep selected vendor, payment mode, narration if you want; or reset if needed
       } catch (err) {
         console.error('vendorDeposit error', err)
         this.$emit('notify', { text: err?.message || 'Failed to deposit', color: 'error' })
@@ -336,6 +445,5 @@ export default {
 </script>
 
 <style scoped>
-/* small spacing fixes */
 .pa-3 { padding: 12px; }
 </style>

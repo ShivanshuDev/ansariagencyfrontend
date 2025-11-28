@@ -59,6 +59,7 @@ import AddInventryVue from '@/components/inventry/addInventry.vue';
 import ClientTable from '@/components/client/clienttable.vue';
 import EmployeeTable from '@/components/employee/employeetable.vue';
 import InventryTable from '@/components/inventry/inventryTable.vue';
+import SEARCHBYCHASSIS from '@/components/inventry/SearchByChassisNumber.vue';
 import MODELNAME from '@/components/modelName/addModelName.vue';
 import BILL from '@/components/bill/addbill.vue';
 import ADDSPARES from '@/components/spares/addSpares.vue';
@@ -103,7 +104,8 @@ export default {
     AllCustomerInvoices,
     RTODetails,
     CUSTOMERACCOUNTDetail,
-    STOCK
+    STOCK,
+    SEARCHBYCHASSIS
   },
   props: {
     selectedTab: {
@@ -144,6 +146,7 @@ export default {
       if(this.selectedTab === 'RTODetails') return 'RTODetails';
       if(this.selectedTab === 'CUSTOMERACCOUNTDetail') return 'CUSTOMERACCOUNTDetail';
       if(this.selectedTab === 'STOCK') return 'STOCK';
+      if(this.selectedTab === 'SEARCHBYCHASSIS') return 'SEARCHBYCHASSIS';
       return null;
     },
     displayName() {

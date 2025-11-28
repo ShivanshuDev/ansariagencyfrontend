@@ -8,71 +8,72 @@
       </v-btn>
     </v-col>
 
-    <v-row dense> 
+    <v-row dense>
       <v-col style="display:flex; flex-direction:row;" cols="12" md="12">
-        <div style="width:50%; ">
+        <div style="width:100%; ">
           <v-sheet class="pa-4 rounded-lg" elevation="2">
             <!-- VendorSelect -->
-            <v-select
-              style="width:100%;"
-              :items="vendors"
-              item-text="name"
-              item-value="pk"
-              label="Select vendor"
-              v-model="selectedVendorKey"
-              dense
-              outlined
-              clearable
-              :loading="loadingVendors"
-              @change="fetchVendors"
-            />
-
-            <!-- CategoryModelChassisSelect -->
-            <div md="6" class="mt-4">
-              <v-select
-                style="width:100%;"
-                :items="cmcs_categories"
-                item-text="label"
-                item-value="value"
-                label="Category"
-                v-model="cmcs_categoryLocal"
-                dense
-                outlined
-                clearable
-                hide-details
-                @change="cmcs_onCategoryChange"
-              />
-              <v-select
-                style="width:100%;"
-                v-if="cmcs_modelsForCategory.length"
-                :items="cmcs_modelsForCategory"
-                item-text="label"
-                item-value="value"
-                label="Model"
-                v-model="cmcs_modelLocal"
-                dense
-                outlined
-                clearable
-                class="mt-3"
-                hide-details
-                @change="cmcs_onModelChange"
-              />
-              <v-select
-                style="width:100%;"
-                v-if="cmcs_chassisForModel.length"
-                :items="cmcs_chassisForModel"
-                item-text="label"
-                item-value="value"
-                label="Select chassis / inventory"
-                v-model="selectedModelKey"
-                dense
-                outlined
-                clearable
-                class="mt-3"
-                hide-details
-                @change="onChassisSelected(selectedModelKey)"
-              />
-            </div>
+            <v-row>
+              <v-col cols="12" md="3">
+                <v-select
+                  :items="vendors"
+                  item-text="name"
+                  item-value="pk"
+                  label="Select vendor"
+                  v-model="selectedVendorKey"
+                  dense
+                  outlined
+                  clearable
+                  :loading="loadingVendors"
+                  @change="fetchVendors"
+                  hide-details
+                />
+              </v-col>
+              <v-col cols="12" md="3">
+                <v-select
+                  :items="cmcs_categories"
+                  item-text="label"
+                  item-value="value"
+                  label="Category"
+                  v-model="cmcs_categoryLocal"
+                  dense
+                  outlined
+                  clearable
+                  hide-details
+                  @change="cmcs_onCategoryChange"
+                />
+              </v-col>
+              <v-col cols="12" md="3">
+                <v-select
+                  v-if="cmcs_modelsForCategory.length"
+                  :items="cmcs_modelsForCategory"
+                  item-text="label"
+                  item-value="value"
+                  label="Model"
+                  v-model="cmcs_modelLocal"
+                  dense
+                  outlined
+                  clearable
+                  hide-details
+                  @change="cmcs_onModelChange"
+                />
+              </v-col>
+              <v-col cols="12" md="3">
+                <v-select
+                  v-if="cmcs_chassisForModel.length"
+                  :items="cmcs_chassisForModel"
+                  item-text="label"
+                  item-value="value"
+                  label="Select chassis / inventory"
+                  v-model="selectedModelKey"
+                  dense
+                  outlined
+                  clearable
+                  hide-details
+                  @change="onChassisSelected(selectedModelKey)"
+                />
+              </v-col>
+            </v-row>
 
             <!-- ItemForm -->
             <div cols="12" md="6" class="mt-6">
@@ -83,7 +84,7 @@
 
               <v-form ref="itemFormRef" v-model="itemFormValid" lazy-validation>
                 <v-row>
-                  <v-col cols="12" md="4" class="">
+                  <v-col cols="12" md="2">
                     <v-text-field
                       v-model.lazy.number="itemForm.price"
                       label="Price (per unit)"
@@ -96,7 +97,7 @@
                     />
                   </v-col>
 
-                  <v-col cols="12" md="4" class="">
+                  <v-col cols="12" md="2">
                     <v-text-field
                       v-model.lazy.number="itemForm.quantity"
                       label="Quantity"
@@ -107,20 +108,10 @@
                       @change="itemForm_onFieldChange"
                     />
                   </v-col>
-                  <v-col cols="12" md="4" class="">
-                    <v-text-field
-                      v-model.lazy.number="itemForm.discount"
-                      label="Discount (₹)"
-                      type="number"
-                      dense
-                      outlined
-                      min="0"
-                      @change="itemForm_onFieldChange"
-                    />
-                  </v-col>
-                </v-row>
-                <v-row>
-                  <v-col cols="12" md="4" class="">
+
+                  <!-- Discount removed from form (but still supported in model if you re-enable later) -->
+
+                  <v-col cols="12" md="2">
                     <v-text-field
                       v-model.lazy="itemForm.hsn"
                       label="HSN"
@@ -130,7 +121,7 @@
                       @change="itemForm_onFieldChange"
                     />
                   </v-col>
-                  <v-col cols="12" md="4" class="">
+                  <v-col cols="12" md="1">
                     <v-text-field
                       v-model.lazy.number="itemForm.cgst"
                       label="CGST (%)"
@@ -140,7 +131,7 @@
                       @change="itemForm_onFieldChange"
                     />
                   </v-col>
-                  <v-col cols="12" md="4" class="">
+                  <v-col cols="12" md="1">
                     <v-text-field
                       v-model.lazy.number="itemForm.sgst"
                       label="SGST (%)"
@@ -150,21 +141,7 @@
                       @change="itemForm_onFieldChange"
                     />
                   </v-col>
-                </v-row>
-
-                <!-- Actions Row: Kit + Add/Update (same row) -->
-                <v-row class="mt-2 align-center">
-                  <v-col cols="12" md="2" class="mt-2">
-                    <v-checkbox
-                      v-model="itemForm.kitGiven"
-                      label="Kit given"
-                      density="compact"
-                      hide-details
-                      @change="itemForm_onFieldChange"
-                    />
-                  </v-col>
-
-                  <v-col cols="12" md="10">
+                  <v-col cols="12" md="1">
                     <v-btn
                       color="primary"
                       elevation="3"
@@ -190,12 +167,10 @@
             </div>
           </v-sheet>
         </div>
-        <div style="width:50%; display:flex; flex-direction:row; justify-content:center; align-items:center; height:420px; ">
-          <img style="height:350px; width:350px;" src="@/assets/inventry.png" />
-        </div>
       </v-col>
 
-      <v-col cols="12" md="12">
+      <!-- INVOICE SUMMARY + TABLE: only show when there is at least one item -->
+      <v-col cols="12" md="12" v-if="selectedItems.length">
         <v-sheet class="pa-4 rounded-lg" elevation="2">
           <div class="d-flex justify-space-between align-center mb-3">
             <div>
@@ -209,45 +184,136 @@
           </div>
 
           <!-- InvoiceTable -->
-          <div class="fixed-table-container elevation-1">
+          <div
+            class="fixed-table-container elevation-1"
+            :class="{ scrollable: selectedItems.length > 5 }"
+          >
             <v-simple-table dense>
               <thead>
                 <tr>
+                  <th class="w-sl">S.No</th>
                   <th class="text-left">Item</th>
-                  <th class="text-left">HSN</th>
-                  <th class="text-center">Kit</th>
-                  <th class="text-right">Qty</th>
-                  <th class="text-right">Discount</th>
-                  <th class="text-right">CGST</th>
-                  <th class="text-right">SGST</th>
+                  <th class="text-left table-col-narrow">HSN</th>
+                  <th class="text-left table-col-narrow">Price</th>
+                  <th class="text-left table-col-narrow">Qty</th>
+                  <th class="text-left table-col-narrow">CGST</th>
+                  <th class="text-left table-col-narrow">SGST</th>
                   <th class="text-right">Total</th>
                   <th class="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <template v-for="it in selectedItems">
-                  <!-- row click enters edit; action buttons use .stop -->
-                  <tr
-                    :key="it.id"
-                  >
-                    <td><div class="font-weight-medium">{{ it.label }}</div></td>
-                    <td class="text-left">{{ it.hsn || '—' }}</td>
-                    <td class="text-center">{{ it.kitGiven ? 'Yes' : 'No' }}</td>
-                    <td class="text-right">{{ it.quantity }} × ₹{{ formatMoney(it.price) }}</td>
-                    <td class="text-right">{{ formatMoney(it.discount) }}</td>
-                    <td class="text-right">{{ (it.cgst || 0) }}%</td>
-                    <td class="text-right">{{ (it.sgst || 0) }}%</td>
-                    <td class="text-right font-weight-medium">₹{{ formatMoney(it.totalWithTax) }}</td>
+                <template v-for="(it, idx) in selectedItems">
+                  <!-- main row -->
+                  <tr :key="it.id">
+                    <td class="text-center">{{ idx + 1 }}</td>
+                    <!-- Item label -->
+                    <td>
+                      <div class="font-weight-medium">{{ it.label }}</div>
+                    </td>
+
+                    <!-- HSN editable -->
+                    <td class="text-left table-col-narrow">
+                      <v-text-field
+                        v-model="it.hsn"
+                        dense
+                        outlined
+                        hide-details
+                        style="width:180px;"
+                        class="table-col-narrow" 
+                        @change="onRowFieldChange(it)"
+                      />
+                    </td>
+
+                    <!-- Price editable -->
+                    <td class="text-right table-col-narrow">
+                      <v-text-field
+                        v-model.number="it.price"
+                        type="number"
+                        dense
+                        outlined
+                        hide-details
+                        class="table-col-narrow" 
+                        @change="onRowFieldChange(it)"
+                      />
+                    </td>
+
+                    <!-- Quantity editable -->
+                    <td class="text-right table-col-narrow">
+                      <v-text-field
+                        v-model.number="it.quantity"
+                        type="number"
+                        dense
+                        outlined
+                        hide-details
+                        class="table-col-narrow" 
+                        @change="onRowFieldChange(it)"
+                      />
+                    </td>
+
+                    <!-- CGST editable (default 9%) -->
+                    <td class="text-right table-col-narrow">
+                      <v-text-field
+                        v-model.number="it.cgst"
+                        type="number"
+                        dense
+                        outlined
+                        hide-details
+                        class="table-col-narrow" 
+                        suffix="%"
+                        @change="onRowFieldChange(it)"
+                      />
+                    </td>
+
+                    <!-- SGST editable (default 9%) -->
+                    <td class="text-right table-col-narrow">
+                      <v-text-field
+                        v-model.number="it.sgst"
+                        type="number"
+                        dense
+                        outlined
+                        hide-details
+                        class="table-col-narrow" 
+                        suffix="%"
+                        @change="onRowFieldChange(it)"
+                      />
+                    </td>
+
+                    <!-- Total (read-only) -->
+                    <td class="text-right font-weight-medium">
+                      ₹{{ formatMoney(it.totalWithTax) }}
+                    </td>
+
+                    <!-- Actions -->
                     <td class="text-right">
-                      <v-btn icon small color="primary" @click.stop="editItem(it)"><v-icon small>mdi-pencil</v-icon></v-btn>
-                      <v-btn icon small color="red" @click.stop="removeItemAndRestore(it)"><v-icon small>mdi-delete</v-icon></v-btn>
+                      <v-btn
+                        icon
+                        small
+                        color="red"
+                        @click.stop="removeItemAndRestore(it)"
+                      >
+                        <v-icon small>mdi-delete</v-icon>
+                      </v-btn>
                     </td>
                   </tr>
+
+                  <!-- details row -->
                   <tr :key="`${it.id}-details`">
-                    <td colspan="9" style="padding:6px 12px 12px 12px; background: #fafafa;">
-                      <div style="width:100%; display:flex; flex-direction:row; font-size:12px; color:rgba(0,0,0,0.6);">
-                        <div style="margin-bottom:4px;">Chassis: {{ it.chassisNumber || '—' }}</div>&nbsp;&nbsp;&nbsp;&nbsp;
-                        <div style="margin-bottom:4px;">Engine: {{ it.engineNumber || '—' }}</div>&nbsp;&nbsp;&nbsp;&nbsp;
+                    <td
+                      colspan="9"
+                      style="padding:6px 12px 12px 12px; background: #fafafa;"
+                    >
+                      <div
+                        style="width:100%; display:flex; flex-direction:row; font-size:12px; color:rgba(0,0,0,0.6);"
+                      >
+                        <div style="margin-bottom:4px;">
+                          Chassis: {{ it.chassisNumber || '—' }}
+                        </div>
+                        &nbsp;&nbsp;&nbsp;&nbsp;
+                        <div style="margin-bottom:4px;">
+                          Engine: {{ it.engineNumber || '—' }}
+                        </div>
+                        &nbsp;&nbsp;&nbsp;&nbsp;
                         <div>Color: {{ it.color || '—' }}</div>
                       </div>
                     </td>
@@ -260,52 +326,25 @@
           <v-divider class="my-3" />
           <v-row>
             <v-col cols="12" md="6">
-              <div class="text--secondary">Tax & discount breakdown</div>
+              <div class="text--secondary">Tax breakdown</div>
               <div class="mt-2">CGST: ₹{{ formatMoney(totalCgst) }}</div>
               <div>SGST: ₹{{ formatMoney(totalSgst) }}</div>
-              <div>Discount: ₹{{ formatMoney(totalDiscount) }}</div>
             </v-col>
 
             <v-col cols="12" md="6" class="text-right">
               <div class="subtitle-2 text--secondary">Grand total</div>
-              <div class="display-1 font-weight-bold">₹{{ formatMoney(grandTotal) }}</div>
-              <div class="text--secondary caption">(Inclusive of taxes, less discounts)</div>
+              <div class="display-1 font-weight-bold">
+                ₹{{ formatMoney(grandTotal) }}
+              </div>
+              <div class="text--secondary caption">
+                (Inclusive of taxes)
+              </div>
             </v-col>
           </v-row>
 
           <v-divider class="my-3" />
           <!-- SummaryPayment -->
           <div>
-            <v-row class="align-center">
-              <v-col cols="12" md="4">
-                <v-text-field
-                  v-model.number="amountPaid"
-                  label="Amount paid (₹)"
-                  type="number"
-                  min="0"
-                  dense
-                  outlined
-                  @input="onAmountPaidChange"
-                />
-              </v-col>
-
-              <v-col cols="12" md="4">
-                <v-select
-                  :items="paymentTypes"
-                  label="Payment type"
-                  v-model="paymentType"
-                  dense
-                  outlined
-                  clearable
-                />
-              </v-col>
-
-              <v-col cols="12" md="4" class="text-right">
-                <div>Due amount: <strong>₹{{ formatMoney(dueAmount) }}</strong></div>
-                <div v-if="changeDue>0" class="text-success">Change: ₹{{ formatMoney(changeDue) }}</div>
-              </v-col>
-            </v-row>
-
             <v-row class="mt-4" justify="end">
               <v-col cols="12" md="6" class="text-right">
                 <v-btn text small @click="openClearConfirm">Clear</v-btn>
@@ -319,7 +358,7 @@
       </v-col>
     </v-row>
 
-    <!-- InvoicePreview (inlined) -->
+    <!-- InvoicePreview (same structure as original so PDF/export stays correct) -->
     <v-dialog v-model="preview" max-width="1200" persistent>
       <v-card class="pa-0" style="overflow: hidden;">
         <br />
@@ -361,7 +400,10 @@
               <div class="blk-body">
                 <div class="small">{{ formatAddressPlain(buyer.address) }}</div>
                 <div class="small">GSTIN : {{ buyer.gstin || '—' }}</div>
-                <div class="small">State : {{ buyer.stateName || '—' }} &nbsp; Code : {{ buyer.stateCode || '—' }}</div>
+                <div class="small">
+                  State : {{ buyer.stateName || '—' }}
+                  &nbsp; Code : {{ buyer.stateCode || '—' }}
+                </div>
               </div>
             </div>
             <div class="col">
@@ -369,7 +411,10 @@
               <div class="blk-body">
                 <div class="small">{{ formatAddressPlain(consignee.address) }} </div>
                 <div class="small">GSTIN : {{ consignee.gstin || '—' }}</div>
-                <div class="small">State : {{ consignee.stateName || '—' }} &nbsp; Code : {{ consignee.stateCode || '—' }}</div>
+                <div class="small">
+                  State : {{ consignee.stateName || '—' }}
+                  &nbsp; Code : {{ consignee.stateCode || '—' }}
+                </div>
               </div>
             </div>
           </div>
@@ -414,7 +459,10 @@
                 <td class="text-right bold">{{ money(it.lineTotal) }}</td>
               </tr>
               <tr class="total-row">
-                <td colspan="5" class="text-left bold">AMOUNT (IN WORDS) : <b>{{ amountInWords }} Rupees Only</b></td>
+                <td colspan="5" class="text-left bold">
+                  AMOUNT (IN WORDS) :
+                  <b>{{ amountInWords }} Rupees Only</b>
+                </td>
                 <td class="text-right bold">{{ money(sum.taxable) }}</td>
                 <td class="text-right bold">{{ money(sum.cgst) }}</td>
                 <td class="text-right bold">{{ money(sum.sgst) }}</td>
@@ -439,20 +487,28 @@
               <div style="display:flex; flex-direction:column; justify-content:center;">
                 <h3 style="margin-left:200px; margin-top:10px;">for ANSARI AUTOMOBILES</h3>
                 <br/>
-                <h4 style="margin-left:200px; margin-top:10px; border-top:2px solid black; text-align:center;">Authorised Signatory</h4>
+                <h4 style="margin-left:200px; margin-top:10px; border-top:2px solid black; text-align:center;">
+                  Authorised Signatory
+                </h4>
               </div>
             </div>
           </div>
 
           <div class="declare ">
             <div class="small">
-              <h4>Declaration : *** We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct. ***</h4>
+              <h4>
+                Declaration : *** We declare that this invoice shows the actual price of the goods
+                described and that all particulars are true and correct. ***
+              </h4>
             </div>
           </div>
         </v-card-text>
 
         <!-- Hidden Gate Pass -->
-        <div ref="gatePassCard" style="padding:16px; background:#fff; color:#000; font-family: Arial, Helvetica, sans-serif; font-size:12px; display:none;">
+        <div
+          ref="gatePassCard"
+          style="padding:16px; background:#fff; color:#000; font-family: Arial, Helvetica, sans-serif; font-size:12px; display:none;"
+        >
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:12px;">
               <img style="height:40px; width:140px;" src="@/assets/newLogoTVS.png" />
@@ -476,7 +532,9 @@
           <table style="width:100%; border-collapse:collapse;">
             <thead>
               <tr>
-                <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:center; width:44px;">S.No</th>
+                <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:center; width:44px;">
+                  S.No
+                </th>
                 <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:left;">Category</th>
                 <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:left;">Model No</th>
                 <th style="border:1px solid #000; padding:6px; background:#f2f2f2; text-align:left;">Chassis No</th>
@@ -541,8 +599,12 @@
 
           <v-divider vertical class="mx-1" />
 
-          <v-btn variant="text" @click="downloadPdfFromPreview"><v-icon start>mdi-download</v-icon>Download</v-btn>
-          <v-btn variant="text" @click="printPdf"><v-icon start>mdi-printer</v-icon>Print</v-btn>
+          <v-btn variant="text" @click="downloadPdfFromPreview">
+            <v-icon start>mdi-download</v-icon>Download
+          </v-btn>
+          <v-btn variant="text" @click="printPdf">
+            <v-icon start>mdi-printer</v-icon>Print
+          </v-btn>
           <v-spacer />
           <v-btn variant="text" @click="preview = false">Close</v-btn>
         </v-card-actions>
@@ -581,7 +643,7 @@ import html2pdf from 'html2pdf.js'
 
 export default {
   name: 'SellToVendor',
-  data() {
+  data () {
     return {
       // Vendors / inventories
       vendors: [],
@@ -595,13 +657,21 @@ export default {
       // Selection + item form
       selectedVendorKey: null,
       selectedModelKey: null,
-      itemForm: { price: 0, quantity: 1, discount: 0, cgst: 0, sgst: 0, hsn: '', kitGiven: false },
+      // CGST & SGST default 9%, but user can change
+      itemForm: {
+        price: 0,
+        quantity: 1,
+        discount: 0,
+        cgst: 9,
+        sgst: 9,
+        hsn: ''
+      },
       itemFormValid: true,
 
-      // Editing state
+      // Editing state (form-based editing largely unused now)
       isEditing: false,
-      editingBackup: null,       // snapshot of the row being edited (row remains visible)
-      _editTempAddedKey: null,   // if we temporarily added inventory back to dropdown
+      editingBackup: null,
+      _editTempAddedKey: null,
       revealPrice: false,
 
       // Invoice lines + payment
@@ -611,7 +681,7 @@ export default {
       paymentTypes: ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Other'],
       // Invoice meta
       preview: false,
-      invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(Math.random()*9000+1000)}`,
+      invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000 + 1000)}`,
       invoiceDate: new Date().toLocaleDateString('en-GB'),
       // Preview/save status
       statusType: null,
@@ -625,11 +695,11 @@ export default {
       clearDialog: false,
       // Endpoints
       updateEndpoint: process.env.VUE_APP_AGENCY_BACKEND_URL + 'updateInventoryItem',
-      presignEndpoint: process.env.VUE_APP_AGENCY_BACKEND_URL + 'uploadImages',
+      presignEndpoint: process.env.VUE_APP_AGENCY_BACKEND_URL + 'uploadImages'
     }
   },
 
-  async created() {
+  async created () {
     await Promise.all([this.fetchVendors(), this.fetchInventories()])
 
     const invoiceNumber = this.$route.query.invoiceNumber
@@ -640,47 +710,72 @@ export default {
 
   computed: {
     /* ---------- SELL PAGE TOTALS ---------- */
-    subtotal() {
-      return this.selectedItems.reduce((s, it) => s + (Number(it.price || 0) * Number(it.quantity || 0)), 0)
+    subtotal () {
+      return this.selectedItems.reduce(
+        (s, it) => s + (Number(it.price || 0) * Number(it.quantity || 0)),
+        0
+      )
     },
-    totalDiscount() {
-      return this.selectedItems.reduce((s, it) => s + Number(it.discount || 0), 0)
+    totalDiscount () {
+      return this.selectedItems.reduce(
+        (s, it) => s + Number(it.discount || 0),
+        0
+      )
     },
-    totalCgst() {
-      return this.selectedItems.reduce((s, it) => s + Number(it.cgstAmount || 0), 0)
+    totalCgst () {
+      return this.selectedItems.reduce(
+        (s, it) => s + Number(it.cgstAmount || 0),
+        0
+      )
     },
-    totalSgst() {
-      return this.selectedItems.reduce((s, it) => s + Number(it.sgstAmount || 0), 0)
+    totalSgst () {
+      return this.selectedItems.reduce(
+        (s, it) => s + Number(it.sgstAmount || 0),
+        0
+      )
     },
-    totalTax() { return this.totalCgst + this.totalSgst },
-    grandTotal() {
-      return this.selectedItems.reduce((s, it) => s + Number(it.totalWithTax || 0), 0)
+    totalTax () {
+      return this.totalCgst + this.totalSgst
+    },
+    grandTotal () {
+      return this.selectedItems.reduce(
+        (s, it) => s + Number(it.totalWithTax || 0),
+        0
+      )
     },
 
-    selectedVendor() { return this.vendors.find(v => v.pk === this.selectedVendorKey) || null },
+    selectedVendor () {
+      return this.vendors.find(v => v.pk === this.selectedVendorKey) || null
+    },
 
-    dueAmount() {
+    dueAmount () {
       const due = Number(this.grandTotal) - Number(this.amountPaid || 0)
       return due > 0 ? Number(due.toFixed(2)) : 0
     },
-    changeDue() {
+    changeDue () {
       const change = Number(this.amountPaid || 0) - Number(this.grandTotal)
       return change > 0 ? Number(change.toFixed(2)) : 0
     },
-    canAddItem() {
-      return Boolean(this.selectedModelKey) && Number(this.itemForm.price) > 0 && Number(this.itemForm.quantity) > 0
+    canAddItem () {
+      return (
+        Boolean(this.selectedModelKey) &&
+        Number(this.itemForm.price) > 0 &&
+        Number(this.itemForm.quantity) > 0
+      )
     },
 
     /* ---------- CMCS computed ---------- */
-    cmcs_categories() {
+    cmcs_categories () {
       const m = {}
       this.availableModel.forEach(it => {
         const cat = (it.categoryName || 'Uncategorized').trim()
         if (!m[cat]) m[cat] = true
       })
-      return Object.keys(m).sort().map(k => ({ label: k, value: k }))
+      return Object.keys(m)
+        .sort()
+        .map(k => ({ label: k, value: k }))
     },
-    cmcs_modelsForCategory() {
+    cmcs_modelsForCategory () {
       if (!this.cmcs_categoryLocal) return []
       const m = {}
       this.availableModel.forEach(it => {
@@ -688,14 +783,18 @@ export default {
         const model = (it.modelName || it.label || 'Unknown Model').trim()
         if (!m[model]) m[model] = true
       })
-      return Object.keys(m).sort().map(k => ({ label: k, value: k }))
+      return Object.keys(m)
+        .sort()
+        .map(k => ({ label: k, value: k }))
     },
-    cmcs_chassisForModel() {
+    cmcs_chassisForModel () {
       if (!this.cmcs_categoryLocal || !this.cmcs_modelLocal) return []
       const rows = (this.availableModel || [])
         .filter(it => {
-          const categoryMatch = (it.categoryName || '').trim() === this.cmcs_categoryLocal
-          const modelMatch = (it.modelName || it.label || '').trim() === this.cmcs_modelLocal
+          const categoryMatch =
+            (it.categoryName || '').trim() === this.cmcs_categoryLocal
+          const modelMatch =
+            (it.modelName || it.label || '').trim() === this.cmcs_modelLocal
           const statusMatch = (it.status || '').toUpperCase() === 'ACTIVE'
           return categoryMatch && modelMatch && statusMatch
         })
@@ -725,7 +824,9 @@ export default {
       return {
         name: v.name || '',
         addressLine1: v.billing?.line1 || '',
-        cityState: v.billing?.city ? `${v.billing.city}, ${v.billing.state}` : '',
+        cityState: v.billing?.city
+          ? `${v.billing.city}, ${v.billing.state}`
+          : '',
         gstin: v.gstin || '',
         stateName: v.billing?.state || ' ',
         stateCode: v.billing?.stateCode || ' ',
@@ -742,18 +843,31 @@ export default {
       return {
         clientId: v.shipping?.clientId || v.clientId || '',
         name: v.shipping?.name || v.name || '',
-        address: v.shipping?.line1 ? `${v.shipping.line1}${v.shipping.line2 ? ', '+v.shipping.line2 : ''}, ${v.shipping.city || ''}, ${v.shipping.state || ''} ${v.shipping.pincode || ''}` : (v.billing?.line1 || ''),
+        address: v.shipping?.line1
+          ? `${v.shipping.line1}${
+              v.shipping.line2 ? ', ' + v.shipping.line2 : ''
+            }, ${v.shipping.city || ''}, ${v.shipping.state || ''} ${
+              v.shipping.pincode || ''
+            }`
+          : v.billing?.line1 || '',
         phone: v.shipping?.phone || v.phone || '',
         gstin: v.gstin || '',
         stateName: v.shipping?.state || v.billing?.state || '',
         stateCode: v.shipping?.stateCode || v.billing?.stateCode || ''
       }
     },
-    buyer () { return { ...this.consignee } },
-    meta () { return { dated: this.invoiceDate || '', paymentTerms: this.paymentType || '' } },
+    buyer () {
+      return { ...this.consignee }
+    },
+    meta () {
+      return { dated: this.invoiceDate || '', paymentTerms: this.paymentType || '' }
+    },
 
     normalizedItems () {
-      const round2 = v => Number((Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2))
+      const round2 = v =>
+        Number(
+          (Math.round((v + Number.EPSILON) * 100) / 100).toFixed(2)
+        )
       return (this.selectedItems || []).map((raw, idx) => {
         const qty = Number(raw.quantity ?? raw.qty ?? 1)
         const entered = Number(raw.price ?? raw.rate ?? 0)
@@ -763,24 +877,30 @@ export default {
         const igstRate = Number(raw.igst ?? 0)
         const totalGstRate = cgstRate + sgstRate + igstRate
         const base = totalGstRate ? gross / (1 + totalGstRate / 100) : gross
-        const cgstAmt = base * cgstRate / 100
-        const sgstAmt = base * sgstRate / 100
-        const igstAmt = base * igstRate / 100
+        const cgstAmt = base * (cgstRate / 100)
+        const sgstAmt = base * (sgstRate / 100)
+        const igstAmt = base * (igstRate / 100)
 
         return {
           _key: raw.id ?? idx,
           color: raw.color,
           label: raw.label || raw.modelName || 'Item',
-          note: (raw.chassisNumber || raw.engineNumber)
-            ? `Chassis: ${raw.chassisNumber || raw.chassis || '—'}  |  Engine: ${raw.engineNumber || '—'}`
-            : '',
+          note:
+            raw.chassisNumber || raw.engineNumber
+              ? `Chassis: ${
+                  raw.chassisNumber || raw.chassis || '—'
+                }  |  Engine: ${raw.engineNumber || '—'}`
+              : '',
           hsn: raw.hsn || '',
           qty,
           rate: entered,
           taxable: round2(base),
-          cgstRate, cgstAmt: round2(cgstAmt),
-          sgstRate, sgstAmt: round2(sgstAmt),
-          igstRate, igstAmt: round2(igstAmt),
+          cgstRate,
+          cgstAmt: round2(cgstAmt),
+          sgstRate,
+          sgstAmt: round2(sgstAmt),
+          igstRate,
+          igstAmt: round2(igstAmt),
           cessAmt: round2(Number(raw.cess ?? 0)),
           lineTotal: round2(gross),
           chassisNumber: raw.chassisNumber || raw.chassis || null
@@ -796,66 +916,89 @@ export default {
       return Array.from(s)
     },
     sum () {
-      return this.normalizedItems.reduce((acc, it) => {
-        acc.taxable += it.taxable
-        acc.cgst += it.cgstAmt
-        acc.sgst += it.sgstAmt
-        acc.igst += it.igstAmt
-        acc.cess += it.cessAmt
-        acc.grand += it.lineTotal
-        return acc
-      }, { taxable: 0, cgst: 0, sgst: 0, igst: 0, cess: 0, grand: 0 })
+      return this.normalizedItems.reduce(
+        (acc, it) => {
+          acc.taxable += it.taxable
+          acc.cgst += it.cgstAmt
+          acc.sgst += it.sgstAmt
+          acc.igst += it.igstAmt
+          acc.cess += it.cessAmt
+          acc.grand += it.lineTotal
+          return acc
+        },
+        {
+          taxable: 0,
+          cgst: 0,
+          sgst: 0,
+          igst: 0,
+          cess: 0,
+          grand: 0
+        }
+      )
     },
     totalDiscountComputed () {
-      const fromItems = this.normalizedItems.reduce((s, it) => s + (it.discAmt || 0), 0)
+      const fromItems = this.normalizedItems.reduce(
+        (s, it) => s + (it.discAmt || 0),
+        0
+      )
       return this.totalDiscount || fromItems
     },
-    amountInWords () { return this.toCurrencyWords(this.sum.grand) || 'Zero' },
+    amountInWords () {
+      return this.toCurrencyWords(this.sum.grand) || 'Zero'
+    },
     canSave () {
       const hasBulk = this.allChassisNumbers.length > 0
-      const hasFallback = false // not using itemPk/sk in merged file
+      const hasFallback = false
       return !!this.statusType && (hasBulk || hasFallback)
     },
 
     gatePassRows () {
       return (this.selectedItems || [])
-        .filter(r => (r?.chassisNumber || r?.chassis))
+        .filter(r => r?.chassisNumber || r?.chassis)
         .map((raw, idx) => ({
           key: raw.id ?? `${raw.chassisNumber || raw.chassis}-${idx}`,
           category: raw.category || raw.type || raw.segment || '',
-          model: raw.modelNumber || raw.modelNo || raw.modelName || raw.label || '',
+          model:
+            raw.modelNumber ||
+            raw.modelNo ||
+            raw.modelName ||
+            raw.label ||
+            '',
           chassis: raw.chassisNumber || raw.chassis || '',
           engine: raw.engineNumber || raw.engine || '',
           color: raw.color || '',
-          // prefer explicit warehouse; fallback to location strings if provided by API
-          warehouse: raw.warehouse || raw.location || raw.locationName || ''
+          warehouse:
+            raw.warehouse || raw.location || raw.locationName || ''
         }))
     },
 
-    /* helpful label from selectedModelKey */
-    selectedModelLabel() {
+    selectedModelLabel () {
       if (!this.selectedModelKey) return null
       const inv = this.inventoriesMap[this.selectedModelKey]
-      return (inv && (inv.modelName || inv.label || inv.model || inv.name)) || null
+      return (
+        (inv && (inv.modelName || inv.label || inv.model || inv.name)) ||
+        null
+      )
     }
   },
 
   watch: {
-    selectedModelKey(newKey) {
+    selectedModelKey (newKey) {
       if (!newKey) return
       const inv = this.inventoriesMap[newKey] || null
       if (!inv) return
-      this.itemForm.hsn = (inv.hsn || this.itemForm.hsn || '')
-      // Guard: do not overwrite price when editing an existing item
+      this.itemForm.hsn = inv.hsn || this.itemForm.hsn || ''
       if (!this.isEditing) {
         this.itemForm.price = Number(0)
       }
-      this.itemForm.kitGiven = !!this.itemForm.kitGiven
     },
     '$route.query.invoiceNumber': {
       async handler (inv) {
         if (!inv) return
-        if (!this.vendors.length || !Object.keys(this.inventoriesMap).length) {
+        if (
+          !this.vendors.length ||
+          !Object.keys(this.inventoriesMap).length
+        ) {
           await Promise.all([this.fetchVendors(), this.fetchInventories()])
         }
         await this.loadSellToVendorForEdit(inv)
@@ -866,28 +1009,32 @@ export default {
   methods: {
     async loadSellToVendorForEdit (invoiceNumber) {
       try {
-        const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}getselltovendorbyinvoicenumber/${encodeURIComponent(invoiceNumber)}`
+        const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}getselltovendorbyinvoicenumber/${encodeURIComponent(
+          invoiceNumber
+        )}`
         const res = await fetch(url)
         const j = await res.json().catch(() => ({}))
-        if (!res.ok || !j?.item) throw new Error(j?.message || 'Invoice not found')
+        if (!res.ok || !j?.item) {
+          throw new Error(j?.message || 'Invoice not found')
+        }
 
         const r = j.item
 
-        // not in editing of a row yet
         this.isEditing = false
         this.editingBackup = null
         this._editTempAddedKey = null
 
-        // top-level fields
         this.invoiceNumber = r.invoiceNumber
-        this.invoiceDate = (r.invoiceDate && new Date(r.invoiceDate).toLocaleDateString('en-GB')) || new Date().toLocaleDateString('en-GB')
+        this.invoiceDate =
+          (r.invoiceDate &&
+            new Date(r.invoiceDate).toLocaleDateString('en-GB')) ||
+          new Date().toLocaleDateString('en-GB')
         this.statusType = r.meta?.statusType || 'SOLD'
         this.selectedVendorKey = r.vendorKey || null
 
         this.amountPaid = Number(r.payment?.amountPaid || 0)
         this.paymentType = r.payment?.paymentType || null
 
-        // items
         this.selectedItems = (r.items || []).map((it, idx) => {
           const row = {
             id: it.id || `edit-${idx}-${Date.now()}`,
@@ -900,8 +1047,15 @@ export default {
             price: Number(it.price || 0),
             quantity: Number(it.quantity || 1),
             discount: Number(it.discount || 0),
-            cgst: Number(it.cgst || 0),
-            sgst: Number(it.sgst || 0),
+            // default CGST/SGST to 9% if not provided; keep stored values if present
+            cgst:
+              it.cgst == null
+                ? 9
+                : Number(it.cgst),
+            sgst:
+              it.sgst == null
+                ? 9
+                : Number(it.sgst),
             taxable: Number(it.taxable || 0),
             cgstAmount: Number(it.cgstAmount || 0),
             sgstAmount: Number(it.sgstAmount || 0),
@@ -915,15 +1069,18 @@ export default {
         this.showSnack(`Failed to load invoice: ${e.message}`, 'error')
       }
     },
-    ensureInvoiceNumber() {
-      // clientId from consignee/buyer; fallback to 'UNKNOWN'
-      const clientId = (this.buyer?.clientId && String(this.buyer.clientId).trim()) || 'UNKNOWN'
+
+    ensureInvoiceNumber () {
+      const clientId =
+        (this.buyer?.clientId && String(this.buyer.clientId).trim()) ||
+        'UNKNOWN'
       const epochSec = Math.floor(Date.now() / 1000).toString()
-      const last9 = epochSec.slice(-9)                      // 9 digits
-      this.invoiceNumber = `INV${last9}${clientId}`         // no separators per spec
+      const last9 = epochSec.slice(-9)
+      this.invoiceNumber = `INV${last9}${clientId}`
       return this.invoiceNumber
     },
-    mapItemsForSellToVendor() {
+
+    mapItemsForSellToVendor () {
       return (this.selectedItems || []).map(r => ({
         inventoryId: r.inventoryId,
         label: r.label,
@@ -935,7 +1092,7 @@ export default {
         color: r.color || '',
 
         quantity: Number(r.quantity || 0),
-        price: Number(r.price || 0),          // GST-inclusive per unit (your UI)
+        price: Number(r.price || 0),
         discount: Number(r.discount || 0),
         cgst: Number(r.cgst || 0),
         sgst: Number(r.sgst || 0),
@@ -948,12 +1105,13 @@ export default {
       }))
     },
 
-    async addSellToVendor() {
-      // Build safe payload from your current state
+    async addSellToVendor () {
       const invoiceNumber = this.ensureInvoiceNumber()
       const payload = {
         invoiceNumber,
-        clientId: (this.buyer?.clientId && String(this.buyer.clientId).trim()) || 'UNKNOWN',
+        clientId:
+          (this.buyer?.clientId &&
+            String(this.buyer.clientId).trim()) || 'UNKNOWN',
         vendorKey: this.selectedVendorKey || null,
         vendorName: this.company?.name || null,
         invoiceDate: new Date().toISOString(),
@@ -1000,22 +1158,28 @@ export default {
         }
       }
 
-      const res = await fetch(process.env.VUE_APP_AGENCY_BACKEND_URL + 'addselltovendor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
+      const res = await fetch(
+        process.env.VUE_APP_AGENCY_BACKEND_URL + 'addselltovendor',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      )
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.ok === false) {
         throw new Error(json?.message || 'Sell-to-vendor save failed')
       }
       return true
     },
+
     /* -------- fetch -------- */
-    async fetchVendors() {
+    async fetchVendors () {
       this.loadingVendors = true
       try {
-        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllClient')
+        const res = await axios.get(
+          process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllClient'
+        )
         this.vendors = (res.data?.items || []).map(v => ({ ...v }))
       } catch (e) {
         console.warn('Failed to fetch vendors', e)
@@ -1023,119 +1187,92 @@ export default {
         this.loadingVendors = false
       }
     },
-    async fetchInventories() {
+
+    async fetchInventories () {
       this.loadingModel = true
       try {
-        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry')
+        const res = await axios.get(
+          process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry'
+        )
         const items = (res.data?.items || []).map(i => ({ ...i }))
 
         this.inventoriesMap = {}
         this.availableModel = items.map(it => {
-          const key = (it.chassisNumber && String(it.chassisNumber).trim()) ||
-                      (it.gsisk3 && String(it.gsisk3).trim()) ||
-                      (it.sk && String(it.sk).trim()) ||
-                      (`inv_${Math.random().toString(36).slice(2,8)}`)
-          const copy = { ...it, __key: key, label: it.modelName || it.label || it.model || 'Item' }
+          const key =
+            (it.chassisNumber && String(it.chassisNumber).trim()) ||
+            (it.gsisk3 && String(it.gsisk3).trim()) ||
+            (it.sk && String(it.sk).trim()) ||
+            `inv_${Math.random()
+              .toString(36)
+              .slice(2, 8)}`
+          const copy = {
+            ...it,
+            __key: key,
+            label: it.modelName || it.label || it.model || 'Item'
+          }
           this.inventoriesMap[key] = copy
           return copy
         })
-        this.availableModel.sort((a,b) => (a.label||'').localeCompare(b.label||''))
+        this.availableModel.sort((a, b) =>
+          (a.label || '').localeCompare(b.label || '')
+        )
       } catch (e) {
         console.warn('Failed to fetch inventories', e)
       } finally {
         this.loadingModel = false
       }
     },
+
     /* -------- helpers -------- */
-    formatMoney(v) { return Number(v || 0).toFixed(2) },
-    onChassisSelected(chassisKey) { this.selectedModelKey = chassisKey },
-    togglePreview() { this.preview = !this.preview },
-    onAmountPaidChange() {
-      if (this.amountPaid === '' || this.amountPaid == null) this.amountPaid = 0
+    formatMoney (v) {
+      return Number(v || 0).toFixed(2)
+    },
+    onChassisSelected (chassisKey) {
+      this.selectedModelKey = chassisKey
+    },
+    togglePreview () {
+      this.preview = !this.preview
+    },
+    onAmountPaidChange () {
+      if (this.amountPaid === '' || this.amountPaid == null) {
+        this.amountPaid = 0
+      }
       this.amountPaid = Number(this.amountPaid || 0)
     },
+
     /* -------- CMCS handlers -------- */
-    cmcs_onCategoryChange() {
+    cmcs_onCategoryChange () {
       this.cmcs_modelLocal = null
       this.selectedModelKey = null
     },
-    cmcs_onModelChange() {
+    cmcs_onModelChange () {
       this.selectedModelKey = null
     },
+
     /* -------- ItemForm handlers -------- */
-    itemForm_onFieldChange() {
+    itemForm_onFieldChange () {
       clearTimeout(this._debounceTimer)
-      this._debounceTimer = setTimeout(() => { /* noop */ }, 300)
+      this._debounceTimer = setTimeout(() => {}, 300)
     },
 
-    itemForm_onAddOrUpdateClicked() {
+    itemForm_onAddOrUpdateClicked () {
       const price = Number(this.itemForm.price || 0)
       const qty = Number(this.itemForm.quantity || 0)
       if (!(price >= 0 && qty > 0)) {
-        this.$refs.itemFormRef && this.$refs.itemFormRef.validate && this.$refs.itemFormRef.validate()
+        this.$refs.itemFormRef &&
+          this.$refs.itemFormRef.validate &&
+          this.$refs.itemFormRef.validate()
         return
       }
       if (!this.canAddItem) return
 
-      if (this.isEditing && this.editingBackup) {
-        // --- UPDATE existing row in place ---
-        // const inv = this.resolveSelectedInventory()
-        // if (!inv) return
-        const inv = this.resolveSelectedInventory()
-        if (!inv) return
-        const updated = {
-          ...this.editingBackup,
-          inventoryId: inv.__key ?? this.selectedModelKey,
-          label: inv.label || inv.modelName || inv.name || this.editingBackup.label,
-          hsn: (this.itemForm.hsn && String(this.itemForm.hsn).trim()) ? String(this.itemForm.hsn).trim() : (inv.hsn || ''),
-
-          // specs
-          chassisNumber: inv.chassisNumber || inv.gsisk3 || inv.chassisNo || inv.chassis || this.editingBackup.chassisNumber || '',
-          engineNumber: inv.engineNumber || inv.engineNo || inv.engine || this.editingBackup.engineNumber || '',
-          color: inv.color || this.editingBackup.color || '',
-
-          // NEW: persist Category & Location
-          category: inv.categoryName || inv.category || inv.type || inv.segment || this.editingBackup.category || '',
-          warehouse: inv.warehouse || inv.location || inv.locationName || inv.store || this.editingBackup.warehouse || '',
-
-          // pricing/tax
-          price: Number(this.itemForm.price || 0),
-          quantity: Number(this.itemForm.quantity || 1),
-          discount: Number(this.itemForm.discount || 0),
-          cgst: Number(this.itemForm.cgst || 0),
-          sgst: Number(this.itemForm.sgst || 0),
-
-          kitGiven: !!this.itemForm.kitGiven
-        }
-
-        this.computeRowTotals(updated)
-
-        const idx = this.selectedItems.findIndex(i => i.id === this.editingBackup.id)
-        if (idx >= 0) this.$set(this.selectedItems, idx, updated)
-
-        // inventory reservation adjustments
-        const oldKey = this.editingBackup.inventoryId
-        const newKey = updated.inventoryId
-
-        if (newKey !== oldKey) {
-          // old inventory becomes available again
-          this.ensureInventoryInAvailable(oldKey)
-          // new inventory is now reserved
-          this.removeInventoryFromAvailable(newKey)
-        } else if (this._editTempAddedKey === oldKey) {
-          // same inventory; remove temporary availability so it remains reserved
-          this.removeInventoryFromAvailable(oldKey)
-        }
-
-        this.clearFormAndEditing()
-        return
-      }
-
-      // --- ADD new row ---
+      // Only ADD logic now; table handles editing
       const newItem = this.buildItemFromForm()
       if (!newItem) return
       this.computeRowTotals(newItem)
-      const existing = this.selectedItems.find(i => i.inventoryId === newItem.inventoryId)
+      const existing = this.selectedItems.find(
+        i => i.inventoryId === newItem.inventoryId
+      )
       if (existing) {
         existing.quantity = Number(existing.quantity || 0) + newItem.quantity
         existing.price = newItem.price
@@ -1143,7 +1280,6 @@ export default {
         existing.cgst = newItem.cgst
         existing.sgst = newItem.sgst
         existing.hsn = newItem.hsn
-        existing.kitGiven = newItem.kitGiven
         existing.chassisNumber = newItem.chassisNumber
         existing.engineNumber = newItem.engineNumber
         existing.color = newItem.color
@@ -1155,66 +1291,88 @@ export default {
       this.clearFormAndEditing()
     },
 
-    resolveSelectedInventory() {
-      if (!this.selectedModelKey) return null
-      return this.inventoriesMap[this.selectedModelKey] ||
-             this.availableModel.find(it => it.__key === this.selectedModelKey) || null
+    // Inline table edit handler
+    onRowFieldChange (row) {
+      this.computeRowTotals(row)
     },
 
-    buildItemFromForm() {
-  const inv = this.resolveSelectedInventory()
-  if (!inv) return null
+    resolveSelectedInventory () {
+      if (!this.selectedModelKey) return null
+      return (
+        this.inventoriesMap[this.selectedModelKey] ||
+        this.availableModel.find(it => it.__key === this.selectedModelKey) ||
+        null
+      )
+    },
 
-  const hsnVal = (this.itemForm.hsn && String(this.itemForm.hsn).trim())
-    ? String(this.itemForm.hsn).trim()
-    : (inv.hsn || '')
+    buildItemFromForm () {
+      const inv = this.resolveSelectedInventory()
+      if (!inv) return null
 
-  // Pull category & location/warehouse from inventory
-  const category =
-    inv.categoryName || inv.category || inv.type || inv.segment || ''
-  const warehouse =
-    inv.warehouse || inv.location || inv.locationName || inv.store || ''
+      const hsnVal =
+        this.itemForm.hsn && String(this.itemForm.hsn).trim()
+          ? String(this.itemForm.hsn).trim()
+          : inv.hsn || ''
 
-  return {
-    id: `${inv.__key ?? this.selectedModelKey}-${Date.now()}`,
-    inventoryId: inv.__key ?? this.selectedModelKey,
+      const category =
+        inv.categoryName || inv.category || inv.type || inv.segment || ''
+      const warehouse =
+        inv.warehouse ||
+        inv.location ||
+        inv.locationName ||
+        inv.store ||
+        ''
 
-    // descriptive
-    label: inv.label || inv.modelName || inv.name || 'Item',
-    hsn: hsnVal,
-    unit: inv.unit || '',
-    image: inv.image || '',
+      return {
+        id: `${inv.__key ?? this.selectedModelKey}-${Date.now()}`,
+        inventoryId: inv.__key ?? this.selectedModelKey,
 
-    // specs
-    chassisNumber: inv.chassisNumber || inv.gsisk3 || inv.chassisNo || inv.chassis || '',
-    engineNumber: inv.engineNumber || inv.engineNo || inv.engine || '',
-    color: inv.color || '',
+        label: inv.label || inv.modelName || inv.name || 'Item',
+        hsn: hsnVal,
+        unit: inv.unit || '',
+        image: inv.image || '',
 
-    // NEW: keep for Gate Pass
-    category,
-    warehouse,
+        chassisNumber:
+          inv.chassisNumber ||
+          inv.gsisk3 ||
+          inv.chassisNo ||
+          inv.chassis ||
+          '',
+        engineNumber:
+          inv.engineNumber || inv.engineNo || inv.engine || '',
+        color: inv.color || '',
 
-    // pricing/tax
-    price: Number(this.itemForm.price || 0),
-    quantity: Number(this.itemForm.quantity || 1),
-    discount: Number(this.itemForm.discount || 0),
-    cgst: Number(this.itemForm.cgst || 0),
-    sgst: Number(this.itemForm.sgst || 0),
+        category,
+        warehouse,
 
-    kitGiven: !!this.itemForm.kitGiven
-  }
-}
-,
+        price: Number(this.itemForm.price || 0),
+        quantity: Number(this.itemForm.quantity || 1),
+        discount: Number(this.itemForm.discount || 0),
+        cgst:
+          this.itemForm.cgst == null
+            ? 9
+            : Number(this.itemForm.cgst || 0),
+        sgst:
+          this.itemForm.sgst == null
+            ? 9
+            : Number(this.itemForm.sgst || 0),
 
-    computeRowTotals(row) {
-      const price = Number(row.price || 0)            // GST-inclusive per unit
+        kitGiven: false
+      }
+    },
+
+    computeRowTotals (row) {
+      const price = Number(row.price || 0)
       const qty = Number(row.quantity || 0)
       const cgstRate = Number(row.cgst || 0)
       const sgstRate = Number(row.sgst || 0)
       const totalGstRate = cgstRate + sgstRate
 
-      const lineTotal = price * qty                    // inclusive total
-      const base = totalGstRate > 0 ? lineTotal / (1 + totalGstRate / 100) : lineTotal
+      const lineTotal = price * qty
+      const base =
+        totalGstRate > 0
+          ? lineTotal / (1 + totalGstRate / 100)
+          : lineTotal
       const cgstAmt = base * (cgstRate / 100)
       const sgstAmt = base * (sgstRate / 100)
       const discount = Number(row.discount || 0)
@@ -1231,109 +1389,98 @@ export default {
       row.sgst = sgstRate
     },
 
-    ensureInventoryInAvailable(key) {
+    ensureInventoryInAvailable (key) {
       if (!key) return
-      if (!this.availableModel.some(a => a.__key === key) && this.inventoriesMap[key]) {
+      if (
+        !this.availableModel.some(a => a.__key === key) &&
+        this.inventoriesMap[key]
+      ) {
         const orig = this.inventoriesMap[key]
-        this.availableModel.push({ ...orig, __key: key, label: orig.label || orig.modelName || orig.name || 'Item' })
-        this.availableModel.sort((a,b) => (a.label||'').localeCompare(b.label||''))
+        this.availableModel.push({
+          ...orig,
+          __key: key,
+          label:
+            orig.label || orig.modelName || orig.name || 'Item'
+        })
+        this.availableModel.sort((a, b) =>
+          (a.label || '').localeCompare(b.label || '')
+        )
       }
     },
-    removeInventoryFromAvailable(key) {
+
+    removeInventoryFromAvailable (key) {
       if (!key) return
-      this.availableModel = this.availableModel.filter(a => a.__key !== key)
+      this.availableModel = this.availableModel.filter(
+        a => a.__key !== key
+      )
     },
 
-    editItem(row) {
-      // If another row is being edited, cancel that edit silently (no changes, no deletion)
-      if (this.isEditing && this.editingBackup && this.editingBackup.id !== row.id) {
-        this.cancelEdit(true)
-      }
-
-      // Ensure the inventory for this row appears in dropdown (temporarily)
-      if (!this.availableModel.some(a => a.__key === row.inventoryId)) {
-        this.ensureInventoryInAvailable(row.inventoryId)
-        this._editTempAddedKey = row.inventoryId
-      } else {
-        this._editTempAddedKey = null
-      }
-
-      // Keep row visible; just snapshot it
-      this.editingBackup = { ...row }
-
-      // reveal price while editing (UI hint)
-      this.revealPrice = true
-
-      // Pre-select and fill the form
-      this.selectedModelKey = row.inventoryId
-      this.itemForm.price = Number(row.price || 0)
-      this.itemForm.quantity = Number(row.quantity || 1)
-      this.itemForm.discount = Number(row.discount || 0)
-      this.itemForm.cgst = Number(row.cgst || 0)
-      this.itemForm.sgst = Number(row.sgst || 0)
-      this.itemForm.hsn = row.hsn || ''
-      this.itemForm.kitGiven = !!row.kitGiven
-
-      // Reflect Category/Model UI
-      const inv = this.inventoriesMap[row.inventoryId] || this.availableModel.find(a => a.__key === row.inventoryId)
-      if (inv) {
-        const cat = (inv.categoryName || 'Uncategorized').trim()
-        const mdl = (inv.modelName || inv.label || 'Unknown Model').trim()
-        this.cmcs_categoryLocal = cat
-        this.$nextTick(() => { this.cmcs_modelLocal = mdl })
-      }
-
-      this.isEditing = true
-    },
-
-    cancelEdit(silent = false) {
-      // If we temporarily added the inventory option for editing, remove it again
+    cancelEdit (silent = false) {
       if (this._editTempAddedKey) {
-        // only remove if this inventory is still used by some row => it should remain reserved
-        const stillUsed = this.selectedItems.some(r => r.inventoryId === this._editTempAddedKey)
+        const stillUsed = this.selectedItems.some(
+          r => r.inventoryId === this._editTempAddedKey
+        )
         if (stillUsed) this.removeInventoryFromAvailable(this._editTempAddedKey)
       }
       this.clearFormAndEditing()
       if (!silent) this.showSnack('Edit cancelled.', 'warning')
     },
 
-    clearFormAndEditing() {
+    clearFormAndEditing () {
       this.selectedModelKey = null
-      this.itemForm = { price: 0, quantity: 1, discount: 0, cgst: 0, sgst: 0, hsn: '', kitGiven: false }
+      this.itemForm = {
+        price: 0,
+        quantity: 1,
+        discount: 0,
+        cgst: 9,
+        sgst: 9,
+        hsn: ''
+      }
       this.isEditing = false
       this.editingBackup = null
       this._editTempAddedKey = null
       this.revealPrice = false
     },
 
-    removeItemAndRestore(it) {
-      this.selectedItems = this.selectedItems.filter(i => i.id !== it.id)
+    removeItemAndRestore (it) {
+      this.selectedItems = this.selectedItems.filter(
+        i => i.id !== it.id
+      )
       this.ensureInventoryInAvailable(it.inventoryId)
-      if (!this.selectedItems.length) { this.amountPaid = 0; this.paymentType = null }
-      // If deleting the row that is currently being edited, clear the edit state
+      if (!this.selectedItems.length) {
+        this.amountPaid = 0
+        this.paymentType = null
+      }
       if (this.editingBackup && this.editingBackup.id === it.id) {
         this.clearFormAndEditing()
       }
     },
 
     // -------- Clear with confirm dialog ----------
-    openClearConfirm() { this.clearDialog = true },
-    cancelClear() { this.clearDialog = false },
-    confirmClear() {
+    openClearConfirm () {
+      this.clearDialog = true
+    },
+    cancelClear () {
+      this.clearDialog = false
+    },
+    confirmClear () {
       this.clearDialog = false
       this.clearAll()
     },
-    clearAll() {
-      this.selectedItems.forEach(i => { if (this.inventoriesMap[i.inventoryId]) this.ensureInventoryInAvailable(i.inventoryId) })
+    clearAll () {
+      this.selectedItems.forEach(i => {
+        if (this.inventoriesMap[i.inventoryId]) {
+          this.ensureInventoryInAvailable(i.inventoryId)
+        }
+      })
       this.selectedItems = []
       this.amountPaid = 0
       this.paymentType = null
       this.clearFormAndEditing()
     },
 
-    /* -------- basic print/export button (list view) -------- */
-    downloadPdf() {
-      const el = this.$refs.invoiceCard // reuse preview card if open
+    downloadPdf () {
+      const el = this.$refs.invoiceCard
       if (!el) return
       try {
         const opt = {
@@ -1341,10 +1488,17 @@ export default {
           filename: `${this.invoiceNumber}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 2 },
-          jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }
+          jsPDF: {
+            unit: 'pt',
+            format: 'a4',
+            orientation: 'landscape'
+          }
         }
         if (typeof html2pdf === 'undefined') return window.print()
-        html2pdf().set(opt).from(el).save()
+        html2pdf()
+          .set(opt)
+          .from(el)
+          .save()
       } catch (e) {
         console.warn('html2pdf failed', e)
         window.print()
@@ -1352,10 +1506,23 @@ export default {
     },
 
     /* -------- PREVIEW methods -------- */
-    fmtQty (q) { return Number(q).toFixed(Number(q) % 1 ? 2 : 0) },
-    pct (n) { const v = Number(n || 0); return v ? `${(v % 1 ? v.toFixed(2) : v)}%` : '' },
-    money (v) { return `₹${Number(v || 0).toFixed(2)}` },
-    formatAddressPlain (a) { if (!a) return ''; return String(a).replace(/\s+/g,' ').replace(/\s*,\s*/g, ', ').trim() },
+    fmtQty (q) {
+      return Number(q).toFixed(Number(q) % 1 ? 2 : 0)
+    },
+    pct (n) {
+      const v = Number(n || 0)
+      return v ? `${v % 1 ? v.toFixed(2) : v}%` : ''
+    },
+    money (v) {
+      return `₹${Number(v || 0).toFixed(2)}`
+    },
+    formatAddressPlain (a) {
+      if (!a) return ''
+      return String(a)
+        .replace(/\s+/g, ' ')
+        .replace(/\s*,\s*/g, ', ')
+        .trim()
+    },
     showSnack (text, color = 'success') {
       this.snack.text = text
       this.snack.color = color
@@ -1363,19 +1530,24 @@ export default {
     },
 
     async saveStatus () {
-      if (!this.canSave) { this.showSnack('Select a status first.', 'error'); return }
+      if (!this.canSave) {
+        this.showSnack('Select a status first.', 'error')
+        return
+      }
 
-      // decide mode once at the start
-      const isEdit = !!(this.isEditing || this.$route?.query?.invoiceNumber)
+      const isEdit = !!(
+        this.isEditing || this.$route?.query?.invoiceNumber
+      )
 
-      // Inventory status payload (unchanged)
       const payload = this.allChassisNumbers.length > 0
-        ? { chassisNumbers: this.allChassisNumbers, item: { status: this.statusType, soldType: 'VENDOR' } }
+        ? {
+            chassisNumbers: this.allChassisNumbers,
+            item: { status: this.statusType, soldType: 'VENDOR' }
+          }
         : { item: { status: this.statusType, soldType: 'VENDOR' } }
 
       this.saving = true
       try {
-        // 1) Update inventory statuses
         const res = await fetch(this.updateEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1387,12 +1559,16 @@ export default {
         if (Array.isArray(data?.results)) {
           const ok = data.results.filter(r => r.ok).length
           const fail = data.results.length - ok
-          this.showSnack(`Status updated. Success: ${ok}${fail ? `, Failed: ${fail}` : ''}.`, fail ? 'warning' : 'success')
+          this.showSnack(
+            `Status updated. Success: ${ok}${
+              fail ? `, Failed: ${fail}` : ''
+            }.`,
+            fail ? 'warning' : 'success'
+          )
         } else {
           this.showSnack('Status updated successfully.', 'success')
         }
 
-        // 2) ADD vs UPDATE sell-to-vendor
         let upsertOk = false
         if (isEdit) {
           upsertOk = await this.updateSellToVendor()
@@ -1402,19 +1578,25 @@ export default {
           if (upsertOk) this.showSnack('Sell-to-vendor saved.', 'success')
         }
 
-        // 3) Export PDF & upload to S3
         const exported = await this.renderPdf('export')
-        if (!exported || !exported.blob) throw new Error('PDF export failed')
+        if (!exported || !exported.blob) {
+          throw new Error('PDF export failed')
+        }
         const uploadOk = await this.uploadPdfToS3(exported.blob)
 
-        // 4) Save invoice record (unchanged)
         const invoiceOk = await this.saveInvoiceRecord()
-        if (uploadOk) this.showSnack('Invoice PDF uploaded to S3.', 'success')
-        else this.showSnack('Status saved, but PDF upload failed.', 'warning')
+        if (uploadOk) {
+          this.showSnack('Invoice PDF uploaded to S3.', 'success')
+        } else {
+          this.showSnack(
+            'Status saved, but PDF upload failed.',
+            'warning'
+          )
+        }
 
-        // 5) Create ledger entry (unchanged)
-        if (invoiceOk) { await this.createLedgerEntry() }
-
+        if (invoiceOk) {
+          await this.createLedgerEntry()
+        }
       } catch (e) {
         this.showSnack(`Failed: ${e.message}`, 'error')
       } finally {
@@ -1426,7 +1608,10 @@ export default {
       const body = {
         invoiceNumber: this.invoiceNumber,
         vendorName: this.company?.name || null,
-        meta: { statusType: this.statusType || null, soldType: 'VENDOR' },
+        meta: {
+          statusType: this.statusType || null,
+          soldType: 'VENDOR'
+        },
         payment: {
           amountPaid: Number(this.amountPaid || 0),
           paymentType: this.paymentType || null,
@@ -1434,28 +1619,40 @@ export default {
           changeDue: Number(this.changeDue || 0)
         }
       }
-      const res = await fetch(`${process.env.VUE_APP_AGENCY_BACKEND_URL}updateselltovendor`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
+      const res = await fetch(
+        `${process.env.VUE_APP_AGENCY_BACKEND_URL}updateselltovendor`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }
+      )
       const j = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(j?.message || 'Update failed')
       return true
-    },   
+    },
 
     async uploadPdfToS3 (pdfBlob) {
       try {
         const vendor = (this.company?.name || 'UnknownVendor').trim()
-        const folder = vendor.replace(/[^\w\-./]/g, '_') || 'UnknownVendor'
-        const cleanInvoice = (this.invoiceNumber ? String(this.invoiceNumber) : 'invoice').replace(/[^\w\-./]/g, '_')
+        const folder =
+          vendor.replace(/[^\w\-./]/g, '_') || 'UnknownVendor'
+        const cleanInvoice = (this.invoiceNumber
+          ? String(this.invoiceNumber)
+          : 'invoice'
+        ).replace(/[^\w\-./]/g, '_')
         const objectKey = `${folder}/${cleanInvoice}.pdf`
         this.billFileLocation = objectKey
 
         const presignRes = await fetch(this.presignEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ body: { fileName: objectKey, fileType: 'application/pdf' } })
+          body: JSON.stringify({
+            body: {
+              fileName: objectKey,
+              fileType: 'application/pdf'
+            }
+          })
         })
         if (!presignRes.ok) return false
         const presignJson = await presignRes.json()
@@ -1473,7 +1670,7 @@ export default {
       }
     },
 
-    async saveInvoiceRecord() {
+    async saveInvoiceRecord () {
       this.creating = true
       try {
         const invoice = {
@@ -1497,16 +1694,25 @@ export default {
           notes: null
         }
 
-        const res = await fetch(`${process.env.VUE_APP_AGENCY_BACKEND_URL}bill`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ invoice, pdf: { contentType: 'application/pdf' } })
-        })
+        const res = await fetch(
+          `${process.env.VUE_APP_AGENCY_BACKEND_URL}bill`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              invoice,
+              pdf: { contentType: 'application/pdf' }
+            })
+          }
+        )
         if (!res.ok) {
           const j = await res.json().catch(() => ({}))
           throw new Error(j?.message || 'Save invoice failed')
         }
-        this.showSnack('Invoice saved & PDF uploaded successfully.', 'success')
+        this.showSnack(
+          'Invoice saved & PDF uploaded successfully.',
+          'success'
+        )
         return true
       } catch (e) {
         this.showSnack(`Save invoice failed: ${e.message}`, 'error')
@@ -1516,12 +1722,12 @@ export default {
       }
     },
 
-    async createLedgerEntry() {
+    async createLedgerEntry () {
       this.ledgering = true
       try {
         const clientId =
-          (this.buyer?.clientId && String(this.buyer.clientId).trim()) ||
-          'UNKNOWN'
+          (this.buyer?.clientId &&
+            String(this.buyer.clientId).trim()) || 'UNKNOWN'
 
         const payload = {
           clientId,
@@ -1551,7 +1757,7 @@ export default {
       const node = this.$refs.invoiceCard
       if (!node || typeof html2pdf === 'undefined') return null
 
-      const filename = `${(this.invoiceNumber || 'invoice')}.pdf`
+      const filename = `${this.invoiceNumber || 'invoice'}.pdf`
       const opt = {
         margin: [3, 10, 3, 10],
         filename,
@@ -1562,11 +1768,18 @@ export default {
           backgroundColor: '#ffffff',
           windowWidth: node.scrollWidth
         },
-        jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' },
+        jsPDF: {
+          unit: 'pt',
+          format: 'a4',
+          orientation: 'landscape'
+        },
         pagebreak: { mode: ['css', 'legacy'] }
       }
 
-      const worker = html2pdf().set(opt).from(node).toPdf()
+      const worker = html2pdf()
+        .set(opt)
+        .from(node)
+        .toPdf()
       const pdf = await worker.get('pdf')
       const totalPages = pdf.internal.getNumberOfPages()
       const pageWidth = pdf.internal.pageSize.getWidth()
@@ -1579,11 +1792,19 @@ export default {
         pdf.setTextColor(150, 150, 150)
         pdf.setFontSize(70)
         pdf.setFont('helvetica', 'bold')
-        pdf.text('Ansari Automobile', pageWidth, pageHeight / 2, { align: 'left', angle: 10 })
+        pdf.text(
+          'Ansari Automobile',
+          pageWidth,
+          pageHeight / 2,
+          { align: 'left', angle: 10 }
+        )
         pdf.restoreGraphicsState()
       }
 
-      if (action === 'save') { pdf.save(filename); return null }
+      if (action === 'save') {
+        pdf.save(filename)
+        return null
+      }
       if (action === 'print') {
         pdf.autoPrint({ variant: 'non-conform' })
         const blobUrl = pdf.output('bloburl')
@@ -1597,8 +1818,12 @@ export default {
       }
       return null
     },
-    downloadPdfFromPreview () { return this.renderPdf('save') },
-    printPdf () { return this.renderPdf('print') },
+    downloadPdfFromPreview () {
+      return this.renderPdf('save')
+    },
+    printPdf () {
+      return this.renderPdf('print')
+    },
 
     async downloadGatePass () {
       const node = this.$refs.gatePassCard
@@ -1606,17 +1831,32 @@ export default {
       const prev = node.style.display
       node.style.display = 'block'
 
-      const filename = `GatePass_${this.invoiceNumber || new Date().toISOString().slice(0,10)}.pdf`
+      const filename = `GatePass_${
+        this.invoiceNumber ||
+        new Date().toISOString().slice(0, 10)
+      }.pdf`
       const opt = {
         margin: [10, 12, 10, 12],
         filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: node.scrollWidth },
-        jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }, // ⬅️ force landscape
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          windowWidth: node.scrollWidth
+        },
+        jsPDF: {
+          unit: 'pt',
+          format: 'a4',
+          orientation: 'landscape'
+        },
         pagebreak: { mode: ['css', 'legacy'] }
       }
 
-      const worker = html2pdf().set(opt).from(node).toPdf()
+      const worker = html2pdf()
+        .set(opt)
+        .from(node)
+        .toPdf()
       const pdf = await worker.get('pdf')
       const totalPages = pdf.internal.getNumberOfPages()
       const pageWidth = pdf.internal.pageSize.getWidth()
@@ -1629,7 +1869,12 @@ export default {
         pdf.setTextColor(150, 150, 150)
         pdf.setFontSize(60)
         pdf.setFont('helvetica', 'bold')
-        pdf.text('Ansari Automobile', pageWidth / 2, pageHeight / 2, { align: 'center', angle: 30 })
+        pdf.text(
+          'Ansari Automobile',
+          pageWidth / 2,
+          pageHeight / 2,
+          { align: 'center', angle: 30 }
+        )
         pdf.restoreGraphicsState()
       }
 
@@ -1640,113 +1885,333 @@ export default {
     toCurrencyWords (amount) {
       const n = Math.round(Number(amount || 0))
       if (!n) return ''
-      const a = ['', 'One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen']
-      const b = ['', '', 'Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety']
+      const a = [
+        '',
+        'One',
+        'Two',
+        'Three',
+        'Four',
+        'Five',
+        'Six',
+        'Seven',
+        'Eight',
+        'Nine',
+        'Ten',
+        'Eleven',
+        'Twelve',
+        'Thirteen',
+        'Fourteen',
+        'Fifteen',
+        'Sixteen',
+        'Seventeen',
+        'Eighteen',
+        'Nineteen'
+      ]
+      const b = [
+        '',
+        '',
+        'Twenty',
+        'Thirty',
+        'Forty',
+        'Fifty',
+        'Sixty',
+        'Seventy',
+        'Eighty',
+        'Ninety'
+      ]
       const crore = Math.floor(n / 10000000)
       const lakh = Math.floor((n % 10000000) / 100000)
       const thousand = Math.floor((n % 100000) / 1000)
       const hundred = Math.floor((n % 1000) / 100)
       const rest = n % 100
-      const two = (x)=> x<20 ? a[x] : b[Math.floor(x/10)] + (x%10? ' '+a[x%10]:'')
-      const seg = (x, name)=> x? (x<100? two(x): a[Math.floor(x/100)]+' Hundred'+(x%100?' '+two(x%100):'')) + ' ' + name + ' ':''
-      const head = (crore? seg(crore,'Crore'):'') + (lakh? seg(lakh,'Lakh'):'') + (thousand? seg(thousand,'Thousand'):'') + (hundred? a[hundred]+' Hundred ':'')
-      return (head + (rest? two(rest):'')).trim()
+      const two = x =>
+        x < 20
+          ? a[x]
+          : b[Math.floor(x / 10)] + (x % 10 ? ' ' + a[x % 10] : '')
+      const seg = (x, name) =>
+        x
+          ? (x < 100
+              ? two(x)
+              : a[Math.floor(x / 100)] +
+                ' Hundred' +
+                (x % 100 ? ' ' + two(x % 100) : '')) +
+            ' ' +
+            name +
+            ' '
+          : ''
+      const head =
+        (crore ? seg(crore, 'Crore') : '') +
+        (lakh ? seg(lakh, 'Lakh') : '') +
+        (thousand ? seg(thousand, 'Thousand') : '') +
+        (hundred ? a[hundred] + ' Hundred ' : '')
+      return (head + (rest ? two(rest) : '')).trim()
     }
   }
 }
 </script>
 
 <style scoped>
-.rounded-lg { border-radius: 12px }
-.pa-4 { padding: 16px }
-.display-1 { font-size: 28px }
-.fixed-table-container { height: 420px; max-height: 420px; overflow: auto; border-radius: 6px; }
-.fixed-table-container table { width: 100%; border-collapse: collapse; }
-.fixed-table-container thead th { position: sticky; top: 0; z-index: 10; background: white; backdrop-filter: blur(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.04); padding-top: 12px; padding-bottom: 12px; }
-.caption { font-size: 12px; }
+.rounded-lg {
+  border-radius: 12px;
+}
+.pa-4 {
+  padding: 16px;
+}
+.display-1 {
+  font-size: 28px;
+}
+
+/* Table container + scroll behaviour */
+.fixed-table-container {
+  max-height: none;
+  overflow: visible;
+  border-radius: 6px;
+}
+.fixed-table-container.scrollable {
+  max-height: 420px;
+  overflow: auto;
+}
+.fixed-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fixed-table-container thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.caption {
+  font-size: 12px;
+}
 
 /* Subtle glass sheets and cleaner headings */
 .v-sheet.rounded-lg {
-  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.98));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.92),
+    rgba(255, 255, 255, 0.98)
+  );
   backdrop-filter: blur(3px);
 }
 
 /* Inputs spacing + sharper labels */
-.v-input, .v-select, .v-text-field { margin-bottom: 8px; }
+.v-input,
+.v-select,
+.v-text-field {
+  margin-bottom: 8px;
+}
 
 /* Section titles */
-.subtitle-1.font-weight-medium { letter-spacing: .2px; }
+.subtitle-1.font-weight-medium {
+  letter-spacing: 0.2px;
+}
 
 /* Table: zebra rows + tighter cells + taller header (40px) */
-.fixed-table-container tbody tr:nth-child(4n+1) { background: #fcfcfc; }
-.fixed-table-container thead th { height: 40px; line-height: 40px; font-weight: 600; }
-.fixed-table-container td, .fixed-table-container th { padding: 10px 12px; }
+.fixed-table-container tbody tr:nth-child(4n + 1) {
+  background: #fcfcfc;
+}
+.fixed-table-container thead th {
+  height: 40px;
+  line-height: 40px;
+  font-weight: 600;
+}
+.fixed-table-container td,
+.fixed-table-container th {
+  padding: 10px 12px;
+}
+
+/* Reduce body cell padding to shrink row height */
+.fixed-table-container tbody td {
+  padding: 4px 8px;
+}
 
 /* Action buttons in table look crisp */
-.fixed-table-container td .v-btn.v-btn--icon { opacity: .9; }
-.fixed-table-container td .v-btn.v-btn--icon:hover { transform: translateY(-1px); }
+.fixed-table-container td .v-btn.v-btn--icon {
+  opacity: 0.9;
+}
+.fixed-table-container td .v-btn.v-btn--icon:hover {
+  transform: translateY(-1px);
+}
 
 /* Invoice summary numbers pop a bit */
-.display-1 { font-size: 28px; letter-spacing: .3px; }
+.display-1 {
+  font-size: 28px;
+  letter-spacing: 0.3px;
+}
 
 /* Dialog polish */
-.v-dialog .v-card-title { letter-spacing: .2px; }
+.v-dialog .v-card-title {
+  letter-spacing: 0.2px;
+}
+
+/* Narrow table columns (HSN, Price, Qty, CGST, SGST) */
+.table-col-narrow {
+  max-width: 110px;
+  min-width: 100px;
+}
+
+/* Narrow + short inputs inside table cells */
+.table-input-xs {
+  max-width: 80px;
+}
+
+::v-deep .table-input-xs .v-input__control {
+  min-height: 28px;
+}
+::v-deep .table-input-xs .v-input__slot {
+  min-height: 28px;
+  padding: 0 6px !important;
+}
+::v-deep .table-input-xs input {
+  text-align: right;
+  padding-right: 4px;
+}
 
 /* -------- Invoice / Preview styles (unchanged) -------- */
-.top-header{ display: flex; flex-direction: row; justify-content: space-between; width: 100%; }
-.top-header-left{ width: 50%; }
-.top-header-right{ width: 50%; text-align: right; }
-.invoice-root{
-  color:#000;
-  background:#fff;
-  padding:10px 12px 12px;
+.top-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  width: 100%;
+}
+.top-header-left {
+  width: 50%;
+}
+.top-header-right {
+  width: 50%;
+  text-align: right;
+}
+.invoice-root {
+  color: #000;
+  background: #fff;
+  padding: 10px 12px 12px;
   font-family: Arial, Helvetica, sans-serif;
-  font-size:12px;
-  line-height:1.25;
+  font-size: 12px;
+  line-height: 1.25;
 }
-.bold{font-weight:700}
-.small{font-size:11px}
-.text-dim{color:#333}
-.text-right{text-align:right}
-.text-center{text-align:center}
-.mt8{margin-top:8px}
-.top-strip{
-  border:1px solid #000;
-  border-bottom:none;
-  display:flex;justify-content:center;align-items:center;
-  padding:4px 0;
+.bold {
+  font-weight: 700;
 }
-.top-strip .label{font-weight:700;letter-spacing:.5px}
-.header-row{
-  display:grid;grid-template-columns:1fr 1fr;
-  border:1px solid #000;border-top:none;
+.small {
+  font-size: 11px;
+}
+.text-dim {
+  color: #333;
+}
+.text-right {
+  text-align: right;
+}
+.text-center {
+  text-align: center;
+}
+.mt8 {
+  margin-top: 8px;
+}
+.top-strip {
+  border: 1px solid #000;
+  border-bottom: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+}
+.top-strip .label {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.header-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #000;
+  border-top: none;
   height: 20px;
-  padding:10px;
+  padding: 10px;
 }
-.header-row .cell{padding:6px 8px;border-left:1px solid #000}
-.header-row .cell.left{border-left:none}
-.header-row .row{display:flex;gap:8px}
-.header-row .cell-key{font-weight:600;min-width:95px}
-.two-col{
-  display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:none;margin-top:0;
-  border-left:1px solid #000;border-right:1px solid #000;border-bottom:none;
+.header-row .cell {
+  padding: 6px 8px;
+  border-left: 1px solid #000;
 }
-.two-col .col{border-bottom:1px solid #000;padding:6px 8px}
-.two-col .col + .col{border-left:1px solid #000}
-.blk-head{font-weight:700;margin-bottom:4px}
-.bordered{border:1px solid #000}
-.items{width:100%;border-collapse:collapse;margin-top:6px}
-.items th,.items td{border:1px solid #000;padding:4px 5px;vertical-align:top}
-.items thead th{background:#eee;font-weight:700;text-align:center}
-.items .w-sl{width:44px}
-.items .w-hsn{width:90px}
-.items .w-qty{width:35px}
-.items .w-rate{width:80px}
-.items .w-taxable{width:95px}
-.items .w-gst{width:95px}
-.items .w-total{width:90px}
-.items .total-row td{font-weight:700}
-.bottom-grid{
+.header-row .cell.left {
+  border-left: none;
+}
+.header-row .row {
+  display: flex;
+  gap: 8px;
+}
+.header-row .cell-key {
+  font-weight: 600;
+  min-width: 95px;
+}
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-top: none;
+  margin-top: 0;
+  border-left: 1px solid #000;
+  border-right: 1px solid #000;
+  border-bottom: none;
+}
+.two-col .col {
+  border-bottom: 1px solid #000;
+  padding: 6px 8px;
+}
+.two-col .col + .col {
+  border-left: 1px solid #000;
+}
+.blk-head {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.bordered {
+  border: 1px solid #000;
+}
+.items {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+.items th,
+.items td {
+  border: 1px solid #000;
+  padding: 4px 5px;
+  vertical-align: top;
+}
+.items thead th {
+  background: #eee;
+  font-weight: 700;
+  text-align: center;
+}
+.items .w-sl {
+  width: 44px;
+}
+.items .w-hsn {
+  width: 90px;
+}
+.items .w-qty {
+  width: 35px;
+}
+.items .w-rate {
+  width: 80px;
+}
+.items .w-taxable {
+  width: 95px;
+}
+.items .w-gst {
+  width: 95px;
+}
+.items .w-total {
+  width: 90px;
+}
+.items .total-row td {
+  font-weight: 700;
+}
+.bottom-grid {
   width: 100%;
   display: flex;
   gap: 8px;
@@ -1754,26 +2219,64 @@ export default {
   align-items: stretch;
 }
 .bottom-grid > .left,
-.bottom-grid > .right{
+.bottom-grid > .right {
   flex: 0 0 calc(50% - 4px);
   width: calc(50% - 4px);
   height: 90px;
   box-sizing: border-box;
   overflow: auto;
 }
-.pad{ padding: 8px; }
-.row-line{ display:flex; gap:8px; align-items:center; }
-.row-line .dash{ flex:1; border-bottom:1px solid #000; height:1px; }
-.summary{ width:100%; border-collapse:collapse; font-size: 11px; font-weight: 700; }
-.summary td{ border-bottom:1px solid #000; padding:6px 8px; }
-.summary tr:last-child td{ border-bottom:none; }
-.summary .grand td{ background:#eee; }
-.declare{
+.pad {
+  padding: 8px;
+}
+.row-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.row-line .dash {
+  flex: 1;
+  border-bottom: 1px solid #000;
+  height: 1px;
+}
+.summary {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  font-weight: 700;
+}
+.summary td {
+  border-bottom: 1px solid #000;
+  padding: 6px 8px;
+}
+.summary tr:last-child td {
+  border-bottom: none;
+}
+.summary .grand td {
+  background: #eee;
+}
+.declare {
   height: 30px;
   width: 100%;
-  display:flex;justify-content:space-between;gap:16px;margin-top:6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 6px;
 }
-.declare .right{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end}
-.declare .sign{margin-top:24px;border-top:1px solid #000;padding-top:6px}
-.terms{margin-top:6px;border:1px solid #000;padding:6px 8px}
+.declare .right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+.declare .sign {
+  margin-top: 24px;
+  border-top: 1px solid #000;
+  padding-top: 6px;
+}
+.terms {
+  margin-top: 6px;
+  border: 1px solid #000;
+  padding: 6px 8px;
+}
 </style>

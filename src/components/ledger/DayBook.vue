@@ -188,11 +188,12 @@
           <v-spacer />
 
           <!-- Export buttons -->
-          <v-btn class="mb-2 mr-2" @click="exportCsv" :disabled="!rows.length">
-            <v-icon left>mdi-download</v-icon>CSV
+          <v-btn class="mb-2 mr-2" color="blue accent-4"
+            dark @click="exportCsv" :disabled="!rows.length">
+            <v-icon left>mdi-download</v-icon>Excel
           </v-btn>
           <v-btn
-            color="deep-purple accent-4"
+            color="black accent-4"
             dark
             class="mb-2 mr-2"
             @click="downloadPdf"
@@ -418,7 +419,7 @@ export default {
         { text: 'TRANSFER', value: 'TRANSFER' }
       ],
 
-      // headers (Flags removed)
+      // headers (S.No. first column)
       headers: [
         { text: 'S.No.', value: 'sno', sortable: false, align: 'center' },
         { text: 'Time', value: 'createdAt' },
@@ -550,11 +551,18 @@ export default {
       }).format(n)
     },
 
+    // DATE as dd/mm/yyyy everywhere (with time kept)
     fmtDateTime (isoOrMs) {
       if (!isoOrMs && isoOrMs !== 0) return ''
       const d = new Date(isoOrMs)
       if (Number.isNaN(d.getTime())) return ''
-      return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+      const p = n => String(n).padStart(2, '0')
+      const dateStr = `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`
+      const timeStr = d.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+      return `${dateStr}, ${timeStr}`
     },
 
     debounced (fn, delay = 350) {
@@ -722,6 +730,7 @@ export default {
 
       items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
+      // add serial number for UI and PDF & Excel
       items = items.map((r, idx) => ({ ...r, sno: idx + 1 }))
 
       this.rows = items
@@ -741,53 +750,87 @@ export default {
       this.modeTotals = modeTotals
     },
 
+    // kept for compatibility (not used by Excel anymore, but does not break anything)
     csv (v) {
       const s = (v == null) ? '' : String(v)
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
     },
 
+    escapeHtml (txt) {
+      return String(txt == null ? '' : txt)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    },
+
+    // SAME NAME (exportCsv) but now generates EXCEL .xls file
     exportCsv () {
       const headers = [
-        'SNo',
-        'Time',
+        'S.No.',
+        'Date & Time',
         'Account',
         'Sold',
         'Narration',
-        'EntryType',
+        'Entry Type',
         'Debit',
         'Credit',
         'Mode',
-        'SourceType',
-        'SourceId'
+        'Source Type',
+        'Source Id'
       ]
-      const lines = [headers.join(',')]
+
+      let html = '<table border="1"><thead><tr>' +
+        headers.map(h => `<th>${this.escapeHtml(h)}</th>`).join('') +
+        '</tr></thead><tbody>'
 
       for (let i = 0; i < this.rows.length; i++) {
         const r = this.rows[i]
         const sno = r.sno || (i + 1)
-        const debit = r.entryType === 'DEBIT' ? r.amount : ''
-        const credit = r.entryType === 'CREDIT' ? r.amount : ''
-        lines.push([
-          this.csv(sno),
-          this.csv(this.fmtDateTime(r.createdAt)),
-          this.csv(r.clientId),
-          this.csv(r.sold || ''),
-          this.csv(r.narration || ''),
-          this.csv(r.entryType),
-          this.csv(debit),
-          this.csv(credit),
-          this.csv(r.mode || ''),
-          this.csv(r.sourceType || ''),
-          this.csv(r.sourceId || '')
-        ].join(','))
+        const debit = r.entryType === 'DEBIT' ? (r.amount || 0) : ''
+        const credit = r.entryType === 'CREDIT' ? (r.amount || 0) : ''
+
+        const dateTime = this.fmtDateTime(r.createdAt)
+
+        html += '<tr>' +
+          `<td>${this.escapeHtml(sno)}</td>` +
+          `<td>${this.escapeHtml(dateTime)}</td>` +
+          `<td>${this.escapeHtml(r.clientId || '')}</td>` +
+          `<td>${this.escapeHtml(r.sold || '')}</td>` +
+          `<td>${this.escapeHtml(r.narration || '')}</td>` +
+          `<td>${this.escapeHtml(r.entryType || '')}</td>` +
+          `<td>${this.escapeHtml(debit)}</td>` +
+          `<td>${this.escapeHtml(credit)}</td>` +
+          `<td>${this.escapeHtml(r.mode || '')}</td>` +
+          `<td>${this.escapeHtml(r.sourceType || '')}</td>` +
+          `<td>${this.escapeHtml(r.sourceId || '')}</td>` +
+          '</tr>'
       }
 
-      const name = `daybook_${this.from || 'na'}_${this.to || 'na'}.csv`
-      this.downloadCsv(lines.join('\n'), name)
+      html += '</tbody></table>'
+
+      const fullHtml =
+        '<html><head><meta charset="UTF-8"></head><body>' +
+        html +
+        '</body></html>'
+
+      const blob = new Blob([fullHtml], {
+        type: 'application/vnd.ms-excel;charset=utf-8;'
+      })
+
+      const name = `daybook_${this.from || 'na'}_${this.to || 'na'}.xls`
+      this.downloadCsv(blob, name)
     },
 
-    downloadCsv (content, filename) {
-      const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+    // re-used name, but now expects BLOB and filename (works fine)
+    downloadCsv (blobOrContent, filename) {
+      let blob = blobOrContent
+      if (!(blobOrContent instanceof Blob)) {
+        blob = new Blob([blobOrContent], {
+          type: 'application/vnd.ms-excel;charset=utf-8;'
+        })
+      }
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -801,15 +844,13 @@ export default {
     async downloadPdf () {
       const pageSize = 38
 
+      // dd/mm/yyyy for PDF dates
       const formatDate = (value) => {
         if (!value && value !== 0) return ''
         const d = new Date(value)
         if (Number.isNaN(d.getTime())) return ''
-        return d.toLocaleDateString('en-US', {
-          year: '2-digit',
-          month: 'numeric',
-          day: '2-digit'
-        })
+        const p = n => String(n).padStart(2, '0')
+        return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`
       }
 
       const formatAmount = (v) => {
@@ -842,6 +883,7 @@ export default {
 
         const rowsHtml = rows.map(r => `
           <tr>
+            <td class="col-sno">${safe(r.sno || '')}</td>
             <td class="col-date">${safe(formatDate(r.createdAt))}</td>
             <td class="col-journal">${safe(r.sourceType || '')}</td>
             <td class="col-ref">${safe(r.sourceId || '')}</td>
@@ -856,6 +898,7 @@ export default {
           ? `
             <tfoot>
               <tr>
+                <td class="col-sno"></td>
                 <td class="col-date"></td>
                 <td class="col-journal"></td>
                 <td class="col-ref"></td>
@@ -889,6 +932,7 @@ export default {
             <table class="ledger-table">
               <thead>
                 <tr class="ledger-header-row">
+                  <th class="col-sno">S.NO.</th>
                   <th class="col-date">DATE</th>
                   <th class="col-journal">JOURNL</th>
                   <th class="col-ref">REFERENCE</th>
@@ -907,7 +951,7 @@ export default {
         `
       }).join('')
 
-      // container with styles: CLEAN ledger look (NO table cell borders)
+      // container with styles
       const container = document.createElement('div')
       container.innerHTML = `
         <style>
@@ -924,7 +968,6 @@ export default {
           .ledger-title { text-align: center; font-weight: bold; margin-top: 8px; }
           .ledger-subtitle { text-align: center; margin-bottom: 8px; }
 
-          /* clean table: no outer borders, only header divider */
           .ledger-table {
             width: 100%;
             border-collapse: collapse;
@@ -934,16 +977,15 @@ export default {
           .ledger-table td {
             padding: 2px 6px;
             white-space: nowrap;
-            border: none; /* <- remove borders */
+            border: none;
           }
           .ledger-header-row th {
-            border-bottom: 1px solid #000; /* thin divider under header */
+            border-bottom: 1px solid #000;
             background: #f4f6fb;
             color: #2a2a2a;
             font-weight: 700 !important;
           }
 
-          /* footer style */
           .ledger-table tfoot td {
             padding-top: 6px;
             font-weight: 700;
@@ -952,14 +994,15 @@ export default {
 
           .ledger-totals-label { text-align: right; padding-right: 6px; }
 
-          .col-date    { width: 70px; }
-          .col-journal { width: 60px; }
-          .col-ref     { width: 70px; }
-          .col-desc    { width: 350px; }
-          .col-account { width: 110px; }
-          .col-sold    { width: 70px; text-align: center; }
-          .col-debit   { width: 80px; text-align: right; }
-          .col-credit  { width: 80px; text-align: right; }
+          .col-sno    { width: 40px; text-align: center; }
+          .col-date   { width: 70px; }
+          .col-journal{ width: 60px; }
+          .col-ref    { width: 70px; }
+          .col-desc   { width: 330px; }
+          .col-account{ width: 110px; }
+          .col-sold   { width: 70px; text-align: center; }
+          .col-debit  { width: 80px; text-align: right; }
+          .col-credit { width: 80px; text-align: right; }
         </style>
 
         <div class="ledger-root">
@@ -967,20 +1010,32 @@ export default {
         </div>
       `
 
-      // append, generate, remove
       document.body.appendChild(container)
 
       const filename = `daybook_${this.from || 'na'}_${this.to || 'na'}.pdf`
+
+      // 🔥 HIGH QUALITY SETTINGS
+      const deviceScale = window.devicePixelRatio || 1.5
       const opt = {
         margin: [16, 18, 16, 18],
         filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, backgroundColor: '#ffffff' },
+        image: {
+          type: 'png',   // PNG + high scale = very crisp
+          quality: 1.0   // max quality
+        },
+        html2canvas: {
+          scale: Math.max(2, deviceScale * 2), // typically 3–4 on modern screens
+          useCORS: true,
+          backgroundColor: '#ffffff'
+        },
         jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }
       }
 
       try {
-        await html2pdf().set(opt).from(container).save()
+        const worker = html2pdf().set(opt).from(container).toPdf()
+        const pdf = await worker.get('pdf')
+        const blobUrl = pdf.output('bloburl')
+        window.open(blobUrl, '_blank')
       } finally {
         document.body.removeChild(container)
       }

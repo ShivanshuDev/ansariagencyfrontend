@@ -48,9 +48,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'Addclient')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'Addclient')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-account-plus</v-icon>
@@ -62,9 +63,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'ClientTable')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'ClientTable')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-format-list-bulleted</v-icon>
@@ -89,9 +91,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'Addemployee')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'Addemployee')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-account-plus</v-icon>
@@ -103,9 +106,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'EmployeeTable')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'EmployeeTable')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-format-list-bulleted</v-icon>
@@ -131,6 +135,35 @@
           </v-list-item-content>
         </template>
 
+        <!-- SEARCHBYCHASSIS Process -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Search By Chassis</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'SEARCHBYCHASSIS')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'SEARCHBYCHASSIS' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Search By Chassis Detail</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+         
+        </v-list-group>
+
         <!-- Invoice Process -->
         <v-list-group
           value="true"
@@ -145,9 +178,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'SellToVendorDetails')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'SellToVendorDetails')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-format-list-bulleted</v-icon>
@@ -158,9 +192,10 @@
           </v-list-item>
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'SellToVendor')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'SellToVendor')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-cash-register</v-icon>
@@ -185,9 +220,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'STOCK')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'STOCK')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'STOCK' }"
+            :class="{ 'selected-item': selectedTab === 'STOCK' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-format-list-bulleted</v-icon>
@@ -212,9 +248,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'InventryTable')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'InventryTable')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-format-list-bulleted</v-icon>
@@ -226,9 +263,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'AddInventryVue')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'AddInventryVue')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-plus-box</v-icon>
@@ -240,97 +278,16 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'MODELNAME')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'MODELNAME')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-motorbike</v-icon>
             </v-list-item-icon>
             <v-list-item-content>
               <v-list-item-title class="item-title">Bike Model</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-        </v-list-group>
-
-        <!-- Vendor -->
-        <v-list-group
-          value="true"
-          sub-group
-          class="submenu"
-        >
-          <template v-slot:activator>
-            <v-list-item-content>
-              <v-list-item-title class="submenu-title">Vendor</v-list-item-title>
-            </v-list-item-content>
-          </template>
-          
-          <v-list-item 
-            link 
-            @click="$emit('tab-selected', 'Addclient')"
-            class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
-          >
-            <v-list-item-icon class="nav-icon">
-              <v-icon small>mdi-account-plus</v-icon>
-            </v-list-item-icon>
-            <v-list-item-content>
-              <v-list-item-title class="item-title">Add Vendor</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-          
-          <v-list-item 
-            link 
-            @click="$emit('tab-selected', 'ClientTable')"
-            class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
-          >
-            <v-list-item-icon class="nav-icon">
-              <v-icon small>mdi-format-list-bulleted</v-icon>
-            </v-list-item-icon>
-            <v-list-item-content>
-              <v-list-item-title class="item-title">Vendor Details</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-        </v-list-group>
-
-        <!-- Employee -->
-        <v-list-group
-          value="true"
-          sub-group
-          class="submenu"
-        >
-          <template v-slot:activator>
-            <v-list-item-content>
-              <v-list-item-title class="submenu-title">Employee</v-list-item-title>
-            </v-list-item-content>
-          </template>
-          
-          <v-list-item 
-            link 
-            @click="$emit('tab-selected', 'Addemployee')"
-            class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
-          >
-            <v-list-item-icon class="nav-icon">
-              <v-icon small>mdi-account-plus</v-icon>
-            </v-list-item-icon>
-            <v-list-item-content>
-              <v-list-item-title class="item-title">Add Employee</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-          
-          <v-list-item 
-            link 
-            @click="$emit('tab-selected', 'EmployeeTable')"
-            class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
-          >
-            <v-list-item-icon class="nav-icon">
-              <v-icon small>mdi-format-list-bulleted</v-icon>
-            </v-list-item-icon>
-            <v-list-item-content>
-              <v-list-item-title class="item-title">Employee Table</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
         </v-list-group>
@@ -364,9 +321,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'ADDSPARES')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'ADDSPARES')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-plus-box</v-icon>
@@ -378,9 +336,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'sparesTable')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'sparesTable')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-format-list-bulleted</v-icon>
@@ -405,9 +364,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'ServiceRequests')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'ServiceRequests')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-clipboard-list</v-icon>
@@ -419,9 +379,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'ServiceHistory')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'ServiceHistory')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-history</v-icon>
@@ -515,9 +476,10 @@
 
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'VENDORACCOUNTDetail')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'VENDORACCOUNTDetail')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-eye</v-icon>
@@ -529,9 +491,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'DAYBOOK')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'DAYBOOK')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-book-open-page-variant</v-icon>
@@ -556,9 +519,10 @@
 
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'CUSTOMERACCOUNTDetail')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'CUSTOMERACCOUNTDetail')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-eye</v-icon>
@@ -598,9 +562,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'RTODetails')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'RTODetails')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-card-bulleted</v-icon>
@@ -625,9 +590,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'AllCustomerInvoices')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'AllCustomerInvoices')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-format-list-bulleted</v-icon>
@@ -639,9 +605,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'QUICKINVOICE')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'QUICKINVOICE')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-receipt</v-icon>
@@ -656,7 +623,6 @@
         <v-list-group
           value="true"
           sub-group
-          class="submenu"
         >
           <template v-slot:activator>
             <v-list-item-content>
@@ -666,9 +632,10 @@
           
           <v-list-item 
             link 
-            @click="$emit('tab-selected', 'PaymentReceipt')"
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'PaymentReceipt')"
             class="nav-item"
-             :class="{ 'selected-item': selectedTab === 'Addclient' }"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
           >
             <v-list-item-icon class="nav-icon">
               <v-icon small>mdi-receipt</v-icon>
@@ -699,7 +666,10 @@ export default {
       // permissions
       userPermissions: null,
       permission: null,
-      selectedTab: null
+      selectedTab: null,
+
+      // used so items become real links (for "open in new tab")
+      currentUrl: window.location.href
     };
   },
 

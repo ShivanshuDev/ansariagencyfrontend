@@ -265,9 +265,11 @@
               </v-col>
 
               <v-col cols="12" sm="6" class="d-flex align-end justify-end">
-                <v-btn small class="mr-2" text @click="clearDateFilter">Clear Range</v-btn>
-                <v-btn small class="mr-2" outlined @click="downloadPdf">Download PDF</v-btn>
-                <v-btn small outlined @click="downloadExcel">Download Excel</v-btn>
+                <v-btn color="success" small outlined class="mr-2" text @click="clearDateFilter">RESET</v-btn>
+                <v-btn style="background-color:black; color:white;" small class="mr-2" outlined @click="downloadPdf">
+                  <v-icon left>mdi-file-pdf-box</v-icon> PDF
+                </v-btn>
+                <v-btn style="background-color:blue; color:white;" small outlined @click="downloadExcel"> Excel</v-btn>
               </v-col>
             </v-row>
 
@@ -399,9 +401,7 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx-js-style";
 import logoSrc from "@/assets/newLogoTVS.png"; // still imported, but not required for layout
 
-// existing deposit form
 import VendorDepositForm from "@/components/ledger/AddEntryForm.vue";
-// NEW: create vendor account component - adjust path if necessary
 import CreateVendorAccount from "@/components/ledger/CreateVendorAccount.vue";
 
 export default {
@@ -437,37 +437,33 @@ export default {
       dateFrom: "",
       dateTo: "",
 
-      // 🔹 controls the new Deposit popup
+      // popups
       depositDialog: false,
-
-      // 🔹 NEW: controls the create account dialog
       openAccountDialog: false,
       menuFrom: false,
-menuTo: false,
+      menuTo: false
     };
   },
   computed: {
     todayISO() {
-    // Today in yyyy-mm-dd (Vuetify v-date-picker format)
-    return new Date().toISOString().slice(0, 10);
-  },
-  dateFromDisplay: {
-    get() {
-      return this.formatISOToDisplay(this.dateFrom);
+      return new Date().toISOString().slice(0, 10);
     },
-    set(val) {
-      this.dateFrom = this.parseDisplayToISO(val);
-    }
-  },
-
-  dateToDisplay: {
-    get() {
-      return this.formatISOToDisplay(this.dateTo);
+    dateFromDisplay: {
+      get() {
+        return this.formatISOToDisplay(this.dateFrom);
+      },
+      set(val) {
+        this.dateFrom = this.parseDisplayToISO(val);
+      }
     },
-    set(val) {
-      this.dateTo = this.parseDisplayToISO(val);
-    }
-  },
+    dateToDisplay: {
+      get() {
+        return this.formatISOToDisplay(this.dateTo);
+      },
+      set(val) {
+        this.dateTo = this.parseDisplayToISO(val);
+      }
+    },
     BASE() {
       return (process.env.VUE_APP_AGENCY_BACKEND_URL || "").replace(/\/$/, "");
     },
@@ -485,7 +481,6 @@ menuTo: false,
     },
 
     ledgerHeaders() {
-      // UI table remains SAME
       return [
         { text: "Date", value: "date" },
         { text: "Time", value: "time" },
@@ -510,16 +505,6 @@ menuTo: false,
       return this.items;
     },
 
-    // filteredLedgerRows() {
-    //   let rows = this.ledgerRows || [];
-    //   if (this.dateFrom) {
-    //     rows = rows.filter(r => r.dateKey && r.dateKey >= this.dateFrom);
-    //   }
-    //   if (this.dateTo) {
-    //     rows = rows.filter(r => r.dateKey && r.dateKey <= this.dateTo);
-    //   }
-    //   return rows;
-    // },
     filteredLedgerRows() {
       let rows = this.ledgerRows || [];
 
@@ -530,15 +515,13 @@ menuTo: false,
         rows = rows.filter(r => r.dateKey && r.dateKey <= this.dateTo);
       }
 
-      // 🔽 NEW: sort by dateKey (latest first)
+      // latest first
       return rows.slice().sort((a, b) => {
         const aKey = a.dateKey || "";
         const bKey = b.dateKey || "";
-        // newer (b) should come before older (a)
         return bKey.localeCompare(aKey);
       });
     },
-
 
     totalDebit() {
       return this.filteredLedgerRows.reduce(
@@ -571,25 +554,22 @@ menuTo: false,
     this.fetchAccounts();
   },
   methods: {
-     onFromDateSelected(value) {
-    this.dateFrom = value;
+    onFromDateSelected(value) {
+      this.dateFrom = value;
+      if (this.dateTo && this.dateTo < this.dateFrom) {
+        this.dateTo = this.dateFrom;
+      }
+      this.menuFrom = false;
+    },
 
-    // if current To Date is before new From Date, auto-adjust it
-    if (this.dateTo && this.dateTo < this.dateFrom) {
-      this.dateTo = this.dateFrom;
-    }
-
-    this.menuFrom = false;
-  },
     parseDisplayToISO(display) {
-  if (!display) return "";
-  const m = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(display);
-  if (!m) return "";
-  let [_, dd, mm, yyyy] = m;
-  return `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
-}
-,
-    // ---------- small helpers ----------
+      if (!display) return "";
+      const m = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(display);
+      if (!m) return "";
+      let [_, dd, mm, yyyy] = m;
+      return `${yyyy}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+    },
+
     formatISOToDisplay(iso) {
       if (!iso) return "";
       const parts = iso.split("-");
@@ -597,6 +577,7 @@ menuTo: false,
       const [year, month, day] = parts;
       return `${day}/${month}/${year}`;
     },
+
     formatAmount(value) {
       if (value === null || value === undefined || value === "") return "";
       const num = Number(value) || 0;
@@ -708,7 +689,7 @@ menuTo: false,
         let displayDate = "";
         if (dateKey) {
           const [year, month, day] = dateKey.split("-");
-          displayDate = `${day}/${month}/${year}`; // dd/mm/yyyy for table + pdf
+          displayDate = `${day}/${month}/${year}`;
         }
 
         const time = d ? d.toLocaleTimeString() : "";
@@ -722,7 +703,6 @@ menuTo: false,
           debit: !isCredit ? amount : 0,
           credit: isCredit ? amount : 0,
           runningBalance: running,
-          // extra fields for PDF layout (do NOT affect UI table)
           journal: t.journal || t.type || "",
           account: t.accountId || vendorAccountId,
           sold:
@@ -881,15 +861,10 @@ menuTo: false,
       }
     },
 
-    // 🔹 Called when deposit is successful inside VendorDepositForm
     async onDepositCreated(payload) {
-      // Close deposit dialog
       this.depositDialog = false;
-
-      // Refresh main accounts list
       await this.fetchAccounts();
 
-      // If some vendor is already selected in details dialog, refresh its history too
       const vendorId =
         this.selectedDetails?.vendor?.vendorId ||
         (this.selectedDetails?.vendor?.pk
@@ -901,21 +876,16 @@ menuTo: false,
       }
     },
 
-    // 🔹 NEW: called when CreateVendorAccount emits 'created'
     async onAccountCreated(payload) {
-      // payload is whatever CreateVendorAccount emits (likely response object)
       this.openAccountDialog = false;
 
-      // notify user
       this.$emit("notify", {
         text: (payload && payload.message) || "Vendor account created",
         color: "success"
       });
 
-      // refresh accounts list so the new account appears
       await this.fetchAccounts();
 
-      // optional: if payload contains vendorId open its details automatically
       const newVendorId =
         (payload &&
           (payload.vendorId ||
@@ -932,7 +902,7 @@ menuTo: false,
       }
     },
 
-    // ========== PDF / Excel functions (UPDATED PDF ONLY) ==========
+    // ========== PDF / Excel functions (PDF UPDATED TO OPEN NEW TAB) ==========
     downloadPdf() {
       if (!this.filteredLedgerRows.length) {
         this.$emit("notify", {
@@ -948,7 +918,7 @@ menuTo: false,
       const vendorName = this.selectedDetails?.vendor?.name || "";
       const vendorId = this.selectedDetails?.vendor?.vendorId || "";
 
-      // determine period: use selected range, otherwise full ledger range
+      // period
       const firstRow = this.filteredLedgerRows[0];
       const lastRow =
         this.filteredLedgerRows[this.filteredLedgerRows.length - 1];
@@ -959,7 +929,7 @@ menuTo: false,
       const periodFromDisplay = this.formatISOToDisplay(periodFromISO);
       const periodToDisplay = this.formatISOToDisplay(periodToISO);
 
-      // ===== Header like attached image (monospaced look) =====
+      // ===== Header =====
       doc.setFont("courier", "bold");
       doc.setFontSize(14);
       doc.text("Ansari Automobiles", pageWidth / 2, 30, { align: "center" });
@@ -990,7 +960,7 @@ menuTo: false,
       doc.setFontSize(9);
       doc.text(periodLine, pageWidth / 2, 90, { align: "center" });
 
-      // Optional: vendor info in small text below (left side)
+      // vendor info
       let infoY = 106;
       doc.setFontSize(9);
       doc.setFont("courier", "normal");
@@ -1005,7 +975,7 @@ menuTo: false,
 
       const startTableY = infoY + 8;
 
-      // ===== Table data: DATE, JOURNAL, REFERENCE, DESCRIPTION, ACCOUNT, SOLD, DEBIT, CREDIT =====
+      // ===== Table data =====
       const head = [[
         "DATE",
         "JOURNAL",
@@ -1047,7 +1017,7 @@ menuTo: false,
           fontSize: 9,
           halign: "left",
           textColor: [0, 0, 0],
-          lineWidth: 0 // 🔸 no borders like dot-matrix style
+          lineWidth: 0
         },
         headStyles: {
           fontStyle: "bold",
@@ -1064,14 +1034,14 @@ menuTo: false,
           0: { halign: "left" },   // DATE
           1: { halign: "left" },   // JOURNAL
           2: { halign: "left" },   // DESCRIPTION
-          4: { halign: "left" },   // SOLD
-          5: { halign: "right" },  // DEBIT
-          6: { halign: "right" }   // CREDIT
+          4: { halign: "left" },   // (unused index kept to avoid breaking)
+          5: { halign: "right" },  // (unused)
+          6: { halign: "right" }   // (unused)
         },
         margin: { left: 40, right: 40 }
       });
 
-      // ===== Page numbers at top-right (Page X of Y) =====
+      // ===== Page numbers =====
       const totalPages = doc.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
@@ -1086,10 +1056,26 @@ menuTo: false,
       }
 
       const fileName = `Ledger_${vendorName || vendorId || "vendor"}.pdf`;
-      doc.save(fileName);
+
+      // 🔴 IMPORTANT CHANGE: open in NEW TAB instead of direct download
+      const blob = doc.output("blob");
+      const blobUrl = URL.createObjectURL(blob);
+
+      // open in a new tab/window, from there user can download / save / print
+      const win = window.open(blobUrl, "_blank");
+
+      // optional: try to revoke URL after some time to free memory
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 60 * 1000);
+
+      // If popup blocked, you could fallback to direct download:
+      if (!win) {
+        // fallback so feature never "breaks"
+        doc.save(fileName);
+      }
     },
 
-    // keep function so nothing else breaks (not used now, but safe)
     downloadPdfWithoutLogo() {
       this.downloadPdf();
     },

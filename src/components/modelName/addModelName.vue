@@ -1,55 +1,127 @@
 <template>
-  <v-container fluid>
+  <v-container fluid class="model-manager pa-4">
     <v-row dense>
-      <!-- CATEGORIES -->
+      <!-- ========== LEFT: CATEGORIES PANEL ========== -->
       <v-col cols="12" md="4">
-        <v-card class="pa-3">
-          <v-card-title class="d-flex align-center">
-            <div class="headline">Categories</div>
+        <v-card class="rounded elevation-3 category-card">
+          <!-- Header -->
+          <v-card-title class="py-3 px-4 d-flex align-center">
+            <div>
+              <div class="section-title">Categories</div>
+              <div class="section-subtitle">
+                Manage model groups & quick selection
+              </div>
+            </div>
+            <v-spacer />
+            <v-chip
+              small
+              label
+              class="category-count-chip"
+            >
+              {{ categoriesData.length }} total
+            </v-chip>
           </v-card-title>
 
-          <v-card-text>
-            <v-row align="center" class="mb-2">
-              <v-col cols="8" class="pr-1">
+          <v-divider class="mx-4" />
+
+          <!-- Add category -->
+          <v-card-text class="px-4 pt-3 pb-1">
+            <v-row align="center" no-gutters>
+              <v-col cols="8" class="pr-2">
                 <v-text-field
                   v-model="newCategory"
                   label="New category"
                   dense
                   outlined
                   hide-details
-                  @keyup.enter="createCategory"
                   clearable
+                  prepend-inner-icon="mdi-folder-plus"
+                  @keyup.enter="createCategory"
                 />
               </v-col>
               <v-col cols="4" class="pl-1">
-                <v-btn :loading="loading" block color="primary" @click="createCategory" :disabled="!newCategory">
+                <v-btn
+                  :loading="loading"
+                  block
+                  color="primary"
+                  class="rounded-lg text-none"
+                  @click="createCategory"
+                  :disabled="!newCategory"
+                >
+                  <v-icon left small>mdi-plus</v-icon>
                   Add
                 </v-btn>
               </v-col>
             </v-row>
-            <v-divider class="my-2" />
-            <v-list two-line dense class="category-list" >
+            <p class="helper-text mt-2 mb-0">
+              Tip: click a category to pre-fill it when adding a model.
+            </p>
+          </v-card-text>
+
+          <v-divider class="mt-2 mb-1" />
+
+          <!-- Category list -->
+          <v-card-text class="pt-0 pb-3 px-2">
+            <v-list two-line dense class="category-list">
               <v-list-item
                 v-for="(c, idx) in categoriesData"
                 :key="c.category || c.name || idx"
                 @click="selectCategoryForForm(c)"
-                class="category-row" style="border-bottom:1px solid gray;"
+                class="category-row px-3"
+                :class="{ 'category-row--active': (c.category || c.name) === form.category }"
               >
+                
+
                 <v-list-item-content>
-                  <v-list-item-title>{{ c.category || c.name }}</v-list-item-title>
-                  <v-list-item-subtitle v-if="c.count">{{ c.count }} models</v-list-item-subtitle>
+                  <v-list-item-title class="text-truncate font-weight-medium">
+                    {{ c.category || c.name }}
+                  </v-list-item-title>
+                  <v-list-item-subtitle v-if="c.count" class="caption">
+                    {{ c.count }} models
+                  </v-list-item-subtitle>
                 </v-list-item-content>
 
-                <v-list-item-action style="display:flex; flex-direction:row;">
-                  <v-btn icon small @click.stop="addModelForCategory(c)"><v-icon>mdi-plus</v-icon></v-btn>
-                  <v-btn icon small @click.stop="openCategoryDialog('edit', c)"><v-icon>mdi-pencil</v-icon></v-btn>
-                  <v-btn icon small @click.stop="deleteCategoryConfirm(c)"><v-icon color="red">mdi-delete</v-icon></v-btn>
+                <v-list-item-action style="display:flex; flex-direction:row;" class="category-actions">
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-btn icon small v-bind="attrs" v-on="on" @click.stop="addModelForCategory(c)">
+                        <v-icon small>mdi-plus</v-icon>
+                      </v-btn>
+                    </template>
+                    <span>Add model in this category</span>
+                  </v-tooltip>
+
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-btn icon small v-bind="attrs" v-on="on" @click.stop="openCategoryDialog('edit', c)">
+                        <v-icon small>mdi-pencil</v-icon>
+                      </v-btn>
+                    </template>
+                    <span>Rename category</span>
+                  </v-tooltip>
+
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-btn icon small v-bind="attrs" v-on="on" @click.stop="deleteCategoryConfirm(c)">
+                        <v-icon small color="red">mdi-delete</v-icon>
+                      </v-btn>
+                    </template>
+                    <span>Delete category</span>
+                  </v-tooltip>
                 </v-list-item-action>
               </v-list-item>
 
-              <v-list-item v-if="!categoriesData || categoriesData.length === 0">
+              <v-list-item
+                v-if="!categoriesData || categoriesData.length === 0"
+                class="px-3"
+              >
                 <v-list-item-content>
-                  <v-list-item-title class="text--secondary">No categories yet</v-list-item-title>
+                  <v-list-item-title class="text--secondary">
+                    No categories yet
+                  </v-list-item-title>
+                  <v-list-item-subtitle class="caption text--disabled">
+                    Start by creating your first category above.
+                  </v-list-item-subtitle>
                 </v-list-item-content>
               </v-list-item>
             </v-list>
@@ -57,229 +129,372 @@
         </v-card>
       </v-col>
 
-      <!-- MODELS TABLE -->
+      <!-- ========== RIGHT: MODELS TABLE ========== -->
       <v-col cols="12" md="8">
-        <v-card class="pa-3">
-          <v-card-title>
-            <div class="headline">Models</div>
+        <v-card class="rounded elevation-3 models-card">
+          <!-- Header -->
+          <v-card-title class="py-3 px-4 d-flex align-center models-header">
+            <div>
+              <div class="section-title">Models</div>
+              <div class="section-subtitle">
+                {{ filteredModels.length }} model{{ filteredModels.length === 1 ? '' : 's' }} found
+                <span v-if="form.category">
+                  · Selected category:
+                  <strong>{{ form.category }}</strong>
+                </span>
+              </div>
+            </div>
+
             <v-spacer />
+
+            <v-select
+              v-model="selectedModelFilter"
+              :items="displayModels.map(m => m.modelName)"
+              label="Filter by model"
+              dense
+              outlined
+              hide-details
+              clearable
+              class="mr-3 model-filter"
+            />
+
+
             <v-text-field
               v-model="search"
               append-icon="mdi-magnify"
-              label="Search"
+              label="Search models"
               single-line
               hide-details
               dense
               outlined
+              class="mr-3 search-field"
               @input="debouncedFilter"
-              style="max-width:260px"
               clearable
             />
+
+            <v-btn
+              color="primary"
+              class="text-none rounded-lg"
+              small
+              @click="openModelDialog()"
+            >
+              <v-icon left small>mdi-plus</v-icon>
+              Add Model
+            </v-btn>
           </v-card-title>
 
-          <v-data-table
-            class="elevation-1 fixed-rows"
-            :headers="headers"
-            :items="filteredModels"
-            :items-per-page="10"
-            dense
-            item-key="modelName"
-            :item-class="rowClass"
-            @click:row="selectModel"
-          >
-            <template v-slot:item.modelName="{ item }">
-              <div class="d-flex align-center justify-space-between">
-                <div style="max-width: 380px; overflow: hidden;">
-                  <!-- Tooltip for Model Name -->
-                  <v-tooltip bottom>
-                    <template v-slot:activator="{ on, attrs }">
-                      <div
-                        v-bind="attrs"
-                        v-on="on"
-                        class="font-weight-medium"
-                        :style="{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: '360px',
-                          cursor: item.modelName?.length > 30 ? 'pointer' : 'default'
-                        }"
-                      >
-                        {{
-                          item.modelName && item.modelName.length > 30
-                            ? item.modelName.substring(0, 30) + '...'
-                            : item.modelName
-                        }}
-                      </div>
-                    </template>
-                    <span>{{ item.modelName }}</span>
-                  </v-tooltip>
+          <v-divider />
 
-                  <!-- Category (truncated if too long) -->
-                  <div
-                    class="caption text--secondary"
-                    :style="{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      maxWidth: '320px',
-                    }"
-                  >
-                    {{ item.category }}
+          <!-- Table -->
+          <v-card-text class="px-0 pb-0 pt-1">
+            <v-data-table
+              class="elevation-0 fixed-rows models-table"
+              :headers="headers"
+              :items="filteredModels"
+              :items-per-page="13"
+              dense
+              item-key="modelName"
+              :item-class="rowClass"
+              @click:row="selectModel"
+            >
+              <!-- MODEL NAME + CATEGORY + COLORS SUMMARY -->
+              <template v-slot:item.modelName="{ item }">
+                <div class="d-flex align-center justify-space-between model-cell">
+                  <div class="model-main">
+                    <!-- Model name with tooltip -->
+                    <v-tooltip bottom>
+                      <template v-slot:activator="{ on, attrs }">
+                        <div
+                          v-bind="attrs"
+                          v-on="on"
+                          class="font-weight-medium text-truncate model-name"
+                          :style="{
+                            cursor: item.modelName?.length > 30 ? 'pointer' : 'default'
+                          }"
+                        >
+                          {{
+                            item.modelName && item.modelName.length > 30
+                              ? item.modelName.substring(0, 30) + '...'
+                              : item.modelName
+                          }}
+                        </div>
+                      </template>
+                      <span>{{ item.modelName }}</span>
+                    </v-tooltip>
+
+                    <!-- Category -->
+                    <div class="caption text--secondary text-truncate model-category">
+                      {{ item.category || '—' }}
+                    </div>
+                  </div>
+
+                  <div class="text-right model-meta">
+                    <v-chip
+                      small
+                      v-if="item.colors && item.colors.length"
+                      label
+                      class="model-color-count-chip"
+                    >
+                      <v-icon left x-small>mdi-palette</v-icon>
+                      {{ item.colors.length }} color{{ item.colors.length === 1 ? '' : 's' }}
+                    </v-chip>
                   </div>
                 </div>
+              </template>
 
-                <div class="text-right">
-                  <v-chip small v-if="item.colors && item.colors.length">
-                    {{ item.colors.length }} colors
+              <!-- COLORS -->
+              <template v-slot:item.color="{ item }">
+                <div class="d-flex align-center flex-wrap colors-cell">
+                  <template v-for="(c,i) in (item.colors || []).slice(0,3)">
+                    <v-tooltip bottom :key="`c-${getKey(item.modelName)}-${i}`">
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-chip
+                          v-bind="attrs"
+                          v-on="on"
+                          small
+                          class="ma-1 color-chip text-truncate"
+                          outlined
+                          pill
+                        >
+                          {{ truncateText(c, 18) }}
+                        </v-chip>
+                      </template>
+                      <span>{{ c }}</span>
+                    </v-tooltip>
+                  </template>
+
+                  <v-chip
+                    v-if="item.colors && item.colors.length > 3"
+                    small
+                    class="ma-1 more-chip"
+                    outlined
+                    pill
+                  >
+                    +{{ item.colors.length - 3 }} more
                   </v-chip>
                 </div>
-              </div>
-            </template>
+              </template>
 
-            <!-- HSN appears automatically via headers/value=hsn -->
-
-            <!-- COLORS (chips, truncated text, tooltip, +N more) -->
-            <template v-slot:item.color="{ item }">
-              <div class="d-flex align-center flex-wrap" style="max-width:480px">
-                <template v-for="(c,i) in (item.colors || []).slice(0,3)">
-                  <v-tooltip bottom :key="`c-${getKey(item.modelName)}-${i}`">
+              <!-- ACTIONS -->
+              <template v-slot:item.actions="{ item }">
+                <div class="d-flex justify-end actions-cell">
+                  <v-tooltip bottom>
                     <template v-slot:activator="{ on, attrs }">
-                      <v-chip
+                      <v-btn
+                        icon
+                        small
                         v-bind="attrs"
                         v-on="on"
-                        small
-                        class="ma-1 color-chip text-truncate"
-                        :style="{ maxWidth: '160px' }"
-                        outlined
-                        pill
+                        @click.stop="openDetails(item)"
                       >
-                        {{ truncateText(c, 18) }}
-                      </v-chip>
+                        <v-icon small>mdi-eye</v-icon>
+                      </v-btn>
                     </template>
-                    <span>{{ c }}</span>
+                    <span>View details</span>
                   </v-tooltip>
-                </template>
 
-                <v-chip
-                  v-if="item.colors && item.colors.length > 3"
-                  small
-                  class="ma-1"
-                  outlined
-                  pill
-                >
-                  +{{ item.colors.length - 3 }} more
-                </v-chip>
-              </div>
-            </template>
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-btn
+                        icon
+                        small
+                        v-bind="attrs"
+                        v-on="on"
+                        :loading="itemLoading[getKey(item.modelName)]"
+                        :disabled="itemLoading[getKey(item.modelName)]"
+                        @click.stop="onEdit(item)"
+                      >
+                        <v-icon small>mdi-pencil</v-icon>
+                      </v-btn>
+                    </template>
+                    <span>Edit model</span>
+                  </v-tooltip>
 
-            <template v-slot:item.actions="{ item }">
-              <v-btn icon small @click.stop="openDetails(item)">
-                <v-icon>mdi-eye</v-icon>
-              </v-btn>
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-btn
+                        icon
+                        small
+                        v-bind="attrs"
+                        v-on="on"
+                        :loading="itemLoading['del-'+getKey(item.modelName)]"
+                        :disabled="itemLoading['del-'+getKey(item.modelName)]"
+                        @click.stop="confirmDelete(item)"
+                      >
+                        <v-icon small color="red">mdi-delete</v-icon>
+                      </v-btn>
+                    </template>
+                    <span>Delete model</span>
+                  </v-tooltip>
+                </div>
+              </template>
 
-              <v-btn icon small :loading="itemLoading[getKey(item.modelName)]" @click.stop="onEdit(item)" :disabled="itemLoading[getKey(item.modelName)]">
-                <v-icon>mdi-pencil</v-icon>
-              </v-btn>
-
-              <v-btn icon small :loading="itemLoading['del-'+getKey(item.modelName)]" @click.stop="confirmDelete(item)" :disabled="itemLoading['del-'+getKey(item.modelName)]">
-                <v-icon color="red">mdi-delete</v-icon>
-              </v-btn>
-            </template>
-
-            <template v-slot:no-data>
-              <v-alert type="info" dense>No models found.</v-alert>
-            </template>
-          </v-data-table>
+              <template v-slot:no-data>
+                <v-alert type="info" dense class="ma-4">
+                  No models found. Try adjusting your search or add a new model.
+                </v-alert>
+              </template>
+            </v-data-table>
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Delete confirmation dialog (per-item) -->
+    <!-- ========== DELETE CONFIRMATION DIALOG ========== -->
     <v-dialog v-model="deleteDialog.visible" persistent max-width="420">
-      <v-card>
-        <v-card-title class="headline">Confirm delete</v-card-title>
+      <v-card class="rounded">
+        <v-card-title class="headline">
+          Confirm delete
+        </v-card-title>
         <v-card-text>
-          Are you sure you want to delete model "<strong>{{ deleteDialog.item?.modelName }}</strong>"? This cannot be undone.
+          Are you sure you want to delete model
+          "<strong>{{ deleteDialog.item?.modelName }}</strong>"?
+          This cannot be undone.
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="() => (deleteDialog.visible = false)">Cancel</v-btn>
-          <v-btn :loading="itemLoading['del-'+getKey(deleteDialog.item?.modelName)]" color="red" @click="() => deleteModel(deleteDialog.item)">Delete</v-btn>
+          <v-btn text class="text-none" @click="() => (deleteDialog.visible = false)">
+            Cancel
+          </v-btn>
+          <v-btn
+            :loading="itemLoading['del-'+getKey(deleteDialog.item?.modelName)]"
+            color="red"
+            class="text-none"
+            @click="() => deleteModel(deleteDialog.item)"
+          >
+            Delete
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Model dialog (add/edit) -->
-    <v-dialog v-model="modelDialog.visible" persistent max-width="680px">
-      <v-card>
-        <v-card-title>
-          <div class="headline">{{ modelDialog.mode === 'edit' ? 'Edit Model' : 'Add Model' }}</div>
+    <!-- ========== MODEL DIALOG (ADD / EDIT) ========== -->
+    <v-dialog v-model="modelDialog.visible" persistent max-width="720px">
+      <v-card class="rounded">
+        <v-card-title class="py-3 px-4">
+          <div class="headline">
+            {{ modelDialog.mode === 'edit' ? 'Edit Model' : 'Add Model' }}
+          </div>
         </v-card-title>
 
-        <v-card-text>
+        <v-divider />
+
+        <v-card-text class="pt-4 pb-2 px-4">
           <v-form ref="modelDialogForm" v-model="modelDialog.valid" lazy-validation>
-            <v-select
-              v-model="form.category"
-              :items="categoriesData.map(c => c.category || c.name)"
-              label="Category"
-              dense
-              outlined
-              :rules="[rules.required]"
-              hide-details
-              clearable
-            />
-            <br />
-            <v-text-field
-              v-model="form.modelName"
-              :rules="[rules.required, rules.min3]"
-              label="Model Name"
-              name="modelName"
-              required
-              outlined
-              dense
-            />
+            <v-row dense>
+              <v-col cols="12" md="6">
+                <v-select
+                  v-model="form.category"
+                  :items="categoriesData.map(c => c.category || c.name)"
+                  label="Category"
+                  dense
+                  outlined
+                  :rules="[rules.required]"
+                  hide-details="auto"
+                  clearable
+                  prepend-inner-icon="mdi-folder"
+                />
+              </v-col>
 
-            <!-- HSN (required) -->
-            <v-text-field
-              v-model.trim="form.hsn"
-              :rules="[rules.required, rules.hsnDigits]"
-              label="HSN (4–8 digits)"
-              outlined
-              dense
-              name="hsn"
-              hide-details="auto"
-              maxlength="8"
-              @input="form.hsn = (form.hsn || '').replace(/[^0-9]/g,'')"
-            />
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="form.modelName"
+                  :rules="[rules.required, rules.min3]"
+                  label="Model Name"
+                  name="modelName"
+                  required
+                  outlined
+                  dense
+                  hide-details="auto"
+                  prepend-inner-icon="mdi-shape-outline"
+                />
+              </v-col>
 
-            <div class="mt-3">
-              <div class="d-flex align-center justify-space-between mb-2">
-                <div class="subtitle-1">Colors</div>
-                <div>
-                  <v-btn small text @click="addColorField" :disabled="loading">Add color</v-btn>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model.trim="form.hsn"
+                  :rules="[rules.required, rules.hsnDigits]"
+                  label="HSN (4–8 digits)"
+                  outlined
+                  dense
+                  name="hsn"
+                  hide-details="auto"
+                  maxlength="8"
+                  prepend-inner-icon="mdi-barcode"
+                  @input="form.hsn = (form.hsn || '').replace(/[^0-9]/g,'')"
+                />
+              </v-col>
+
+              <v-col cols="12" md="6" class="d-flex align-center">
+                <v-chip
+                  small
+                  label
+                  :color="form.active ? 'green' : 'red'"
+                  :text-color="form.active ? 'white' : 'white'"
+                  class="mr-2"
+                >
+                  <v-icon left small>
+                    {{ form.active ? 'mdi-check-circle' : 'mdi-close-circle' }}
+                  </v-icon>
+                  {{ form.active ? 'Active' : 'Inactive' }}
+                </v-chip>
+                <span class="caption text--secondary">
+                  (Status can be toggled in backend or a separate flow if needed)
+                </span>
+              </v-col>
+            </v-row>
+
+            <!-- Colors section -->
+            <div class="mt-4">
+              <div class="d-flex align-center justify-space-between mb-1">
+                <div class="subtitle-2 font-weight-medium d-flex align-center">
+                  <v-icon small class="mr-1">mdi-palette</v-icon>
+                  Colors
                 </div>
+                <v-btn
+                  small
+                  text
+                  class="text-none"
+                  @click="addColorField"
+                  :disabled="loading"
+                >
+                  <v-icon small left>mdi-plus</v-icon>
+                  Add color
+                </v-btn>
+              </div>
+              <p class="helper-text mb-2">
+                Add all color names or codes associated with this model.
+              </p>
+
+              <div v-if="form.colorInputs.length === 0" class="text--secondary mb-2">
+                No color fields — click "Add color" to start.
               </div>
 
-              <div v-if="form.colorInputs.length === 0" class="text--secondary mb-2">No color fields — click "Add color".</div>
-
-              <div style="max-height:220px; overflow:auto;">
-                <br />
-                <v-row v-for="(c, idx) in form.colorInputs" :key="`fci-${idx}`" class="mb-2" align="center">
-                  <v-col cols="10">
+              <div class="color-inputs-scroll">
+                <v-row
+                  v-for="(c, idx) in form.colorInputs"
+                  :key="`fci-${idx}`"
+                  class="mb-2"
+                  align="center"
+                  no-gutters
+                >
+                  <v-col cols="11" class="pr-2">
                     <v-text-field
                       ref="colorInputs"
                       v-model="form.colorInputs[idx]"
                       :label="`Color ${idx + 1}`"
                       dense
                       outlined
-                      hide-details 
-                      @keyup.enter="onColorEnter(idx)"
+                      hide-details
                       clearable
+                      @keyup.enter="onColorEnter(idx)"
+                      prepend-inner-icon="mdi-palette"
                     />
                   </v-col>
-                  <v-col cols="1" class="text-right d-flex align-center">
-                    <v-btn icon small @click="removeColorField(idx)"><v-icon color="red">mdi-delete</v-icon></v-btn>
+                  <v-col cols="1" class="d-flex justify-end">
+                    <v-btn icon small @click="removeColorField(idx)">
+                      <v-icon small color="red">mdi-delete</v-icon>
+                    </v-btn>
                   </v-col>
                 </v-row>
               </div>
@@ -287,38 +502,68 @@
           </v-form>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="px-4 pb-4 pt-1">
           <v-spacer />
-          <v-btn text @click="closeModelDialog">Cancel</v-btn>
-          <v-btn :loading="itemLoading[getKey(modelDialog.editingKey)]" color="primary" @click="submitModelFromDialog">{{ modelDialog.mode === 'edit' ? 'Update' : 'Add' }}</v-btn>
+          <v-btn text class="text-none" @click="closeModelDialog">
+            Cancel
+          </v-btn>
+          <v-btn
+            :loading="itemLoading[getKey(modelDialog.editingKey)]"
+            color="primary"
+            class="text-none"
+            @click="submitModelFromDialog"
+          >
+            {{ modelDialog.mode === 'edit' ? 'Update' : 'Add' }}
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Category dialog -->
+    <!-- ========== CATEGORY DIALOG ========== -->
     <v-dialog v-model="categoryDialog.visible" persistent max-width="420px">
-      <v-card>
-        <v-card-title>
-          <span class="headline">{{ categoryDialog.mode === 'add' ? 'Add Category' : 'Edit Category' }}</span>
+      <v-card class="rounded">
+        <v-card-title class="py-3 px-4">
+          <span class="headline">
+            {{ categoryDialog.mode === 'add' ? 'Add Category' : 'Edit Category' }}
+          </span>
         </v-card-title>
 
-        <v-card-text>
+        <v-divider />
+
+        <v-card-text class="pt-4 pb-2 px-4">
           <v-form ref="categoryForm" v-model="categoryDialog.valid" lazy-validation>
-            <v-text-field v-model="categoryDialog.value" label="Category name" :rules="[rules.required]" outlined dense />
+            <v-text-field
+              v-model="categoryDialog.value"
+              label="Category name"
+              :rules="[rules.required]"
+              outlined
+              dense
+              hide-details="auto"
+              prepend-inner-icon="mdi-folder"
+            />
           </v-form>
         </v-card-text>
 
-        <v-card-actions>
+        <v-card-actions class="px-4 pb-4 pt-1">
           <v-spacer />
-          <v-btn text @click="closeCategoryDialog">Cancel</v-btn>
-          <v-btn color="primary" :loading="loading" @click="confirmCategoryDialog">{{ categoryDialog.mode === 'add' ? 'Add' : 'Save' }}</v-btn>
+          <v-btn text class="text-none" @click="closeCategoryDialog">
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            class="text-none"
+            :loading="loading"
+            @click="confirmCategoryDialog"
+          >
+            {{ categoryDialog.mode === 'add' ? 'Add' : 'Save' }}
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Model details dialog (polished) -->
+    <!-- ========== MODEL DETAILS DIALOG ========== -->
     <v-dialog v-model="modelDetailsDialog.visible" max-width="720px">
-      <v-card class="rounded-xl elevation-8">
+      <v-card class="rounded elevation-8">
         <!-- Header -->
         <div class="details-header d-flex align-center px-4 py-3">
           <v-avatar size="40" class="mr-3" tile>
@@ -336,7 +581,8 @@
                 class="mr-2 mb-1"
                 outlined
               >
-                <v-icon left small>mdi-folder</v-icon>{{ modelDetailsDialog.data.category }}
+                <v-icon left small>mdi-folder</v-icon>
+                {{ modelDetailsDialog.data.category }}
               </v-chip>
 
               <v-chip
@@ -365,7 +611,12 @@
 
           <v-spacer />
 
-          <v-btn icon small class="mr-1" @click="copyText(modelDetailsDialog.data?.modelName)">
+          <v-btn
+            icon
+            small
+            class="mr-1"
+            @click="copyText(modelDetailsDialog.data?.modelName)"
+          >
             <v-icon>mdi-content-copy</v-icon>
           </v-btn>
           <v-btn icon small @click="closeDetails">
@@ -375,35 +626,53 @@
 
         <!-- Body -->
         <v-card-text class="pt-4">
-          <!-- Info grid -->
           <v-container fluid class="pt-0">
             <v-row dense>
               <v-col cols="12" md="6" class="mb-3">
                 <div class="label">Model Name</div>
                 <div class="value">
                   {{ modelDetailsDialog.data?.modelName || '—' }}
-                  <v-btn text x-small class="ml-1" @click="copyText(modelDetailsDialog.data?.modelName)">Copy</v-btn>
+                  <v-btn
+                    text
+                    x-small
+                    class="ml-1 text-none"
+                    @click="copyText(modelDetailsDialog.data?.modelName)"
+                  >
+                    Copy
+                  </v-btn>
                 </div>
               </v-col>
 
               <v-col cols="12" md="6" class="mb-3">
                 <div class="label">Category</div>
-                <div class="value">{{ modelDetailsDialog.data?.category || '—' }}</div>
+                <div class="value">
+                  {{ modelDetailsDialog.data?.category || '—' }}
+                </div>
               </v-col>
 
-              <!-- HSN -->
               <v-col cols="12" md="6" class="mb-3">
                 <div class="label">HSN</div>
                 <div class="value">
                   {{ modelDetailsDialog.data?.hsn || '—' }}
-                  <v-btn text x-small class="ml-1" @click="copyText(modelDetailsDialog.data?.hsn)">Copy</v-btn>
+                  <v-btn
+                    text
+                    x-small
+                    class="ml-1 text-none"
+                    @click="copyText(modelDetailsDialog.data?.hsn)"
+                  >
+                    Copy
+                  </v-btn>
                 </div>
               </v-col>
 
               <v-col cols="12" md="6" class="mb-3">
                 <div class="label">Status</div>
                 <div class="value d-flex align-center">
-                  <v-icon small class="mr-1" :color="modelDetailsDialog.data?.active ? 'green' : 'red'">
+                  <v-icon
+                    small
+                    class="mr-1"
+                    :color="modelDetailsDialog.data?.active ? 'green' : 'red'"
+                  >
                     {{ modelDetailsDialog.data?.active ? 'mdi-check-circle' : 'mdi-close-circle' }}
                   </v-icon>
                   {{ modelDetailsDialog.data?.active ? 'Active' : 'Inactive' }}
@@ -412,7 +681,9 @@
 
               <v-col cols="12" md="6" class="mb-3">
                 <div class="label">Total Colors</div>
-                <div class="value">{{ modelDetailsDialog.data?.colors?.length || 0 }}</div>
+                <div class="value">
+                  {{ modelDetailsDialog.data?.colors?.length || 0 }}
+                </div>
               </v-col>
             </v-row>
 
@@ -425,7 +696,11 @@
             </div>
 
             <div v-if="modelDetailsDialog.data?.colors?.length" class="d-flex flex-wrap">
-              <v-tooltip bottom v-for="(c, i) in modelDetailsDialog.data.colors" :key="'chip-'+i">
+              <v-tooltip
+                bottom
+                v-for="(c, i) in modelDetailsDialog.data.colors"
+                :key="'chip-'+i"
+              >
                 <template v-slot:activator="{ on, attrs }">
                   <v-chip
                     v-bind="attrs"
@@ -450,15 +725,17 @@
 
         <!-- Footer -->
         <v-card-actions class="px-4 pb-4">
-          <v-btn text @click="closeDetails">Close</v-btn>
+          <v-btn text class="text-none" @click="closeDetails">
+            Close
+          </v-btn>
           <v-spacer />
-          <v-btn color="primary" @click="goToEditFromDetails">
-            <v-icon left>mdi-pencil</v-icon>Edit
+          <v-btn color="primary" class="text-none" @click="goToEditFromDetails">
+            <v-icon left>mdi-pencil</v-icon>
+            Edit
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
   </v-container>
 </template>
 
@@ -528,7 +805,8 @@ export default {
 
       itemLoading: {},
 
-      deleteDialog: { visible: false, item: null }
+      deleteDialog: { visible: false, item: null },
+      selectedModelFilter: null,
     };
   },
 
@@ -555,9 +833,18 @@ export default {
     },
 
     filteredModels() {
-      if (!this.search || this.search.trim() === "") return this.displayModels;
+      let list = this.displayModels;
+
+      // Filter by selected model from dropdown
+      if (this.selectedModelFilter) {
+        list = list.filter(m => m.modelName === this.selectedModelFilter);
+      }
+
+      // Existing search filter
+      if (!this.search || this.search.trim() === "") return list;
+
       const q = this.search.trim().toLowerCase();
-      return this.displayModels.filter(m =>
+      return list.filter(m =>
         (m.modelName && m.modelName.toLowerCase().includes(q)) ||
         (m.category && m.category.toString().toLowerCase().includes(q)) ||
         (m.colors && m.colors.join(", ").toLowerCase().includes(q)) ||
@@ -811,7 +1098,6 @@ export default {
       return res.data;
     },
 
-    // updateModel now accepts oldName and includes oldModelName only when provided
     async updateModel(oldName, payload) {
       const model = (payload.modelName || "").toString().trim();
       if (!model) throw new Error("modelName missing in payload");
@@ -961,7 +1247,6 @@ export default {
         const loadingKey = this.getKey(oldName);
         this.$set(this.itemLoading, loadingKey, true);
         try {
-          // only include oldName when actual rename happened
           const oldNameToSend = (oldName && oldName !== payload.modelName) ? oldName : null;
           await this.updateModel(oldNameToSend, payload);
           this.showSnackbar("Model updated");
@@ -989,7 +1274,6 @@ export default {
             this.selectedModel.colors = Array.from(payload.colors);
             this.selectedModel.category = payload.category;
             this.selectedModel.active = payload.active;
-            // update stored original name for selection
             this.selectedModel.__originalName = payload.modelName;
           }
         } catch (err) {
@@ -1057,14 +1341,13 @@ export default {
     },
 
     selectModel(item) {
-      // record original name so panel saves know if a rename happened
       this.selectedModel = {
         modelName: item.modelName,
         hsn: item.hsn || null,
         colors: Array.isArray(item.colors) ? [...item.colors] : [],
         active: !!item.active,
         category: item.category || null,
-        __originalName: item.modelName  // <-- important: store original
+        __originalName: item.modelName
       };
     },
 
@@ -1123,7 +1406,6 @@ export default {
           category: this.selectedModel.category || null,
         };
 
-        // send oldName only if original name exists and it differs
         const oldNameToSend = (this.selectedModel.__originalName && this.selectedModel.__originalName !== payload.modelName)
           ? this.selectedModel.__originalName
           : null;
@@ -1148,7 +1430,6 @@ export default {
           await this.fetchModels();
         }
 
-        // update stored original name after successful save
         if (this.selectedModel) this.selectedModel.__originalName = payload.modelName;
 
         this.colorDialog.visible = false;
@@ -1168,20 +1449,129 @@ export default {
 };
 </script>
 
-
 <style scoped>
-.category-list { max-height: 730px; overflow-y: auto; }
-.category-row { cursor: pointer; }
-.color-list { max-height: 220px; overflow-y: auto; }
-.v-data-table .v-chip { min-width: 36px; text-align: center; }
-.swatch { width: 18px; height: 18px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.08); display: inline-block; }
-.details-header{
+.model-manager {
+  background: linear-gradient(145deg, #f5f7fb, #ffffff);
+}
+
+/* ---------- Generic typography ---------- */
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.section-subtitle {
+  font-size: 0.78rem;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- Categories card ---------- */
+.category-card {
+  overflow: hidden;
+}
+
+.category-count-chip {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.helper-text {
+  font-size: 0.7rem;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* Scroll area for categories */
+.category-list {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* Category list rows */
+.category-row {
+  cursor: pointer;
+  border-radius: 12px;
+  margin: 2px 4px;
+  transition: background 0.12s ease, transform 0.08s ease;
+}
+
+.category-row:hover {
+  background-color: rgba(99, 102, 241, 0.06);
+  transform: translateY(-1px);
+}
+
+.category-row--active {
+  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(16,185,129,0.12));
+}
+
+.category-avatar {
+  background-color: rgba(99, 102, 241, 0.08);
+  color: rgba(55, 65, 81, 0.9);
+}
+
+.category-actions .v-btn {
+  margin-left: 4px;
+}
+
+/* ---------- Models card & table ---------- */
+.models-card {
+  overflow: hidden;
+}
+
+.models-header {
+  background-color: rgba(248, 250, 252, 0.9);
+}
+
+.search-field {
+  max-width: 260px;
+}
+
+.models-table .v-data-table__wrapper {
+  max-height: 620px;
+}
+
+.model-cell {
+  width: 100%;
+}
+
+.model-main {
+  min-width: 0;
+  max-width: 420px;
+}
+
+.model-name {
+  font-size: 0.9rem;
+}
+
+.model-category {
+  max-width: 380px;
+}
+
+.model-meta {
+  min-width: 0;
+}
+
+.model-color-count-chip {
+  font-size: 0.74rem;
+}
+
+/* Color chips in table */
+.colors-cell {
+  max-width: 480px;
+}
+
+/* ---------- Actions cell ---------- */
+.actions-cell .v-btn {
+  margin-left: 4px;
+}
+
+/* ---------- Details dialog ---------- */
+.details-header {
   background: linear-gradient(135deg, rgba(99,102,241,.22), rgba(16,185,129,.22));
   backdrop-filter: blur(4px);
   border-bottom: 1px solid rgba(0,0,0,.06);
 }
 
-.label{
+.label {
   font-size: .78rem;
   letter-spacing: .02em;
   opacity: .7;
@@ -1189,19 +1579,26 @@ export default {
   text-transform: uppercase;
 }
 
-.value{
+.value {
   font-size: 1rem;
 }
 
-.color-chip{
+/* ---------- Color chips (shared) ---------- */
+.color-chip {
   transition: transform .12s ease, box-shadow .12s ease;
+  max-width: 160px;
 }
-.color-chip:hover{
+
+.color-chip:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0,0,0,.08);
 }
 
-.swatch{
+.more-chip {
+  font-size: 0.75rem;
+}
+
+.swatch {
   width: 14px;
   height: 14px;
   border-radius: 3px;
@@ -1214,21 +1611,19 @@ export default {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.color-chip {
-  max-width: 160px; /* keeps chips tidy in table cells */
+
+/* ---------- Fixed row heights ---------- */
+.fixed-rows .v-data-table__wrapper table tbody tr {
+  height: 48px;
 }
 
-/* same height rows for Vuetify 2 */
-.fixed-rows .v-data-table__wrapper table tbody tr {
-  height: 48px;              /* tweak to 44/52 as you like */
-}
 .fixed-rows .v-data-table__wrapper td,
 .fixed-rows .v-data-table__wrapper th {
   padding: 8px 12px;
   vertical-align: middle;
 }
 
-/* force single-line with ellipsis inside cells */
+/* Avoid messy wrapping inside cells */
 .fixed-rows .v-data-table__wrapper td > *,
 .fixed-rows .v-data-table__wrapper td div,
 .fixed-rows .v-data-table__wrapper td span {
@@ -1237,18 +1632,54 @@ export default {
   text-overflow: ellipsis;
 }
 
-/* no chip wrapping; keep them compact */
-.fixed-rows .v-chip {
-  max-width: 160px;
-  white-space: nowrap;
-}
-
-/* make placeholder rows invisible but keep height for consistent table height */
+/* Placeholder rows invisible but keep height */
 .fixed-rows .placeholder-row td {
   color: transparent !important;
   border-color: transparent !important;
   pointer-events: none;
 }
 
+/* Color inputs scroll */
+.color-inputs-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 960px) {
+  .category-list {
+    max-height: 260px;
+  }
+  .models-table .v-data-table__wrapper {
+    max-height: 400px;
+  }
+}
+
+
+/* Color inputs scroll */
+.color-inputs-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+
+  /* NEW: make them flow like a grid */
+  display: flex;
+  flex-wrap: wrap;
+  /* 4 * 190 + small gaps ≈ 780px, so max 4 per row */
+  max-width: 780px;
+}
+
+/* Each color row behaves like a 190px "card" */
+.color-inputs-scroll .v-row {
+  flex: 0 0 190px;
+  max-width: 190px;
+  margin-right: 8px;
+}
+
+/* Ensure text-field itself respects width and label does not overlap */
+.color-inputs-scroll .v-text-field {
+  min-width: 190px;
+}
 
 </style>

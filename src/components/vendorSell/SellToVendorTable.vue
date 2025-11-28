@@ -16,7 +16,9 @@
             class="mr-2"
             color="secondary"
             @click="downloadPdf"
-            :disabled="loading || !rows.length"
+            :loading="pdfBusy"
+            :disabled="loading || pdfBusy || !rows.length"
+            style="cursor:pointer;"
           >
             <v-icon left>mdi-file-pdf-box</v-icon>
             PDF
@@ -28,12 +30,13 @@
             color="success"
             @click="downloadExcel"
             :disabled="loading || !rows.length"
+            style="cursor:pointer;"
           >
-            <v-icon left>mdi-microsoft-excel</v-icon>
+            <v-icon style="cursor:pointer;" left>mdi-microsoft-excel</v-icon>
             Excel
           </v-btn>
 
-          <v-btn small depressed color="primary" @click="loadAll" :loading="loading">
+          <v-btn small style="cursor:pointer;" depressed color="primary" @click="loadAll" :loading="loading">
             Refresh
           </v-btn>
         </v-toolbar>
@@ -120,8 +123,8 @@
           dense
         >
           <!-- Serial number column (first) - now global index across rows -->
-          <template v-slot:item.serial="{ item }">
-            {{ getSerial(item) }}
+          <template v-slot:item.serial="{ index }">
+             {{ index + 1 }}
           </template>
 
           <!-- Date column formatted as dd/mm/yyyy -->
@@ -353,6 +356,9 @@
         </div>
       </v-card>
     </template>
+
+    <!-- Hidden container for html2pdf rendering -->
+    <div ref="pdfContainer" style="display:none;"></div>
   </div>
 </template>
 
@@ -509,11 +515,11 @@ export default {
       rows: [],
       allRows: [],
       headers: [
-        { text: 'S.No', value: 'serial', width: 100 },
-        { text: 'Invoice', value: 'invoiceNumber', width: 230 },
+        { text: 'S.No', value: 'serial', width: 100, sortable: false },
         { text: 'Date', value: 'invoiceDate', width: 120 },
-        { text: 'Vendor', value: 'vendorName' },
         { text: 'Client ID', value: 'clientId', width: 160 },
+        { text: 'Vendor', value: 'vendorName' },
+        { text: 'Invoice', value: 'invoiceNumber', width: 230 },
         { text: 'Grand Total', value: 'totals.grandTotal', align: 'end', width: 140 },
         { text: 'Vehicle Count', value: 'itemsDisplay', align: 'center', width: 140 },
         { text: 'Status', value: 'meta.statusType', width: 100 },
@@ -536,12 +542,13 @@ export default {
       updateValid: true,
       saving: false,
       embedded: { show: false, invoiceNumber: null },
-      snack: { show: false, color: 'success', text: '' }
+      snack: { show: false, color: 'success', text: '' },
+      pdfBusy: false
     }
   },
 
   computed: {
-    currentDate() {
+    currentDate () {
       return new Date().toLocaleDateString('en-IN', {
         day: '2-digit',
         month: '2-digit',
@@ -550,10 +557,10 @@ export default {
         minute: '2-digit'
       })
     },
-    totalGrandTotal() {
+    totalGrandTotal () {
       return this.rows.reduce((sum, row) => sum + (row.totals?.grandTotal || 0), 0)
     },
-    totalVehicleCount() {
+    totalVehicleCount () {
       return this.rows.reduce((sum, row) => sum + (row.items?.length || 0), 0)
     }
   },
@@ -710,56 +717,205 @@ export default {
       this.rows = this.allRows.slice()
     },
 
-    // FIXED PDF DOWNLOAD - Creates HTML content dynamically
-async downloadPdf() {
-  if (!this.rows.length) {
-    this.notify('No records to export', 'warning');
-    return;
-  }
+    // ===== OPTIMIZED PDF DOWNLOAD =====
+    async downloadPdf () {
+      if (!this.rows.length) {
+        this.notify('No records to export', 'warning')
+        return
+      }
 
-  try {
-    const printWindow = window.open('', '_blank');
-    const html = `
-      <html>
-        <head><title>Sell To Vendor Records</title></head>
-        <body>
-          <h2 style="text-align:center;">ANSARI AUTOMOBILES</h2>
-          <h3 style="text-align:center;">Sell To Vendor Records</h3>
-          <p style="text-align:center;">Generated: ${new Date().toLocaleString()}</p>
-          <table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse;">
-            <thead>
-              <tr style="background:#f0f0f0;">
-                <th>S.No</th><th>Invoice</th><th>Date</th><th>Vendor</th>
-                <th>Client ID</th><th>Grand Total</th><th>Vehicles</th><th>Status</th>
+      if (this.pdfBusy) return
+      this.pdfBusy = true
+
+      try {
+        const pageSize = 30
+        const totalRows = this.rows.length
+        const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
+
+        const fromText = this.filters.from ? this.displayDateSlash(this.filters.from) : 'All'
+        const toText = this.filters.to ? this.displayDateSlash(this.filters.to) : 'All'
+
+        const pagesHtml = []
+
+        for (let p = 0; p < totalPages; p++) {
+          const start = p * pageSize
+          const end = start + pageSize
+          const pageRows = this.rows.slice(start, end)
+
+          const rowsHtml = pageRows.map((row, idx) => {
+            const serial = start + idx + 1
+            const dateStr = this.fmtDate(row.invoiceDate)
+            const invoice = row.invoiceNumber || ''
+            const clientId = row.clientId || ''
+            const vendor = row.vendorName || ''
+            const vehicleCount = row.items?.length || 0
+            const grandTotal = this.money(row.totals?.grandTotal || 0)
+            const status = row.meta?.statusType || ''
+
+            return `
+              <tr>
+                <td class="text-center">${serial}</td>
+                <td>${dateStr}</td>
+                <td>${clientId}</td>
+                <td>${vendor}</td>
+                <td>${invoice}</td>
+                <td class="text-center">${vehicleCount}</td>
+                <td class="text-right">${grandTotal}</td>
+                <td class="text-center">${status}</td>
               </tr>
-            </thead>
-            <tbody>
-              ${this.rows.map((row, i) => `
-                <tr>
-                  <td>${i + 1}</td>
-                  <td>${row.invoiceNumber || ''}</td>
-                  <td>${this.fmtDate(row.invoiceDate)}</td>
-                  <td>${row.vendorName || ''}</td>
-                  <td>${row.clientId || ''}</td>
-                  <td>₹${this.money(row.totals?.grandTotal || 0)}</td>
-                  <td>${row.items?.length || 0}</td>
-                  <td>${row.meta?.statusType || ''}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `;
-    
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.print();
-    
-  } catch (error) {
-    this.notify('PDF generation failed', 'error');
-  }
-},
+            `
+          }).join('')
+
+          pagesHtml.push(`
+            <div class="pdf-page">
+              <div class="pdf-header-main">Ansari Automobiles</div>
+              <div class="pdf-subheader">BADI KAMHARIYA BY PASS ROAD MAU</div>
+              <div class="pdf-subheader">GSTIN/UIN- 09AJPBA0437B1ZY</div>
+              <div class="pdf-subheader">SELL TO VENDOR TRANSACTIONS</div>
+              <div class="pdf-subheader">
+                All transactions for (${fromText} to ${toText})
+              </div>
+              <div class="pdf-meta">
+                <span>Generated: ${this.currentDate}</span>
+                <div><strong>Total Grand Total: </strong>₹${this.money(this.totalGrandTotal)}</div>
+                <div><strong>Total Vehicles: </strong>${this.totalVehicleCount}</div>
+                <span>Page ${p + 1} of ${totalPages}</span>
+              </div>
+
+              <table class="pdf-table">
+                <thead>
+                  <tr>
+                    <th class="text-center" style="width:40px;">S.No</th>
+                    <th style="width:90px;">DATE</th>
+                    <th style="width:170px;">CLIENT ID</th>
+                    <th>VENDOR</th>
+                    <th style="width:220px;">INVOICE</th>
+                    <th class="text-center" style="width:60px;">VEH</th>
+                    <th class="text-right" style="width:130px;">GRAND TOTAL (₹)</th>
+                    <th class="text-center" style="width:90px;">STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </div>
+          `)
+        }
+
+        const container = this.$refs.pdfContainer
+        if (!container) {
+          this.notify('PDF container missing', 'error')
+          return
+        }
+
+        container.innerHTML = `
+          <div id="sell-to-vendor-pdf-root" class="pdf-root">
+            <style>
+              .pdf-root {
+                font-family: "Courier New", monospace;
+                font-size: 9pt;
+                color: #000;
+              }
+              .pdf-page {
+                padding: 18pt 18pt 12pt 18pt;
+                page-break-after: always;
+              }
+              .pdf-page:last-child {
+                page-break-after: auto;
+              }
+              .pdf-header-main {
+                text-align: center;
+                font-weight: bold;
+                font-size: 11pt;
+              }
+              .pdf-subheader {
+                text-align: center;
+                font-size: 9pt;
+              }
+              .pdf-meta {
+                display: flex;
+                justify-content: space-between;
+                font-size: 8pt;
+                margin-top: 6pt;
+                margin-bottom: 6pt;
+              }
+              .pdf-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 6pt;
+                table-layout: fixed;
+              }
+              .pdf-table th,
+              .pdf-table td {
+                padding: 2pt 3pt;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+              .pdf-table thead th {
+                font-weight: bold;
+              }
+              .text-right { text-align: right; }
+              .text-center { text-align: center; }
+            </style>
+
+            ${pagesHtml.join('')}
+
+          </div>
+        `
+
+        await this.$nextTick()
+
+        const el = container.querySelector('#sell-to-vendor-pdf-root')
+        if (!el) {
+          this.notify('PDF element not found', 'error')
+          return
+        }
+
+        const opt = {
+          margin: 10,
+          filename: `sell-to-vendor-records-${new Date().toISOString().slice(0, 10)}.pdf`,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: {
+            // lower scale to speed up and reduce memory usage
+            scale: 1.2,
+            useCORS: true
+          },
+          jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }
+        }
+
+        // Get a blob URL directly from html2pdf (lighter than get('pdf') + manual blob)
+        const pdfUrl = await html2pdf().set(opt).from(el).outputPdf('bloburl')
+
+        // Open PDF in new tab so user can download / save / print
+        const win = window.open(pdfUrl, '_blank')
+        if (!win) {
+          // Fallback if popup blocked
+          const link = document.createElement('a')
+          link.href = pdfUrl
+          link.download = opt.filename
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+        }
+
+        // Cleanup
+        if (typeof pdfUrl === 'string' && pdfUrl.startsWith('blob:')) {
+          setTimeout(() => {
+            URL.revokeObjectURL(pdfUrl)
+          }, 10000)
+        }
+        container.innerHTML = ''
+
+        this.notify('PDF generated successfully', 'success')
+      } catch (error) {
+        console.error('PDF generation failed:', error)
+        this.notify('PDF generation failed', 'error')
+      } finally {
+        this.pdfBusy = false
+      }
+    },
 
     downloadExcel () {
       if (!this.rows.length) {
@@ -804,13 +960,13 @@ async downloadPdf() {
           ...dataRows.map(row => row.map(escapeCsv).join(','))
         ].join('\r\n')
 
-        const blob = new Blob(['\uFEFF' + csvContent], { 
-          type: 'text/csv;charset=utf-8;' 
+        const blob = new Blob(['\uFEFF' + csvContent], {
+          type: 'text/csv;charset=utf-8;'
         })
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         const timestamp = new Date().toISOString().slice(0, 10)
-        
+
         link.href = url
         link.setAttribute('download', `sell-to-vendor-records-${timestamp}.csv`)
         document.body.appendChild(link)
@@ -901,7 +1057,15 @@ async downloadPdf() {
       } finally { this.saving = false }
     },
 
-    money (v) { return Number(v || 0).toFixed(2) },
+    // Indian number formatting: 10,00,000.00
+    money (v) {
+      const num = Number(v || 0)
+      if (isNaN(num)) return '0.00'
+      return num.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })
+    },
 
     fmtDate (iso) {
       if (!iso) return '—'

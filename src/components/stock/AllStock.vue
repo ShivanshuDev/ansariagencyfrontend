@@ -21,11 +21,11 @@
         <v-btn
           small
           depressed
-          color="red darken-1"
+          color="black darken-1"
           class="ml-2"
           @click="downloadPdf"
         >
-          Download PDF
+          <span style="color:white;"><v-icon left>mdi-file-pdf-box</v-icon> PDF</span>
         </v-btn>
 
         <v-btn
@@ -215,8 +215,9 @@
         :sort-by="['invoiceDate']"
         :sort-desc="[true]"
       >
-        <template v-slot:item.serial="{ item }">
-          {{ getSerial(item) }}
+        <!-- 👇 S.No = visible row index + 1 (always 1..N) -->
+        <template v-slot:item.serial="{ index }">
+          {{ index + 1 }}
         </template>
 
         <template v-slot:item.modelName="{ item }">
@@ -233,6 +234,11 @@
 
         <template v-slot:item.engineNumber="{ item }">
           {{ item.engineNumber || '—' }}
+        </template>
+
+        <!-- Invoice Number column in table -->
+        <template v-slot:item.invoiceNumber="{ item }">
+          {{ item.invoiceNumber || '—' }}
         </template>
 
         <template v-slot:item.invoiceDate="{ item }">
@@ -260,10 +266,10 @@
         </template>
       </v-data-table>
 
-      <!-- GROUPED PDF CONTENT -->
+      <!-- GROUPED PDF CONTENT (used only for PDF export) -->
       <div
         ref="pdfContent"
-        style="display:none; padding:16px; font-family: Arial, sans-serif; font-size:11px;"
+        style="display:none; padding:16px; font-family:'Courier New', Courier, monospace; font-size:11px;"
       >
         <div
           v-for="(page, pageIndex) in pdfPages"
@@ -284,7 +290,41 @@
             Stock — All Records
           </h3>
 
-          <!-- Content blocks: category, model + header, items -->
+          <!-- Column headers: once per page (not on summary page) -->
+          <div
+            v-if="!page.isSummary"
+            style="margin-left:24px; font-size:10px; display:flex; font-weight:600; margin-bottom:2px; border-bottom:1px solid #ccc;"
+          >
+            <div style="width:30px;"></div>
+            <div style="flex:1;">
+              Chassis
+            </div>
+            <div style="width:110px;">
+              Engine
+            </div>
+            <!-- COLOR COLUMN -->
+            <div style="width:70px; margin-left:8px;">
+              Color
+            </div>
+            <div style="width:70px; text-align:right; margin-left:8px;">
+              Stock days
+            </div>
+            <!-- Invoice No column in PDF header -->
+            <div style="width:80px; margin-left:8px;">
+              Invoice No
+            </div>
+            <div style="width:80px; text-align:right; margin-left:8px;">
+              Invoice date
+            </div>
+            <div style="width:110px; margin-left:8px;">
+              Location
+            </div>
+            <div style="width:80px; text-align:right; margin-left:8px;">
+              Status
+            </div>
+          </div>
+
+          <!-- Content blocks: category, model, items, summary -->
           <div v-for="(block, idx) in page.blocks" :key="idx">
             <!-- Category line -->
             <div
@@ -294,43 +334,21 @@
               {{ block.category }} ({{ block.totalCount }})
             </div>
 
-            <!-- Model line + column header row -->
+            <!-- Model line -->
             <div v-else-if="block.type === 'model'">
               <div
                 style="font-weight:600; margin-left:12px; margin-top:4px; margin-bottom:2px;"
               >
                 {{ block.model }} ({{ block.count }})
               </div>
-
-              <!-- Column headers -->
-              <div
-                style="margin-left:24px; font-size:10px; display:flex; font-weight:600; margin-bottom:2px; border-bottom:1px solid #ccc;"
-              >
-                <div style="width:30px;"></div>
-                <div style="flex:1;">
-                  Chassis
-                </div>
-                <div style="width:120px;">
-                  Engine
-                </div>
-                <div style="width:60px; text-align:right;">
-                  Stock days
-                </div>
-                <div style="width:80px; text-align:right; margin-left:8px;">
-                  Invoice date
-                </div>
-                <div style="width:80px; text-align:right; margin-left:8px;">
-                  Status
-                </div>
-              </div>
             </div>
 
-            <!-- Vehicle row (serial, chassis, engine, stock days, date, status) -->
+            <!-- Vehicle row (serial, chassis, engine, color, stock days, invoice no, date, location, status) -->
             <div
               v-else-if="block.type === 'item'"
               style="margin-left:24px; font-size:10px; display:flex; align-items:flex-start; margin-bottom:2px;"
             >
-              <!-- S.No -->
+              <!-- S.No within model group for PDF -->
               <div style="width:30px;">
                 {{ block.serial }}
               </div>
@@ -341,13 +359,23 @@
               </div>
 
               <!-- Engine -->
-              <div style="width:120px;">
+              <div style="width:110px;">
                 {{ block.item.engineNumber || '—' }}
               </div>
 
+              <!-- COLOR COLUMN -->
+              <div style="width:70px; margin-left:8px;">
+                {{ block.item.color || '—' }}
+              </div>
+
               <!-- Stock days -->
-              <div style="width:60px; text-align:right;">
+              <div style="width:70px; text-align:right; margin-left:8px;">
                 {{ stockDays(block.item) }}
+              </div>
+
+              <!-- Invoice No in PDF row -->
+              <div style="width:80px; margin-left:8px;">
+                {{ block.item.invoiceNumber || '—' }}
               </div>
 
               <!-- Invoice date -->
@@ -355,9 +383,56 @@
                 {{ fmtDate(block.item.invoiceDate) }}
               </div>
 
+              <!-- Location -->
+              <div style="width:110px; margin-left:8px;">
+                {{ block.item.warehouse || '—' }}
+              </div>
+
               <!-- Status -->
               <div style="width:80px; text-align:right; margin-left:8px;">
                 {{ block.item.status || '—' }}
+              </div>
+            </div>
+
+            <!-- Summary page -->
+            <div
+              v-else-if="block.type === 'summary'"
+              style="margin-top:16px; font-size:10px;"
+            >
+              <div style="font-weight:700; margin-bottom:8px;">
+                Summary (Filtered Records)
+              </div>
+
+              <div style="display:flex; gap:40px;">
+                <!-- Location summary -->
+                <div style="flex:1;">
+                  <div style="font-weight:600; margin-bottom:4px;">
+                    By Location
+                  </div>
+                  <div
+                    v-for="loc in block.locations"
+                    :key="loc.location"
+                    style="display:flex; justify-content:space-between; margin-bottom:2px;"
+                  >
+                    <span>{{ loc.location }}</span>
+                    <span>{{ loc.count }}</span>
+                  </div>
+                </div>
+
+                <!-- Model summary -->
+                <div style="flex:1;">
+                  <div style="font-weight:600; margin-bottom:4px;">
+                    By Model
+                  </div>
+                  <div
+                    v-for="m in block.models"
+                    :key="m.model"
+                    style="display:flex; justify-content:space-between; margin-bottom:2px;"
+                  >
+                    <span>{{ m.model }}</span>
+                    <span>{{ m.count }}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -403,11 +478,14 @@ export default {
       globalSearch: '',
       snack: { show: false, color: 'success', text: '' },
       headers: [
-        { text: 'S.No', value: 'serial', width: 90 },
+        // S.No will always be 1..N via slot index
+        { text: 'S.No', value: 'serial', width: 70, sortable: false },
         { text: 'Model', value: 'modelName' },
         { text: 'Category', value: 'categoryName' },
         { text: 'Chassis', value: 'chassisNumber', width: 180 },
         { text: 'Engine', value: 'engineNumber', width: 160 },
+        // Invoice No column in table headers (before Invoice Date)
+        { text: 'Invoice No', value: 'invoiceNumber', width: 140 },
         { text: 'Invoice Date', value: 'invoiceDate', width: 140 },
         { text: 'Stock by days', value: 'stockDays', width: 150 },
         { text: 'Location', value: 'warehouse', width: 160 },
@@ -475,9 +553,10 @@ export default {
         return true
       })
 
+      // keep existing sorting behavior (by invoice date desc)
       out.sort((a, b) => {
         const ta = this.toTime(a.invoiceDate || a.createdAt || a.lastModified)
-        const tb = this.toTime(b.invoiceDate || b.createdAt || b.lastModified)
+        const tb = this.toTime(b.invoiceDate || b.lastModified || b.createdAt)
         return tb - ta
       })
 
@@ -515,14 +594,14 @@ export default {
     },
 
     pdfPages () {
-      const maxLines = 55;
+      const maxLines = 55
       const pages = []
-      let currentPage = { blocks: [], lineCount: 0 }
+      let currentPage = { blocks: [], lineCount: 0, isSummary: false }
 
       const pushPage = () => {
         if (currentPage.blocks.length) {
           pages.push(currentPage)
-          currentPage = { blocks: [], lineCount: 0 }
+          currentPage = { blocks: [], lineCount: 0, isSummary: false }
         }
       }
 
@@ -533,6 +612,7 @@ export default {
       }
 
       const groups = this.pdfGroups
+      const src = this.filteredAndSorted || []
 
       groups.forEach(cat => {
         ensureCapacity(1)
@@ -544,7 +624,8 @@ export default {
         currentPage.lineCount += 1
 
         cat.models.forEach(modelGroup => {
-          ensureCapacity(2) // model line + header line
+          // model line
+          ensureCapacity(2)
           currentPage.blocks.push({
             type: 'model',
             category: cat.category,
@@ -558,6 +639,7 @@ export default {
             currentPage.blocks.push({
               type: 'item',
               item,
+              // serial within model group for PDF
               serial: idx + 1,
               model: modelGroup.model,
               category: cat.category
@@ -568,6 +650,41 @@ export default {
       })
 
       pushPage()
+
+      // Summary (counts by location and by model) as last page
+      if (src.length) {
+        const locMap = new Map()
+        const modelMap = new Map()
+
+        src.forEach(it => {
+          const loc = it.warehouse || 'Unknown Location'
+          const model = it.modelName || 'Unknown Model'
+
+          locMap.set(loc, (locMap.get(loc) || 0) + 1)
+          modelMap.set(model, (modelMap.get(model) || 0) + 1)
+        })
+
+        const locations = Array.from(locMap.entries())
+          .map(([location, count]) => ({ location, count }))
+          .sort((a, b) => a.location.localeCompare(b.location))
+
+        const models = Array.from(modelMap.entries())
+          .map(([model, count]) => ({ model, count }))
+          .sort((a, b) => a.model.localeCompare(b.model))
+
+        pages.push({
+          blocks: [
+            {
+              type: 'summary',
+              locations,
+              models
+            }
+          ],
+          lineCount: 0,
+          isSummary: true
+        })
+      }
+
       return pages
     }
   },
@@ -585,9 +702,11 @@ export default {
         const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry')
         const items = (res.data && res.data.items) ? res.data.items : []
         this.rawItems = this.dedupeItems(items)
+
+        // keep your original sorting (invoice date desc)
         this.rawItems.sort((a, b) => {
           const ta = this.toTime(a.invoiceDate || a.createdAt || a.lastModified)
-          const tb = this.toTime(b.invoiceDate || b.createdAt || b.lastModified)
+          const tb = this.toTime(b.invoiceDate || b.lastModified || b.createdAt)
           return tb - ta
         })
       } catch (err) {
@@ -732,13 +851,6 @@ export default {
       return String(days)
     },
 
-    getSerial (item) {
-      const idx = this.filteredAndSorted.findIndex(
-        r => (r.pk === item.pk && r.sk === item.sk)
-      )
-      return idx >= 0 ? (idx + 1) : '—'
-    },
-
     statusColor (s) {
       const k = String(s || '').toUpperCase()
       if (k === 'SOLD') return 'green'
@@ -779,6 +891,12 @@ export default {
       if (!sortBy || !sortBy.length) return items
 
       const sortKey = sortBy[0]
+
+      // never sort by S.No
+      if (sortKey === 'serial') {
+        return items
+      }
+
       const desc = Array.isArray(sortDesc) ? !!sortDesc[0] : !!sortDesc
 
       const sorted = items.slice().sort((a, b) => {
@@ -790,7 +908,7 @@ export default {
           valB = this.stockDaysNumber(b)
         } else if (sortKey === 'invoiceDate') {
           valA = this.toTime(a.invoiceDate || a.createdAt || a.lastModified)
-          valB = this.toTime(b.invoiceDate || b.createdAt || b.lastModified)
+          valB = this.toTime(b.invoiceDate || b.lastModified || b.createdAt)
         } else {
           valA = a[sortKey]
           valB = b[sortKey]
@@ -808,6 +926,7 @@ export default {
       return sorted
     },
 
+    // OPEN PDF IN NEW TAB (A4 LANDSCAPE)
     downloadPdf () {
       if (!this.filteredAndSorted.length) {
         this.showSnack('No records to export', 'error')
@@ -834,7 +953,7 @@ export default {
         jsPDF: {
           unit: 'pt',
           format: 'a4',
-          orientation: 'portrait'
+          orientation: 'landscape'
         },
         pagebreak: {
           mode: ['css', 'legacy']
@@ -844,8 +963,16 @@ export default {
       html2pdf()
         .set(opt)
         .from(el)
-        .save()
-        .then(() => {
+        .toPdf()
+        .get('pdf')
+        .then(pdf => {
+          try {
+            pdf.setProperties({ title: filename })
+          } catch (e) {
+            // ignore if not supported
+          }
+          const blobUrl = pdf.output('bloburl')
+          window.open(blobUrl, '_blank')
           el.style.display = prevDisplay || 'none'
         })
         .catch(err => {
@@ -858,14 +985,15 @@ export default {
     downloadExcel () {
       try {
         const rows = this.filteredAndSorted.map((it, index) => ({
-          'S.No': index + 1,
+          'S.No': index + 1, // same logic: 1..N in current order
           Model: it.modelName || '',
           Category: it.categoryName || '',
           Chassis: it.chassisNumber || '',
           Engine: it.engineNumber || '',
+          'Invoice No': it.invoiceNumber || '',
           'Invoice Date': this.fmtDate(it.invoiceDate),
           'Stock Days': this.stockDays(it),
-          Location: it.warehouse || '',
+          'Location / Warehouse': it.warehouse || '',
           Status: it.status || ''
         }))
 
@@ -892,5 +1020,9 @@ export default {
 .html2pdf__page-break {
   height: 0;
   page-break-after: always;
+}
+
+.pdf-page {
+  width: 100%;
 }
 </style>

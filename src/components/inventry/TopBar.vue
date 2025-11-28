@@ -21,7 +21,7 @@
       </v-col>
 
       <!-- Search Chassis Number (independent; opens dialog & calls API) -->
-      <v-col cols="12" md="3" class="pa-0 pr-2">
+      <!-- <v-col cols="12" md="3" class="pa-0 pr-2">
         <v-text-field
           v-model="chassisQuery"
           @input="onChassisInput"
@@ -32,7 +32,7 @@
           hide-details
           placeholder="Chassis or Engine number..."
         />
-      </v-col>
+      </v-col> -->
 
       <!-- Buttons (these operate on parent's selectedItemsData as before) -->
       <v-col cols="auto" class="pl-2" style="display:flex; align-items:center; gap:8px;">
@@ -50,135 +50,7 @@
     </v-row>
 
     <!-- Dialog shown only by this component when chassis search returns (or while loading) -->
-    <v-dialog v-model="dialogOpen" max-width="1800px" persistent>
-      <v-card>
-        <v-card-title class="d-flex align-center justify-space-between">
-          <div>
-            <span class="headline">Search results for: "{{ chassisQuery }}"</span>
-            <div v-if="!loadingChassis && !localChassisResults.length" class="subtitle-2">No results found</div>
-            <div v-if="loadingChassis" class="subtitle-2">Searching...</div>
-          </div>
-
-          <div class="d-flex align-center" style="gap:8px;">
-            <!-- Downloads operate on selectedRows inside the dialog -->
-            <DownloadPdf :items="selectedRows" :headers="dialogHeaders" />
-            <DownloadXlsx
-              :items="selectedRows"
-              :headers="dialogHeaders"
-              filename="chassis_search_results"
-              @downloaded="onDialogDownloaded"
-              :disabled="loadingChassis || !selectedRows.length"
-            />
-            <v-btn icon @click="closeDialog"><v-icon>mdi-close</v-icon></v-btn>
-          </div>
-        </v-card-title>
-
-        <v-card-text>
-          <v-skeleton-loader v-if="loadingChassis" type="table" />
-          <div v-else>
-            <v-simple-table dense>
-              <thead style="background-color:#dff3f79c; color:white;">
-                <tr>
-                  <!-- Checkbox header -->
-                  <th style="width:48px; text-align:center;">
-                    <v-checkbox
-                      :input-value="allSelected"
-                      @change="toggleSelectAll"
-                      hide-details
-                      density="compact"
-                    />
-                  </th>
-
-                  <!-- Dynamic headers -->
-                  <th v-for="h in dialogHeaders" :key="h.value">{{ h.text }}</th>
-
-                  <!-- Actions column -->
-                  <th style="width:160px; text-align:center;">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                <!-- Empty state -->
-                <tr v-if="!localChassisResults.length">
-                  <td :colspan="dialogHeaders.length + 2" class="text-center">No items found</td>
-                </tr>
-
-                <!-- Rows -->
-                <tr
-                  v-for="(row, idx) in localChassisResults"
-                  :key="row.pk || row.chassisNumber || row.engineNumber || idx"
-                >
-                  <!-- Row checkbox -->
-                  <td style="text-align:center;">
-                    <v-checkbox
-                      :input-value="isSelected(row)"
-                      @change="toggleRowSelection(row)"
-                      hide-details
-                      density="compact"
-                    />
-                  </td>
-
-                  <!-- Data cells -->
-                  <td v-for="h in dialogHeaders" :key="h.value">
-                    {{ getValue(row, h.value) }}
-                  </td>
-
-                  <!-- Actions -->
-                  <td style="text-align:center; white-space:nowrap;">
-                    <!-- Edit -->
-                    <v-tooltip text="Edit Item" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          v-bind="props"
-                          color="primary"
-                          size="x-small"
-                          variant="tonal"
-                          class="mr-1"
-                          @click="openEdit(row)"
-                        >
-                          <v-icon size="16" start>mdi-pencil</v-icon>
-                          Edit
-                        </v-btn>
-                      </template>
-                    </v-tooltip>
-
-                    <!-- Inventory History -->
-                    <v-tooltip text="View Inventory History" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          v-bind="props"
-                          color="teal"
-                          size="x-small"
-                          variant="tonal"
-                          @click="openHistory(row)"
-                        >
-                          <v-icon size="16" start>mdi-history</v-icon>
-                          History
-                        </v-btn>
-                      </template>
-                    </v-tooltip>
-                  </td>
-                </tr>
-              </tbody>
-            </v-simple-table>
-          </div>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer />
-          <div class="mr-4">
-            <small v-if="selectedRows.length">{{ selectedRows.length }} selected</small>
-          </div>
-           <InventoryHistoryDialog
-            v-if="true"
-            v-model="historyDialogOpen"
-            :invoiceNumber="historyInvoiceNumber"
-            :chassisNumber="historyChassisNumber"
-          />
-          <v-btn text @click="closeDialog">Close</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+   
     <!-- Edit dialog (internal) -->
     <v-dialog v-model="editDialog" persistent max-width="920px">
       <v-card>

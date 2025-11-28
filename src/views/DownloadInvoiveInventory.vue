@@ -1,11 +1,11 @@
 <template>
-  <v-btn color="success" :disabled="!items.length" @click="downloadPdf">
-    Download Invoice Inventry PDF
+  <v-btn color="black" :disabled="!items.length" @click="downloadPdf">
+    <v-icon style="color:white;" left>mdi-file-pdf-box</v-icon>
+    <span style="color:white;"> Invoice PDF</span>
   </v-btn>
 </template>
 
 <script>
-// npm install jspdf jspdf-autotable
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -19,520 +19,223 @@ export default {
     },
   },
   methods: {
-//     downloadPdf() {
-//       if (!this.items || !this.items.length) return;
-
-//       // Group items by invoiceNumber first, then category -> model -> items
-//       const byInvoice = this.items.reduce((acc, it) => {
-//         const invoice = it.invoiceNumber || 'NO-INVOICE';
-//         if (!acc[invoice]) acc[invoice] = [];
-//         acc[invoice].push(it);
-//         return acc;
-//       }, {});
-
-//       const invoiceNumbers = Object.keys(byInvoice);
-
-//       const doc = new jsPDF({
-//         orientation: 'landscape',
-//         unit: 'mm',
-//         format: 'a4',
-//       });
-
-//       const pageWidth = doc.internal.pageSize.getWidth();
-//       const pageHeight = doc.internal.pageSize.getHeight();
-//       const margin = 12;
-//       const usableWidth = pageWidth - margin * 2;
-
-//       // helper to ensure vertical space
-//       let y = margin;
-//       const ensureSpace = (need) => {
-//         if (y + need > pageHeight - margin) {
-//           doc.addPage();
-//           y = margin;
-//         }
-//       };
-
-//     //   const renderInvoice = (itemsForInvoice) => {
-//     //     // Create grouping for this invoice: category -> model -> items
-//     //     const grouped = itemsForInvoice.reduce((acc, it) => {
-//     //       const cat = it.categoryName || 'Uncategorized';
-//     //       const model = it.modelName || 'Unknown Model';
-//     //       if (!acc[cat]) acc[cat] = {};
-//     //       if (!acc[cat][model]) acc[cat][model] = [];
-//     //       acc[cat][model].push(it);
-//     //       return acc;
-//     //     }, {});
-
-//     //     // Invoice header info (take from first item of this invoice)
-//     //     const first = itemsForInvoice[0] || {};
-//     //     const invoiceNumber = first.invoiceNumber || '-';
-//     //     const invoiceDate = first.invoiceDate || '-';
-
-//     //     // Top-left: ALL - total for this invoice
-//     //     const totalCount = itemsForInvoice.length;
-//     //     doc.setFontSize(11);
-//     //     doc.setFont('helvetica', 'bold');
-//     //     ensureSpace(12);
-//     //     doc.text(`ALL - ${totalCount}`, margin, y);
-
-//     //     // Top-right: invoice details (right-aligned)
-//     //     doc.setFontSize(11);
-//     //     doc.setFont('helvetica', 'bold');
-//     //     const invText1 = `INVOICE NO - ${invoiceNumber}`;
-//     //     const invText2 = `INVOICE DATE - ${invoiceDate}`;
-//     //     const inv1Width = doc.getTextWidth(invText1);
-//     //     doc.text(invText1, pageWidth - margin - inv1Width, y);
-//     //     y += 6;
-//     //     const inv2Width = doc.getTextWidth(invText2);
-//     //     doc.text(invText2, pageWidth - margin - inv2Width, y);
-//     //     y += 8;
-
-//     //     // separator
-//     //     doc.setLineWidth(0.3);
-//     //     doc.line(margin, y, pageWidth - margin, y);
-//     //     y += 8;
-
-//     //     // Iterate categories
-//     //     const categoryNames = Object.keys(grouped);
-//     //     categoryNames.forEach((cat) => {
-//     //       const models = grouped[cat];
-//     //       const catItems = Object.values(models).flat();
-//     //       const catCount = catItems.length;
-
-//     //       // Category heading with count
-//     //       ensureSpace(14);
-//     //       doc.setFontSize(12);
-//     //       doc.setFont('helvetica', 'bold');
-//     //       doc.text(`${cat} - ${catCount}`, margin, y);
-//     //       y += 8;
-
-//     //       // Serial number should reset per category per invoice
-//     //       let serial = 1;
-
-//     //       // Iterate models in this category
-//     //       Object.keys(models).forEach((modelName) => {
-//     //         const modelItems = models[modelName];
-
-//     //         // Estimate height needed for heading + table (to avoid overlap)
-//     //         const estimatedModelHeading = 8;
-//     //         const estimatedTableHeader = 7;
-//     //         const perRow = 6.5;
-//     //         const rowsCount = modelItems.length || 1;
-//     //         const estimatedTableHeight = estimatedTableHeader + rowsCount * perRow;
-//     //         const reserve = estimatedModelHeading + estimatedTableHeight + 12; // padding
-
-//     //         // If remaining space can't fit the whole model block, force a new page
-//     //         if (y + reserve > pageHeight - margin) {
-//     //           doc.addPage();
-//     //           y = margin;
-//     //         }
-
-//     //         // Model subheading (print only once)
-//     //         doc.setFontSize(10);
-//     //         doc.setFont('helvetica', 'bold');
-//     //         doc.text(modelName, margin + 4, y);
-//     //         y += 6;
-
-//     //         // Prepare rows for autoTable: columns [S.N, Chassis, Engine, Color]
-//     //         const rows = modelItems.map((it) => {
-//     //           const chassis = (it.chassisNumber || '-').toString();
-//     //           const engine = (it.engineNumber || it.engine || '-').toString();
-//     //           const color = (it.color || '-').toString();
-//     //           const warehouse = (it.warehouse || '-').toString();
-//     //           const sn = serial++; // increment per category
-//     //           return [String(sn), chassis, engine, color, warehouse];
-//     //         });
-
-//     //         // Column width distribution
-//     //         const col0 = 12; // S.N
-//     //         const remaining = usableWidth - (col0 + 20);
-//     //         const col1 = Math.round(remaining * 0.48); // chassis
-//     //         const col2 = Math.round(remaining * 0.30); // engine
-//     //         const col3 = Math.round(remaining * 0.22); // color
-//     //         const col3 = Math.round(remaining * 0.22); // color
-
-//     //         // Draw table for this model
-//     //         autoTable(doc, {
-//     //           startY: y,
-//     //           margin: { left: margin + 6, right: margin },
-//     //           styles: { fontSize: 9, cellPadding: 2, overflow: 'ellipsize' },
-//     //           theme: 'striped',
-//     //           head: [['S.N', 'CHASSIS', 'ENGINE', 'COLOUR']],
-//     //           body: rows,
-//     //           columnStyles: {
-//     //             0: { cellWidth: col0, halign: 'left' },
-//     //             1: { cellWidth: col1, halign: 'left' },
-//     //             2: { cellWidth: col2, halign: 'left' },
-//     //             3: { cellWidth: col3, halign: 'left' },
-//     //           },
-//     //           headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], halign: 'left' },
-//     //         });
-
-//     //         // Move y to after the drawn table
-//     //         const prev = doc.previousAutoTable;
-//     //         if (prev && prev.finalY) {
-//     //           y = prev.finalY + 8;
-//     //         } else {
-//     //           y += estimatedTableHeight + 8;
-//     //         }
-//     //       });
-
-//     //       // small spacer after category
-//     //       y += 4;
-//     //     });
-
-//     //     // Footer / small gap before next invoice (we'll start next invoice on a new page)
-//     //   };
-
-//       // Iterate invoices in order and render them one by one.
-    
-    
-//     const renderInvoice = (itemsForInvoice) => {
-//   // Grouping by category → model → items
-//   const grouped = itemsForInvoice.reduce((acc, it) => {
-//     const cat = it.categoryName || 'Uncategorized';
-//     const model = it.modelName || 'Unknown Model';
-//     if (!acc[cat]) acc[cat] = {};
-//     if (!acc[cat][model]) acc[cat][model] = [];
-//     acc[cat][model].push(it);
-//     return acc;
-//   }, {});
-
-//   // Invoice details
-//   const first = itemsForInvoice[0] || {};
-//   const invoiceNumber = first.invoiceNumber || '-';
-//   const invoiceDate = first.invoiceDate || '-';
-//   const totalCount = itemsForInvoice.length;
-
-//   // Header (left and right)
-//   doc.setFontSize(11);
-//   doc.setFont('helvetica', 'bold');
-//   ensureSpace(12);
-//   doc.text(`ALL - ${totalCount}`, margin, y);
-
-//   const invText1 = `INVOICE NO - ${invoiceNumber}`;
-//   const invText2 = `INVOICE DATE - ${invoiceDate}`;
-//   const inv1Width = doc.getTextWidth(invText1);
-//   doc.text(invText1, pageWidth - margin - inv1Width, y);
-//   y += 6;
-//   const inv2Width = doc.getTextWidth(invText2);
-//   doc.text(invText2, pageWidth - margin - inv2Width, y);
-//   y += 8;
-
-//   // Separator line
-//   doc.setLineWidth(0.3);
-//   doc.line(margin, y, pageWidth - margin, y);
-//   y += 8;
-
-//   // Loop categories
-//   const categoryNames = Object.keys(grouped);
-//   categoryNames.forEach((cat) => {
-//     const models = grouped[cat];
-//     const catItems = Object.values(models).flat();
-//     const catCount = catItems.length;
-
-//     // Category heading
-//     ensureSpace(14);
-//     doc.setFontSize(12);
-//     doc.setFont('helvetica', 'bold');
-//     doc.text(`${cat} - ${catCount}`, margin, y);
-//     y += 8;
-
-//     let serial = 1; // Reset serial number per category
-
-//     // Loop models
-//     Object.keys(models).forEach((modelName) => {
-//       const modelItems = models[modelName];
-
-//       // Estimate height to manage page breaks
-//       const estimatedModelHeading = 8;
-//       const estimatedTableHeader = 7;
-//       const perRow = 6.5;
-//       const rowsCount = modelItems.length || 1;
-//       const estimatedTableHeight = estimatedTableHeader + rowsCount * perRow;
-//       const reserve = estimatedModelHeading + estimatedTableHeight + 12;
-
-//       if (y + reserve > pageHeight - margin) {
-//         doc.addPage();
-//         y = margin;
-//       }
-
-//       // Model subheading
-//       doc.setFontSize(10);
-//       doc.setFont('helvetica', 'bold');
-//       doc.text(modelName, margin + 4, y);
-//       y += 6;
-
-//       // Prepare table rows [S.N, Chassis, Engine, Color, Warehouse]
-//       const rows = modelItems.map((it) => {
-//         const sn = serial++;
-//         return [
-//           String(sn),
-//           it.chassisNumber || '-',
-//           it.engineNumber || it.engine || '-',
-//           it.color || '-',
-//           it.warehouse || '-',
-//         ];
-//       });
-
-//       // Column widths
-//       const col0 = 10; // S.N
-//       const col1 = 45; // Chassis
-//       const col2 = 45; // Engine
-//       const col3 = 25; // Color
-//       const col4 = 35; // Warehouse
-//       const tableCols = col0 + col1 + col2 + col3 + col4;
-
-//       // Adjust width if it exceeds usable width
-//       const scaleFactor = usableWidth / tableCols;
-//       const scaledCols = [col0, col1, col2, col3, col4].map((c) => c * scaleFactor);
-
-//       // Draw table
-//       autoTable(doc, {
-//         startY: y,
-//         margin: { left: margin + 6, right: margin },
-//         styles: { fontSize: 9, cellPadding: 2, overflow: 'ellipsize' },
-//         theme: 'striped',
-//         head: [['S.N', 'CHASSIS', 'ENGINE', 'COLOUR', 'WAREHOUSE']],
-//         body: rows,
-//         columnStyles: {
-//           0: { cellWidth: scaledCols[0], halign: 'center' },
-//           1: { cellWidth: scaledCols[1], halign: 'left' },
-//           2: { cellWidth: scaledCols[2], halign: 'left' },
-//           3: { cellWidth: scaledCols[3], halign: 'left' },
-//           4: { cellWidth: scaledCols[4], halign: 'left' },
-//         },
-//         headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-//       });
-
-//       const prev = doc.previousAutoTable;
-//       y = prev?.finalY ? prev.finalY + 8 : y + estimatedTableHeight + 8;
-//     });
-
-//     y += 4; // spacer between categories
-//   });
-// };
-
-
-      
-//     invoiceNumbers.forEach((invNum, idx) => {
-//         const itemsForInvoice = byInvoice[invNum];
-//         // If not the first invoice, start on a fresh page
-//         if (idx > 0) {
-//           doc.addPage();
-//           y = margin;
-//         }
-//         renderInvoice(itemsForInvoice);
-//       });
-
-//       // Final footer on last page
-//       if (y + 12 > pageHeight - margin) {
-//         doc.addPage();
-//         y = margin;
-//       }
-//       const genDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-//       doc.setFontSize(9);
-//       doc.setFont('helvetica', 'normal');
-//       doc.text(`Generated: ${genDate}`, margin, pageHeight - 8);
-
-//       // Save file
-//       const dateStr = new Date().toISOString().slice(0, 10);
-//       // If only one invoice, name file with that invoice; otherwise generic
-//       const filenameInvoice = invoiceNumbers.length === 1 ? invoiceNumbers[0] : 'MULTI_INVOICE';
-//       doc.save(`Inventory_${filenameInvoice || 'NA'}_${dateStr}.pdf`);
-//     },
-
-        downloadPdf() {
-  if (!this.items || !this.items.length) return;
-
-  // Group items by invoiceNumber first, then category -> model -> items
-  const byInvoice = this.items.reduce((acc, it) => {
-    const invoice = it.invoiceNumber || 'NO-INVOICE';
-    if (!acc[invoice]) acc[invoice] = [];
-    acc[invoice].push(it);
-    return acc;
-  }, {});
-
-  const invoiceNumbers = Object.keys(byInvoice);
-
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'mm',
-    format: 'a4',
-  });
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 12;
-  const usableWidth = pageWidth - margin * 2;
-
-  // helper to ensure vertical space
-  let y = margin;
-  const ensureSpace = (need) => {
-    if (y + need > pageHeight - margin) {
-      doc.addPage();
-      y = margin;
-    }
-  };
-
-  // Render one invoice block
-  const renderInvoice = (itemsForInvoice) => {
-    // Grouping by category -> model -> items
-    const grouped = itemsForInvoice.reduce((acc, it) => {
-      const cat = it.categoryName || 'Uncategorized';
-      const model = it.modelName || 'Unknown Model';
-      if (!acc[cat]) acc[cat] = {};
-      if (!acc[cat][model]) acc[cat][model] = [];
-      acc[cat][model].push(it);
-      return acc;
-    }, {});
-
-    // Invoice details
-    const first = itemsForInvoice[0] || {};
-    const invoiceNumber = first.invoiceNumber || '-';
-    const invoiceDate = first.invoiceDate || '-';
-    const totalCount = itemsForInvoice.length;
-
-    // Header (left and right)
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    ensureSpace(12);
-    doc.text(`ALL - ${totalCount}`, margin, y);
-
-    const invText1 = `INVOICE NO - ${invoiceNumber}`;
-    const invText2 = `INVOICE DATE - ${invoiceDate}`;
-    const inv1Width = doc.getTextWidth(invText1);
-    doc.text(invText1, pageWidth - margin - inv1Width, y);
-    y += 6;
-    const inv2Width = doc.getTextWidth(invText2);
-    doc.text(invText2, pageWidth - margin - inv2Width, y);
-    y += 8;
-
-    // Separator line
-    doc.setLineWidth(0.3);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 8;
-
-    // Loop categories
-    const categoryNames = Object.keys(grouped);
-    categoryNames.forEach((cat) => {
-      const models = grouped[cat];
-      const catItems = Object.values(models).flat();
-      const catCount = catItems.length;
-
-      // Category heading
-      ensureSpace(14);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${cat} - ${catCount}`, margin, y);
-      y += 8;
-
-      let serial = 1; // Reset serial number per category
-
-      // Loop models
-      Object.keys(models).forEach((modelName) => {
-        const modelItems = models[modelName];
-
-        // Estimate height to manage page breaks
-        const estimatedModelHeading = 8;
-        const estimatedTableHeader = 7;
-        const perRow = 6.5;
-        const rowsCount = modelItems.length || 1;
-        const estimatedTableHeight = estimatedTableHeader + rowsCount * perRow;
-        const reserve = estimatedModelHeading + estimatedTableHeight + 12;
-
-        if (y + reserve > pageHeight - margin) {
-          doc.addPage();
-          y = margin;
-        }
-
-        // Model subheading
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.text(modelName, margin + 4, y);
-        y += 6;
-
-        // Prepare table rows [S.N, Chassis, Engine, Color, Warehouse, Source]
-        const rows = modelItems.map((it) => {
-          const sn = serial++;
-          return [
-            String(sn),
-            it.chassisNumber || '-',
-            it.engineNumber || it.engine || '-',
-            it.color || '-',
-            it.warehouse || '-',
-            it.source || '-',
-          ];
-        });
-
-        // Column widths (base)
-        const col0 = 10; // S.N
-        const col1 = 42; // Chassis
-        const col2 = 42; // Engine
-        const col3 = 26; // Color
-        const col4 = 34; // Warehouse
-        const col5 = 34; // Source
-        const tableCols = col0 + col1 + col2 + col3 + col4 + col5;
-
-        // Scale columns to fit usableWidth
-        const scaleFactor = usableWidth / tableCols;
-        const scaledCols = [col0, col1, col2, col3, col4, col5].map((c) => Math.max(8, c * scaleFactor));
-
-        // Draw table with SOURCE column
-        autoTable(doc, {
-          startY: y,
-          margin: { left: margin + 6, right: margin },
-          styles: { fontSize: 9, cellPadding: 2, overflow: 'ellipsize' },
-          theme: 'striped',
-          head: [['S.N', 'CHASSIS', 'ENGINE', 'COLOUR', 'WAREHOUSE', 'SOURCE']],
-          body: rows,
-          columnStyles: {
-            0: { cellWidth: scaledCols[0], halign: 'center' },
-            1: { cellWidth: scaledCols[1], halign: 'left' },
-            2: { cellWidth: scaledCols[2], halign: 'left' },
-            3: { cellWidth: scaledCols[3], halign: 'left' },
-            4: { cellWidth: scaledCols[4], halign: 'left' },
-            5: { cellWidth: scaledCols[5], halign: 'left' },
-          },
-          headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-        });
-
-        const prev = doc.previousAutoTable;
-        y = prev && prev.finalY ? prev.finalY + 8 : y + estimatedTableHeight + 8;
+    downloadPdf() {
+      if (!this.items || !this.items.length) return;
+
+      const byInvoice = this.items.reduce((acc, it) => {
+        const invoice = it.invoiceNumber || 'NO-INVOICE';
+        if (!acc[invoice]) acc[invoice] = [];
+        acc[invoice].push(it);
+        return acc;
+      }, {});
+
+      const invoiceNumbers = Object.keys(byInvoice);
+
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
       });
 
-      y += 4; // spacer between categories
-    });
-  };
+      // +2px updated global font
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(0, 0, 0);
 
-  // Iterate invoices in order and render them one by one.
-  invoiceNumbers.forEach((invNum, idx) => {
-    const itemsForInvoice = byInvoice[invNum];
-    // If not the first invoice, start on a fresh page
-    if (idx > 0) {
-      doc.addPage();
-      y = margin;
-    }
-    renderInvoice(itemsForInvoice);
-  });
+      const margin = 12;
+      const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Final footer on last page
-  if (y + 12 > pageHeight - margin) {
-    doc.addPage();
-    y = margin;
-  }
-  const genDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Generated: ${genDate}`, margin, pageHeight - 8);
+      const totalPagesExp = '{total_pages_count_string}';
 
-  // Save file
-  const dateStr = new Date().toISOString().slice(0, 10);
-  // If only one invoice, name file with that invoice; otherwise generic
-  const filenameInvoice = invoiceNumbers.length === 1 ? invoiceNumbers[0] : 'MULTI_INVOICE';
-  doc.save(`Inventory_${filenameInvoice || 'NA'}_${dateStr}.pdf`);
-}
+      const titleBlockY = margin;
+      const headerInfoY = titleBlockY + 12;
+      const headerLineY = headerInfoY;
+      const tableTop = headerLineY + 6;
 
+      const renderInvoice = (itemsForInvoice) => {
+        const first = itemsForInvoice[0] || {};
+        const invoiceNumber = first.invoiceNumber || '-';
+        const invoiceDate = first.invoiceDate || '-';
+        const totalCount = itemsForInvoice.length;
+
+        const grouped = itemsForInvoice.reduce((acc, it) => {
+          const cat = it.categoryName || 'Uncategorized';
+          const model = it.modelName || 'Unknown Model';
+          if (!acc[cat]) acc[cat] = {};
+          if (!acc[cat][model]) acc[cat][model] = [];
+          acc[cat][model].push(it);
+          return acc;
+        }, {});
+
+        const body = [];
+
+        Object.keys(grouped).forEach((cat) => {
+          const models = grouped[cat];
+          const catItemsCount = Object.values(models).reduce(
+            (sum, arr) => sum + arr.length,
+            0
+          );
+
+          body.push({
+            type: 'category',
+            label: `${cat} (${catItemsCount})`,
+          });
+
+          let serial = 1;
+
+          Object.keys(models).forEach((modelName) => {
+            const modelItems = models[modelName];
+
+            body.push({
+              type: 'model',
+              label: modelName,
+            });
+
+            modelItems.forEach((it) => {
+              body.push({
+                type: 'item',
+                sn: String(serial++),
+                chassis: it.chassisNumber || '-',
+                engine: it.engineNumber || it.engine || '-',
+                color: it.color || '-',
+                warehouse: it.warehouse || '-',
+                source: it.source || '-',
+              });
+            });
+          });
+        });
+
+        autoTable(doc, {
+          startY: tableTop,
+          margin: { top: tableTop, left: margin, right: margin },
+          theme: 'plain',
+          styles: {
+            font: 'courier',
+            fontSize: 9,   // +2px from 7
+            overflow: 'ellipsize',
+            textColor: [0, 0, 0],
+            lineWidth: 0,
+          },
+          headStyles: {
+            font: 'courier',
+            fontStyle: 'bold',
+            fontSize: 10,  // +2px from 8
+            textColor: [0, 0, 0],
+            lineWidth: 0,
+          },
+          bodyStyles: {
+            lineWidth: 0,
+          },
+          tableLineWidth: 0,
+          columns: [
+            { header: 'S.N', dataKey: 'sn' },
+            { header: 'CHASSIS', dataKey: 'chassis' },
+            { header: 'ENGINE', dataKey: 'engine' },
+            { header: 'COLOUR', dataKey: 'color' },
+            { header: 'WAREHOUSE', dataKey: 'warehouse' },
+            { header: 'SOURCE', dataKey: 'source' },
+          ],
+          body,
+          didParseCell: (data) => {
+            const raw = data.row.raw || {};
+
+            if (raw.type === 'category') {
+              if (data.column.dataKey === 'sn') {
+                data.cell.colSpan = 6;
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fontSize = 11;  // +2px from 9
+                data.cell.text = [raw.label];
+              } else {
+                data.cell.text = [''];
+              }
+            }
+
+            if (raw.type === 'model') {
+              if (data.column.dataKey === 'sn') {
+                data.cell.colSpan = 6;
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fontSize = 10; // +2px from 8
+                data.cell.text = [raw.label];
+              } else {
+                data.cell.text = [''];
+              }
+            }
+          },
+
+          didDrawPage: () => {
+            // Report Header
+            doc.setFont('courier', 'bold');
+            doc.setFontSize(13); // +2px from 11
+            doc.text('ANSARI AUTOMOBILES,', pageWidth / 2, titleBlockY, {
+              align: 'center',
+            });
+
+            doc.setFont('courier', 'normal');
+            doc.setFontSize(11); // +2px from 9
+            doc.text(
+              'BADI KAMHARIYA BY PASS ROAD, MAU, UTTAR PRADESH',
+              pageWidth / 2,
+              titleBlockY + 5,
+              { align: 'center' }
+            );
+
+            doc.setFont('courier', 'bold');
+            doc.setFontSize(11);
+            doc.text(
+              'Stock – All Records',
+              pageWidth / 2,
+              titleBlockY + 10,
+              { align: 'center' }
+            );
+
+            // Invoice Header
+            doc.setFont('courier', 'bold');
+            doc.setFontSize(11);
+
+            doc.text(`ALL - ${totalCount}`, margin, headerInfoY);
+
+            const inv1 = `INVOICE NO - ${invoiceNumber}`;
+            const inv2 = `INVOICE DATE - ${invoiceDate}`;
+            doc.text(inv1, pageWidth - margin - doc.getTextWidth(inv1), headerInfoY);
+            doc.text(inv2, pageWidth - margin - doc.getTextWidth(inv2), headerInfoY + 5);
+
+            // Page Number
+            const pageStr = `Page ${doc.internal.getNumberOfPages()} of ${totalPagesExp}`;
+            doc.setFont('courier', 'normal');
+            doc.setFontSize(10);   // +2px from 8
+            doc.text(
+              pageStr,
+              pageWidth - margin - doc.getTextWidth(pageStr),
+              titleBlockY - 4
+            );
+          },
+        });
+      };
+
+      invoiceNumbers.forEach((inv, i) => {
+        if (i > 0) doc.addPage();
+        renderInvoice(byInvoice[inv]);
+      });
+
+      if (doc.putTotalPages) doc.putTotalPages(totalPagesExp);
+
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(9); // +2px from 7
+      doc.text(
+        `Generated: ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`,
+        margin,
+        pageHeight - 8
+      );
+
+      try {
+        window.open(doc.output('bloburl'), '_blank');
+      } catch (e) {
+        const file =
+          invoiceNumbers.length === 1 ? invoiceNumbers[0] : 'MULTI_INVOICE';
+        doc.save(`Inventory_${file}.pdf`);
+      }
+    },
   },
 };
 </script>

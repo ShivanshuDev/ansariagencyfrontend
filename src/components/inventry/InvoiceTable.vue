@@ -11,7 +11,7 @@
     class="invoice-table"
     :page.sync="page"
     :footer-props="{
-      'items-per-page-options': [10, 25, 50, { text: 'All', value: -1 }],
+      'items-per-page-options': [15, 30, 45, { text: 'All', value: -1 }],
       'items-per-page-text': 'Rows per page'
     }"
   >
@@ -100,7 +100,7 @@ export default {
 }
 
 /* ✅ Header cells */
-::v-deep(.v-data-table-header th) {
+::v-deep .v-data-table-header th {
   color: #000000 !important;
   font-size: 12px !important;
   font-weight: 600 !important;
@@ -112,9 +112,9 @@ export default {
 /* ✅ Row height 50px */
 ::v-deep .v-data-table__wrapper thead tr > th,
 ::v-deep .v-data-table__wrapper tbody tr > td {
-  height: 50px !important;
-  padding-top: 8px !important;
-  padding-bottom: 8px !important;
+  height: 40px !important;
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
   vertical-align: middle !important;
 }
 
