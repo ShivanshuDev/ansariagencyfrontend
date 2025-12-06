@@ -75,6 +75,7 @@ import CLIENTSUMMERY from '@/components/ledger/ClientSummaryCard.vue'
 import DAYBOOK from '@/components/ledger/DayBook.vue'
 import QUICKINVOICE from '@/components/sales/QuickInvoice.vue'
 import AllCustomerInvoices from '@/components/sales/CustomerInvoiceTable.vue'
+import BIKEBOOKING from '@/components/sales/BookingPage.vue'
 import RTODetails from '@/components/sales/FinanceAndRto.vue'
 import CUSTOMERACCOUNTDetail from '@/components/ledger/CustomerAccount.vue'
 import STOCK from '@/components/stock/AllStock.vue'
@@ -105,7 +106,8 @@ export default {
     RTODetails,
     CUSTOMERACCOUNTDetail,
     STOCK,
-    SEARCHBYCHASSIS
+    SEARCHBYCHASSIS,
+    BIKEBOOKING
   },
   props: {
     selectedTab: {
@@ -147,6 +149,7 @@ export default {
       if(this.selectedTab === 'CUSTOMERACCOUNTDetail') return 'CUSTOMERACCOUNTDetail';
       if(this.selectedTab === 'STOCK') return 'STOCK';
       if(this.selectedTab === 'SEARCHBYCHASSIS') return 'SEARCHBYCHASSIS';
+      if(this.selectedTab === 'BIKEBOOKING') return 'BIKEBOOKING';
       return null;
     },
     displayName() {

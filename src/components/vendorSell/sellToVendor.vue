@@ -10,7 +10,7 @@
 
     <v-row dense>
       <v-col style="display:flex; flex-direction:row;" cols="12" md="12">
-        <div style="width:100%; ">
+        <div style="width:100%;">
           <v-sheet class="pa-4 rounded-lg" elevation="2">
             <!-- VendorSelect -->
             <v-row>
@@ -202,102 +202,155 @@
                   <th class="text-right">Actions</th>
                 </tr>
               </thead>
+
+              <!-- INLINE EDIT TABLE BODY -->
               <tbody>
                 <template v-for="(it, idx) in selectedItems">
                   <!-- main row -->
                   <tr :key="it.id">
                     <td class="text-center">{{ idx + 1 }}</td>
-                    <!-- Item label -->
+
+                    <!-- Item label (read-only) -->
                     <td>
                       <div class="font-weight-medium">{{ it.label }}</div>
                     </td>
 
-                    <!-- HSN editable -->
+                    <!-- HSN -->
                     <td class="text-left table-col-narrow">
-                      <v-text-field
-                        v-model="it.hsn"
-                        dense
-                        outlined
-                        hide-details
-                        style="width:180px;"
-                        class="table-col-narrow" 
-                        @change="onRowFieldChange(it)"
-                      />
+                      <template v-if="inlineEditIndex === idx">
+                        <v-text-field
+                          v-model="it.hsn"
+                          dense
+                          hide-details
+                          class="table-col-narrow table-edit-field table-input-xs"
+                          @change="onRowFieldChange(it)"
+                        />
+                      </template>
+                      <template v-else>
+                        {{ it.hsn }}
+                      </template>
                     </td>
 
-                    <!-- Price editable -->
-                    <td class="text-right table-col-narrow">
-                      <v-text-field
-                        v-model.number="it.price"
-                        type="number"
-                        dense
-                        outlined
-                        hide-details
-                        class="table-col-narrow" 
-                        @change="onRowFieldChange(it)"
-                      />
+                    <!-- Price -->
+                    <td class="text-left table-col-narrow">
+                      <template v-if="inlineEditIndex === idx">
+                        <v-text-field
+                          v-model.number="it.price"
+                          type="number"
+                          dense
+                          hide-details
+                          class="table-col-narrow table-edit-field table-input-xs"
+                          @change="onRowFieldChange(it)"
+                        />
+                      </template>
+                      <template v-else>
+                        {{ formatMoney(it.price) }}
+                      </template>
                     </td>
 
-                    <!-- Quantity editable -->
-                    <td class="text-right table-col-narrow">
-                      <v-text-field
-                        v-model.number="it.quantity"
-                        type="number"
-                        dense
-                        outlined
-                        hide-details
-                        class="table-col-narrow" 
-                        @change="onRowFieldChange(it)"
-                      />
+                    <!-- Quantity -->
+                    <td class="text-left table-col-narrow">
+                      <template v-if="inlineEditIndex === idx">
+                        <v-text-field
+                          v-model.number="it.quantity"
+                          type="number"
+                          dense
+                          hide-details
+                          class="table-col-narrow table-edit-field table-input-xs"
+                          @change="onRowFieldChange(it)"
+                        />
+                      </template>
+                      <template v-else>
+                        {{ it.quantity }}
+                      </template>
                     </td>
 
-                    <!-- CGST editable (default 9%) -->
-                    <td class="text-right table-col-narrow">
-                      <v-text-field
-                        v-model.number="it.cgst"
-                        type="number"
-                        dense
-                        outlined
-                        hide-details
-                        class="table-col-narrow" 
-                        suffix="%"
-                        @change="onRowFieldChange(it)"
-                      />
+                    <!-- CGST -->
+                    <td class="text-left table-col-narrow">
+                      <template v-if="inlineEditIndex === idx">
+                        <v-text-field
+                          v-model.number="it.cgst"
+                          type="number"
+                          dense
+                          hide-details
+                          class="table-col-narrow table-edit-field table-input-xs"
+                          suffix="%"
+                          @change="onRowFieldChange(it)"
+                        />
+                      </template>
+                      <template v-else>
+                        {{ it.cgst }}%
+                      </template>
                     </td>
 
-                    <!-- SGST editable (default 9%) -->
-                    <td class="text-right table-col-narrow">
-                      <v-text-field
-                        v-model.number="it.sgst"
-                        type="number"
-                        dense
-                        outlined
-                        hide-details
-                        class="table-col-narrow" 
-                        suffix="%"
-                        @change="onRowFieldChange(it)"
-                      />
+                    <!-- SGST -->
+                    <td class="text-left table-col-narrow">
+                      <template v-if="inlineEditIndex === idx">
+                        <v-text-field
+                          v-model.number="it.sgst"
+                          type="number"
+                          dense
+                          hide-details
+                          class="table-col-narrow table-edit-field table-input-xs"
+                          suffix="%"
+                          @change="onRowFieldChange(it)"
+                        />
+                      </template>
+                      <template v-else>
+                        {{ it.sgst }}%
+                      </template>
                     </td>
 
                     <!-- Total (read-only) -->
-                    <td class="text-right font-weight-medium">
+                    <td class="text-left font-weight-medium">
                       ₹{{ formatMoney(it.totalWithTax) }}
                     </td>
 
                     <!-- Actions -->
                     <td class="text-right">
-                      <v-btn
-                        icon
-                        small
-                        color="red"
-                        @click.stop="removeItemAndRestore(it)"
-                      >
-                        <v-icon small>mdi-delete</v-icon>
-                      </v-btn>
+                      <template v-if="inlineEditIndex === idx">
+                        <v-btn
+                          small
+                          color="primary"
+                          class="mr-1"
+                          @click.stop="saveInlineEdit(idx)"
+                        >
+                          <v-icon left small>mdi-content-save</v-icon>
+                          Save
+                        </v-btn>
+                        <v-btn
+                          small
+                          text
+                          color="secondary"
+                          @click.stop="cancelInlineEdit"
+                        >
+                          <v-icon left small>mdi-cancel</v-icon>
+                          Cancel
+                        </v-btn>
+                      </template>
+                      <template v-else>
+                        <v-btn
+                          icon
+                          small
+                          color="primary"
+                          class="mr-1"
+                          @click.stop="startInlineEdit(idx)"
+                        >
+                          <v-icon small>mdi-pencil</v-icon>
+                        </v-btn>
+                        <v-btn
+                          icon
+                          small
+                          color="red"
+                          @click.stop="removeItemAndRestore(it)"
+                        >
+                          <v-icon small>mdi-delete</v-icon>
+                        </v-btn>
+                      </template>
                     </td>
                   </tr>
 
-                  <!-- details row -->
+                  <!-- details row (unchanged) -->
                   <tr :key="`${it.id}-details`">
                     <td
                       colspan="9"
@@ -494,7 +547,7 @@
             </div>
           </div>
 
-          <div class="declare ">
+          <div class="declare">
             <div class="small">
               <h4>
                 Declaration : *** We declare that this invoice shows the actual price of the goods
@@ -695,7 +748,11 @@ export default {
       clearDialog: false,
       // Endpoints
       updateEndpoint: process.env.VUE_APP_AGENCY_BACKEND_URL + 'updateInventoryItem',
-      presignEndpoint: process.env.VUE_APP_AGENCY_BACKEND_URL + 'uploadImages'
+      presignEndpoint: process.env.VUE_APP_AGENCY_BACKEND_URL + 'uploadImages',
+
+      // Inline edit state for table
+      inlineEditIndex: null,
+      inlineEditBackup: null
     }
   },
 
@@ -1266,7 +1323,7 @@ export default {
       }
       if (!this.canAddItem) return
 
-      // Only ADD logic now; table handles editing
+      // ADD logic; table handles editing
       const newItem = this.buildItemFromForm()
       if (!newItem) return
       this.computeRowTotals(newItem)
@@ -1442,7 +1499,55 @@ export default {
       this.revealPrice = false
     },
 
+    // INLINE EDIT HELPERS
+    startInlineEdit (index) {
+      if (this.inlineEditIndex !== null && this.inlineEditIndex !== index) {
+        this.cancelInlineEdit()
+      }
+      const row = this.selectedItems[index]
+      if (!row) return
+      this.inlineEditIndex = index
+      this.inlineEditBackup = { ...row }
+    },
+
+    saveInlineEdit (index) {
+      const row = this.selectedItems[index]
+      if (!row) return
+
+      this.onRowFieldChange(row)
+
+      this.inlineEditIndex = null
+      this.inlineEditBackup = null
+      this.showSnack('Row updated successfully.', 'success')
+    },
+
+    cancelInlineEdit () {
+      if (this.inlineEditIndex === null || !this.inlineEditBackup) {
+        this.inlineEditIndex = null
+        this.inlineEditBackup = null
+        return
+      }
+
+      this.$set(this.selectedItems, this.inlineEditIndex, {
+        ...this.inlineEditBackup
+      })
+
+      this.inlineEditIndex = null
+      this.inlineEditBackup = null
+    },
+
     removeItemAndRestore (it) {
+      // adjust inline edit index if we delete the edited row
+      const idx = this.selectedItems.findIndex(i => i.id === it.id)
+      if (this.inlineEditIndex !== null && idx !== -1) {
+        if (idx === this.inlineEditIndex) {
+          this.inlineEditIndex = null
+          this.inlineEditBackup = null
+        } else if (idx < this.inlineEditIndex) {
+          this.inlineEditIndex = this.inlineEditIndex - 1
+        }
+      }
+
       this.selectedItems = this.selectedItems.filter(
         i => i.id !== it.id
       )
@@ -2072,6 +2177,26 @@ export default {
   padding-right: 4px;
 }
 
+/* Remove border & make edit fields look like plain text */
+::v-deep .table-edit-field .v-input__slot {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+::v-deep .table-edit-field .v-input__control {
+  min-height: 24px;
+}
+
+/* Hide number spinners in table edit fields */
+.table-edit-field input[type='number']::-webkit-outer-spin-button,
+.table-edit-field input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.table-edit-field input[type='number'] {
+  -moz-appearance: textfield;
+}
+
 /* -------- Invoice / Preview styles (unchanged) -------- */
 .top-header {
   display: flex;
@@ -2279,4 +2404,24 @@ export default {
   border: 1px solid #000;
   padding: 6px 8px;
 }
+
+/* Remove all borders (including bottom underline) for table edit fields */
+::v-deep .table-edit-field .v-input__slot {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Kill Vuetify bottom border/underline */
+::v-deep .table-edit-field .v-input__slot::before,
+::v-deep .table-edit-field .v-input__slot::after {
+  border-bottom: none !important;
+}
+
+/* Just in case the native input has its own border */
+::v-deep .table-edit-field input {
+  border: none !important;
+  box-shadow: none !important;
+}
+
 </style>

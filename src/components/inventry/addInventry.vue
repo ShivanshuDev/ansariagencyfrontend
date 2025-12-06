@@ -72,7 +72,6 @@
                 v-bind="attrs"
                 v-on="on"
               />
-
             </template>
             <v-date-picker
               v-model="commonInvoiceDate"
@@ -327,22 +326,105 @@
           <tbody>
             <tr v-for="(b, idx) in addedBikes" :key="b._localId">
               <td>{{ idx + 1 }}</td>
-              <td>{{ b.categoryName }}</td>
-              <td>{{ b.modelName }}</td>
-              <td>{{ b.hsn || '-' }}</td>
-              <td>{{ b.color }}</td>
-              <td>{{ b.chassisNumber }}</td>
-              <td>{{ b.engineNumber }}</td>
-              <td>{{ b.warehouse }}</td>
-              <td>{{ b.source }}</td>
-              <td>{{ b.addedBy }}</td>
+
               <td>
-                <button class="btn edit" @click="onEditRow(idx)">
-                  Edit
-                </button>
-                <button class="btn remove" @click="removeFromTable(idx)">
-                  Delete
-                </button>
+                <template v-if="inlineEditIndex === idx">
+                  <input v-model="b.categoryName" class="inline-input" />
+                </template>
+                <template v-else>
+                  {{ b.categoryName }}
+                </template>
+              </td>
+
+              <td>
+                <template v-if="inlineEditIndex === idx">
+                  <input v-model="b.modelName" class="inline-input" />
+                </template>
+                <template v-else>
+                  {{ b.modelName }}
+                </template>
+              </td>
+
+              <td>
+                <template v-if="inlineEditIndex === idx">
+                  <input v-model="b.hsn" class="inline-input" />
+                </template>
+                <template v-else>
+                  {{ b.hsn || '-' }}
+                </template>
+              </td>
+
+              <td>
+                <template v-if="inlineEditIndex === idx">
+                  <input v-model="b.color" class="inline-input" />
+                </template>
+                <template v-else>
+                  {{ b.color }}
+                </template>
+              </td>
+
+              <td>
+                <template v-if="inlineEditIndex === idx">
+                  <input v-model="b.chassisNumber" class="inline-input" />
+                </template>
+                <template v-else>
+                  {{ b.chassisNumber }}
+                </template>
+              </td>
+
+              <td>
+                <template v-if="inlineEditIndex === idx">
+                  <input v-model="b.engineNumber" class="inline-input" />
+                </template>
+                <template v-else>
+                  {{ b.engineNumber }}
+                </template>
+              </td>
+
+              <td>
+                <template v-if="inlineEditIndex === idx">
+                  <input v-model="b.warehouse" class="inline-input" />
+                </template>
+                <template v-else>
+                  {{ b.warehouse }}
+                </template>
+              </td>
+
+              <td>
+                <template v-if="inlineEditIndex === idx">
+                  <input v-model="b.source" class="inline-input" />
+                </template>
+                <template v-else>
+                  {{ b.source }}
+                </template>
+              </td>
+
+              <td>
+                <template v-if="inlineEditIndex === idx">
+                  <input v-model="b.addedBy" class="inline-input" />
+                </template>
+                <template v-else>
+                  {{ b.addedBy }}
+                </template>
+              </td>
+
+              <td>
+                <template v-if="inlineEditIndex === idx">
+                  <button class="btn primary" @click="saveInlineEdit(idx)">
+                    Save
+                  </button>
+                  <button class="btn remove" @click="cancelInlineEdit">
+                    Cancel
+                  </button>
+                </template>
+                <template v-else>
+                  <button class="btn edit" @click="startInlineEdit(idx)">
+                    Edit
+                  </button>
+                  <button class="btn remove" @click="removeFromTable(idx)">
+                    Delete
+                  </button>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -430,10 +512,13 @@ export default {
         chassisNumber: "",
       },
       invoiceDateMenu: false,
-      // track which row is being edited
+      // track which row is being edited by top form
       editingIndex: null,
-      // 🔹 used to avoid resetting dropdowns when we change values programmatically
+      // used to avoid resetting dropdowns when we change values programmatically
       suppressDependentResets: false,
+      // inline edit state for table rows
+      inlineEditIndex: null,
+      inlineEditBackup: null,
     };
   },
   mounted() {
@@ -468,7 +553,7 @@ export default {
       if (!this.bikeForm.addedBy) this.bikeForm.addedBy = newVal;
     },
 
-    // 🔹 CATEGORY CHANGE: user changes -> reset model, color, hsn
+    // CATEGORY CHANGE: user changes -> reset model, color, hsn
     "bikeForm.categoryName": function (newVal) {
       if (newVal) {
         this.fetchModels(newVal);
@@ -478,20 +563,18 @@ export default {
 
       if (this.suppressDependentResets) return;
 
-      // user-triggered category change
       this.bikeForm.modelName = "";
       this.bikeForm.color = "";
       this.bikeForm.hsn = "";
     },
 
-    // 🔹 MODEL CHANGE: always sync HSN, only reset color for user action
+    // MODEL CHANGE: always sync HSN, only reset color for user action
     "bikeForm.modelName": function (newVal) {
       const m = this.findModelByName(newVal);
       this.bikeForm.hsn = m && m.hsn ? String(m.hsn) : "";
 
       if (this.suppressDependentResets) return;
 
-      // user-triggered model change -> reset color only
       this.bikeForm.color = "";
     },
 
@@ -748,6 +831,31 @@ export default {
 
       return errors;
     },
+
+    // NEW: utility to check duplicates in addedBikes
+    isDuplicateInAddedBikes(bike, ignoreIndex = null) {
+      const norm = (s) => (s || "").toString().trim().toUpperCase();
+      const c = norm(bike.chassisNumber);
+      const e = norm(bike.engineNumber);
+
+      let chassisDupIndex = -1;
+      let engineDupIndex = -1;
+
+      for (let i = 0; i < this.addedBikes.length; i++) {
+        if (ignoreIndex !== null && i === ignoreIndex) continue;
+        const row = this.addedBikes[i];
+        if (!row) continue;
+        const rc = norm(row.chassisNumber);
+        const re = norm(row.engineNumber);
+        if (c && rc && c === rc) chassisDupIndex = i;
+        if (e && re && e === re) engineDupIndex = i;
+        // early exit if both found
+        if (chassisDupIndex !== -1 && engineDupIndex !== -1) break;
+      }
+
+      return { chassisDupIndex, engineDupIndex };
+    },
+
     saveBikeToTable() {
       this.ensureModelFieldsDefaults();
 
@@ -760,6 +868,21 @@ export default {
       const singleErrors = this.validateSingleBike();
       if (Object.keys(singleErrors).length) {
         this.singleBikeErrors = singleErrors;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      // check duplicates in addedBikes
+      const dup = this.isDuplicateInAddedBikes(this.bikeForm, this.editingIndex);
+      if (dup.chassisDupIndex !== -1 || dup.engineDupIndex !== -1) {
+        // prepare user friendly message and error fields
+        if (dup.chassisDupIndex !== -1) {
+          this.singleBikeErrors.chassisNumber = `Duplicate chassis found in row ${dup.chassisDupIndex + 1}`;
+        }
+        if (dup.engineDupIndex !== -1) {
+          this.singleBikeErrors.engineNumber = `Duplicate engine found in row ${dup.engineDupIndex + 1}`;
+        }
+        this.showSnackbar("error", "Duplicate chassis/engine found in the current table. Resolve before adding/updating.");
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
@@ -793,7 +916,7 @@ export default {
           this.addedBikes.push(payloadBike);
           this.showSnackbar("success", "Bike added to list.");
 
-          // ✅ after Add More: keep dropdowns, clear chassis/engine/warehouse
+          // after Add More: keep dropdowns, clear chassis/engine/warehouse
           const prevCategory = this.bikeForm.categoryName;
           const prevModel = this.bikeForm.modelName;
           const prevColor = this.bikeForm.color;
@@ -806,14 +929,12 @@ export default {
           this.bikeForm.invoiceNumber = this.commonInvoiceNumber || "";
           this.bikeForm.invoiceDate = this.commonInvoiceDate || "";
 
-          // restore dropdown-related selections
           this.bikeForm.categoryName = prevCategory;
           this.bikeForm.modelName = prevModel;
           this.bikeForm.color = prevColor;
           this.bikeForm.hsn = prevHsn;
           this.bikeForm.source = prevSource;
 
-          // clear chassis, engine, warehouse for next bike
           this.bikeForm.chassisNumber = "";
           this.bikeForm.engineNumber = "";
           this.bikeForm.warehouse = "";
@@ -832,8 +953,73 @@ export default {
         this.isSavingBike = false;
       }
     },
+
+    // INLINE EDIT HELPERS
+    startInlineEdit(index) {
+      // if another row is already editing, restore it first
+      if (this.inlineEditIndex !== null && this.inlineEditIndex !== index) {
+        this.cancelInlineEdit();
+      }
+      const row = this.addedBikes[index];
+      if (!row) return;
+      this.inlineEditIndex = index;
+      this.inlineEditBackup = { ...row }; // shallow backup
+    },
+    saveInlineEdit(index) {
+      const row = this.addedBikes[index];
+      if (!row) return;
+
+      // run validation for the inline row
+      const errors = this.validateSingleBike(row);
+      if (Object.keys(errors).length) {
+        // show errors via snackbar (inline form area not same as top form)
+        this.showSnackbar("error", "Validation failed for edited row. Fix required.");
+        // set top-level errors so user sees them (useful if editing then switching to top form)
+        this.singleBikeErrors = errors;
+        return;
+      }
+
+      // check duplicates excluding current edited row
+      const dup = this.isDuplicateInAddedBikes(row, index);
+      if (dup.chassisDupIndex !== -1 || dup.engineDupIndex !== -1) {
+        let msg = "Duplicate found in table: ";
+        if (dup.chassisDupIndex !== -1) msg += `chassis matches row ${dup.chassisDupIndex + 1}. `;
+        if (dup.engineDupIndex !== -1) msg += `engine matches row ${dup.engineDupIndex + 1}.`;
+        this.showSnackbar("error", msg);
+        return;
+      }
+
+      // all good: commit inline edit
+      this.inlineEditIndex = null;
+      this.inlineEditBackup = null;
+      this.showSnackbar("success", "Row updated successfully.");
+    },
+    cancelInlineEdit() {
+      if (this.inlineEditIndex === null || !this.inlineEditBackup) {
+        this.inlineEditIndex = null;
+        this.inlineEditBackup = null;
+        return;
+      }
+
+      this.$set(this.addedBikes, this.inlineEditIndex, {
+        ...this.inlineEditBackup,
+      });
+
+      this.inlineEditIndex = null;
+      this.inlineEditBackup = null;
+    },
+
     removeFromTable(index) {
       this.addedBikes.splice(index, 1);
+
+      // adjust inline edit index if needed
+      if (this.inlineEditIndex === index) {
+        this.inlineEditIndex = null;
+        this.inlineEditBackup = null;
+      } else if (this.inlineEditIndex !== null && index < this.inlineEditIndex) {
+        this.inlineEditIndex = this.inlineEditIndex - 1;
+      }
+
       if (this.editingIndex === index) {
         this.editingIndex = null;
       } else if (this.editingIndex !== null && index < this.editingIndex) {
@@ -856,6 +1042,8 @@ export default {
       this.chassisCheck.available = null;
       this.dialogs.chassisAvailable = false;
       this.editingIndex = null;
+      this.inlineEditIndex = null;
+      this.inlineEditBackup = null;
     },
     onReset() {
       this.suppressDependentResets = true;
@@ -870,6 +1058,8 @@ export default {
       this.chassisCheck.available = null;
       this.dialogs.chassisAvailable = false;
       this.editingIndex = null;
+      this.inlineEditIndex = null;
+      this.inlineEditBackup = null;
     },
     onClickSubmitAll() {
       if (this.addedBikes.length === 0) {
@@ -931,6 +1121,7 @@ export default {
       this.snackbar.show = true;
     },
     onEditRow(index) {
+      // old top-form edit still available (not used by table now)
       const bike = this.addedBikes[index];
       if (!bike) return;
       this.editingIndex = index;
@@ -938,7 +1129,6 @@ export default {
       this.commonInvoiceNumber = bike.invoiceNumber || "";
       this.commonInvoiceDate = bike.invoiceDate || "";
 
-      // load row data without triggering resets
       this.suppressDependentResets = true;
       this.bikeForm = { ...bike };
       this.ensureModelFieldsDefaults();
@@ -1131,14 +1321,27 @@ export default {
   font-weight: bold;
 }
 
-/* Add this to your <style scoped> */
-
+/* narrow action column */
 .bikes-table th:last-child,
 .bikes-table td:last-child {
-  width: 90px;        /* or 80px / 70px as you like */
-  white-space: nowrap; /* keep buttons on a single line */
+  width: 90px;
+  white-space: nowrap;
 }
 
+/* inline inputs in table: keep same height/width feel */
+.inline-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  padding: 2px 4px;
+  font-size: 12px;
+  background: #ffffff;
+  outline: none;
+}
+.bikes-table td .inline-input {
+  height: 20px;
+  line-height: 20px;
+}
 
 /* responsive */
 @media (max-width: 960px) {

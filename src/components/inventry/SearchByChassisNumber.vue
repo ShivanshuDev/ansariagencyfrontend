@@ -1,168 +1,195 @@
 <template>
   <div style="background-color:white; height:91vh; padding:12px; margin:12px; border-radius:5px;">
-    <!-- SEARCH FIELD (use this inside your v-row) -->
-    <v-col cols="12" md="3" class="pa-0 pr-2">
-      <v-text-field
-        v-model="chassisQuery"
-        @input="onChassisInput"
-        label="Search by chassis Number"
-        dense
-        outlined
-        clearable
-        hide-details
-        placeholder="Chassis or Engine number..."
-      />
-    </v-col>
+    <!-- SEARCH FIELDS -->
+    <v-row class="px-4 py-2" no-gutters>
+      <!-- Search by Chassis Number -->
+      <v-col cols="12" md="3" class="pa-0 pr-2">
+        <v-text-field
+          v-model="chassisQuery"
+          @input="onChassisInput"
+          label="Search by Chassis Number"
+          dense
+          outlined
+          clearable
+          hide-details
+          placeholder="Chassis number..."
+        />
+      </v-col>
 
-    <!-- SEARCH RESULT DIALOG -->
-    <v-dialog v-model="dialogOpen" max-width="1800px" persistent>
-      <v-card>
-        <v-card-title class="d-flex align-center justify-space-between">
-          <div>
-            <span class="headline">Search results for: "{{ chassisQuery }}"</span>
-            <div v-if="!loadingChassis && !localChassisResults.length" class="subtitle-2">
-              No results found
-            </div>
-            <div v-if="loadingChassis" class="subtitle-2">
-              Searching...
-            </div>
+      <!-- Search by Engine Number -->
+      <v-col cols="12" md="3" class="pa-0 pr-2">
+        <v-text-field
+          v-model="engineQuery"
+          @input="onEngineInput"
+          label="Search by Engine Number"
+          dense
+          outlined
+          clearable
+          hide-details
+          placeholder="Engine number..."
+        />
+      </v-col>
+    </v-row>
+
+    <!-- INLINE RESULT CARD (NO DIALOG) -->
+    <v-card
+      v-if="hasSearched || loadingChassis"
+      class="mt-4"
+      elevation="2"
+    >
+      <v-card-title class="d-flex align-center justify-space-between">
+        <div>
+          <span class="headline">
+            Search results for:
+            "
+            {{ activeQuery }}
+            "
+          </span>
+
+          <div v-if="!loadingChassis && hasSearched && !localChassisResults.length" class="subtitle-2 mt-1">
+            No results found
           </div>
-
-          <div class="d-flex align-center" style="gap:8px;">
-            <!-- Downloads operate on selectedRows inside the dialog -->
-            <DownloadPdf
-              :items="selectedRows"
-              :headers="dialogHeaders"
-            />
-            <DownloadXlsx
-              :items="selectedRows"
-              :headers="dialogHeaders"
-              filename="chassis_search_results"
-              @downloaded="onDialogDownloaded"
-              :disabled="loadingChassis || !selectedRows.length"
-            />
-            <v-btn icon @click="closeDialog">
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
+          <div v-if="loadingChassis" class="subtitle-2 mt-1">
+            Searching...
           </div>
-        </v-card-title>
+        </div>
 
-        <v-card-text>
-          <v-skeleton-loader v-if="loadingChassis" type="table" />
-          <div v-else>
-            <v-simple-table dense>
-              <thead style="background-color:#dff3f79c; color:white;">
-                <tr>
-                  <!-- Checkbox header -->
-                  <th style="width:48px; text-align:center;">
-                    <v-checkbox
-                      :input-value="allSelected"
-                      @change="toggleSelectAll"
-                      hide-details
-                      density="compact"
-                    />
-                  </th>
-
-                  <!-- Dynamic headers -->
-                  <th v-for="h in dialogHeaders" :key="h.value">
-                    {{ h.text }}
-                  </th>
-
-                  <!-- Actions column -->
-                  <th style="width:160px; text-align:center;">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                <!-- Empty state -->
-                <tr v-if="!localChassisResults.length">
-                  <td :colspan="dialogHeaders.length + 2" class="text-center">
-                    No items found
-                  </td>
-                </tr>
-
-                <!-- Rows -->
-                <tr
-                  v-for="(row, idx) in localChassisResults"
-                  :key="row.pk || row.chassisNumber || row.engineNumber || idx"
-                >
-                  <!-- Row checkbox -->
-                  <td style="text-align:center;">
-                    <v-checkbox
-                      :input-value="isSelected(row)"
-                      @change="toggleRowSelection(row)"
-                      hide-details
-                      density="compact"
-                    />
-                  </td>
-
-                  <!-- Data cells -->
-                  <td v-for="h in dialogHeaders" :key="h.value">
-                    {{ getValue(row, h.value) }}
-                  </td>
-
-                  <!-- Actions -->
-                  <td style="text-align:center; white-space:nowrap;">
-                    <!-- Edit -->
-                    <v-tooltip text="Edit Item" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          v-bind="props"
-                          color="primary"
-                          size="x-small"
-                          variant="tonal"
-                          class="mr-1"
-                          @click="openEdit(row)"
-                        >
-                          <v-icon size="16" start>mdi-pencil</v-icon>
-                          Edit
-                        </v-btn>
-                      </template>
-                    </v-tooltip>
-
-                    <!-- Inventory History -->
-                    <v-tooltip text="View Inventory History" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          v-bind="props"
-                          color="teal"
-                          size="x-small"
-                          variant="tonal"
-                          @click="openHistory(row)"
-                        >
-                          <v-icon size="16" start>mdi-history</v-icon>
-                          History
-                        </v-btn>
-                      </template>
-                    </v-tooltip>
-                  </td>
-                </tr>
-              </tbody>
-            </v-simple-table>
-          </div>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer />
-          <div class="mr-4">
-            <small v-if="selectedRows.length">
-              {{ selectedRows.length }} selected
-            </small>
-          </div>
-
-          <InventoryHistoryDialog
-            v-if="true"
-            v-model="historyDialogOpen"
-            :invoiceNumber="historyInvoiceNumber"
-            :chassisNumber="historyChassisNumber"
+        <div class="d-flex align-center" style="gap:8px;">
+          <!-- Downloads operate on selectedRows -->
+          <DownloadPdf
+            :items="selectedRows"
+            :headers="dialogHeaders"
           />
+          <DownloadXlsx
+            :items="selectedRows"
+            :headers="dialogHeaders"
+            filename="inventory_search_results"
+            @downloaded="onDialogDownloaded"
+            :disabled="loadingChassis || !selectedRows.length"
+          />
+          <v-btn
+            text
+            @click="clearSearch"
+          >
+            Clear
+          </v-btn>
+        </div>
+      </v-card-title>
 
-          <v-btn text @click="closeDialog">Close</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+      <v-card-text>
+        <v-skeleton-loader v-if="loadingChassis" type="table" />
+        <div v-else>
+          <v-simple-table dense>
+            <thead style="background-color:#dff3f79c; color:white;">
+              <tr>
+                <!-- Checkbox header -->
+                <th style="width:48px; text-align:center;">
+                  <v-checkbox
+                    :input-value="allSelected"
+                    @change="toggleSelectAll"
+                    hide-details
+                    density="compact"
+                  />
+                </th>
 
-    <!-- Edit dialog (internal) -->
+                <!-- Dynamic headers -->
+                <th v-for="h in dialogHeaders" :key="h.value">
+                  {{ h.text }}
+                </th>
+
+                <!-- Actions column -->
+                <th style="width:160px; text-align:center;">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <!-- Empty state -->
+              <tr v-if="!localChassisResults.length && hasSearched">
+                <td :colspan="dialogHeaders.length + 2" class="text-center">
+                  No items found
+                </td>
+              </tr>
+
+              <!-- Rows -->
+              <tr
+                v-for="(row, idx) in localChassisResults"
+                :key="row.pk || row.chassisNumber || row.engineNumber || idx"
+              >
+                <!-- Row checkbox -->
+                <td style="text-align:center;">
+                  <v-checkbox
+                    :input-value="isSelected(row)"
+                    @change="toggleRowSelection(row)"
+                    hide-details
+                    density="compact"
+                  />
+                </td>
+
+                <!-- Data cells -->
+                <td v-for="h in dialogHeaders" :key="h.value">
+                  {{ getValue(row, h.value) }}
+                </td>
+
+                <!-- Actions -->
+                <td style="text-align:center; white-space:nowrap;">
+                  <!-- Edit -->
+                  <v-tooltip text="Edit Item" location="top">
+                    <template #activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        color="primary"
+                        size="x-small"
+                        variant="tonal"
+                        class="mr-1"
+                        @click="openEdit(row)"
+                      >
+                        <v-icon size="16" start>mdi-pencil</v-icon>
+                        Edit
+                      </v-btn>
+                    </template>
+                  </v-tooltip>
+
+                  <!-- Inventory History -->
+                  <v-tooltip text="View Inventory History" location="top">
+                    <template #activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        color="teal"
+                        size="x-small"
+                        variant="tonal"
+                        @click="openHistory(row)"
+                      >
+                        <v-icon size="16" start>mdi-history</v-icon>
+                        History
+                      </v-btn>
+                    </template>
+                  </v-tooltip>
+                </td>
+              </tr>
+            </tbody>
+          </v-simple-table>
+        </div>
+      </v-card-text>
+
+      <v-card-actions>
+        <v-spacer />
+        <div class="mr-4">
+          <small v-if="selectedRows.length">
+            {{ selectedRows.length }} selected
+          </small>
+        </div>
+      </v-card-actions>
+    </v-card>
+
+    <!-- Inventory History Dialog (kept same behavior) -->
+    <InventoryHistoryDialog
+      v-if="true"
+      v-model="historyDialogOpen"
+      :invoiceNumber="historyInvoiceNumber"
+      :chassisNumber="historyChassisNumber"
+    />
+
+    <!-- Edit dialog (same as before) -->
     <v-dialog v-model="editDialog" persistent max-width="920px">
       <v-card>
         <v-card-title>
@@ -216,13 +243,16 @@ export default {
       historyInvoiceNumber: '',
       historyChassisNumber: '',
 
-      // chassis search local state
+      // search local state
       chassisQuery: '',
+      engineQuery: '',        // NEW: engine search query
       _chassisTimer: null,
+      _engineTimer: null,     // NEW: engine debounce timer
       engineDebounceMs: 420,
       loadingChassis: false,
       chassisResults: [],
-      dialogOpen: false,
+      dialogOpen: false,      // kept for compatibility, no longer used
+      hasSearched: false,     // NEW: to show "no results" / card
 
       // selection state
       selectedRowKeys: [],
@@ -262,6 +292,11 @@ export default {
       return this.localChassisResults.every(r =>
         this.selectedRowKeys.includes(this._rowKey(r))
       );
+    },
+
+    // NEW: which query text to show in title
+    activeQuery() {
+      return this.chassisQuery || this.engineQuery || '';
     }
   },
   methods: {
@@ -272,8 +307,17 @@ export default {
       this.historyDialogOpen = true;
     },
 
-    // debounce handler
+    // debounce handler for chassis search
     onChassisInput() {
+      // when user types in chassis box, clear engine search
+      if (this.engineQuery) {
+        this.engineQuery = '';
+      }
+      if (this._engineTimer) {
+        clearTimeout(this._engineTimer);
+        this._engineTimer = null;
+      }
+
       if (this._chassisTimer) {
         clearTimeout(this._chassisTimer);
         this._chassisTimer = null;
@@ -283,8 +327,8 @@ export default {
 
       if (!v) {
         this.chassisResults = [];
-        this.dialogOpen = false;
         this.loadingChassis = false;
+        this.hasSearched = false;
         this.clearSelection();
         return;
       }
@@ -298,61 +342,123 @@ export default {
       }, this.engineDebounceMs);
     },
 
+    // NEW: debounce handler for engine search
+    onEngineInput() {
+      // when user types in engine box, clear chassis search
+      if (this.chassisQuery) {
+        this.chassisQuery = '';
+      }
+      if (this._chassisTimer) {
+        clearTimeout(this._chassisTimer);
+        this._chassisTimer = null;
+      }
+
+      if (this._engineTimer) {
+        clearTimeout(this._engineTimer);
+        this._engineTimer = null;
+      }
+
+      const v = this.engineQuery == null ? '' : String(this.engineQuery).trim();
+
+      if (!v) {
+        this.chassisResults = [];
+        this.loadingChassis = false;
+        this.hasSearched = false;
+        this.clearSelection();
+        return;
+      }
+
+      const isCandidate = /[A-Za-z0-9]{3,}/.test(v);
+      if (!isCandidate) return;
+
+      this._engineTimer = setTimeout(() => {
+        this._engineTimer = null;
+        this._searchEngineApi(v);
+      }, this.engineDebounceMs);
+    },
+
     async _searchChassisApi(q) {
       this.loadingChassis = true;
+      this.hasSearched = false;
       try {
         const resSearch = await axios.get(
           `${process.env.VUE_APP_AGENCY_BACKEND_URL}searchInventoryByChassis`,
           { params: { query: q } }
         );
 
-        const items = (resSearch && resSearch.data && Array.isArray(resSearch.data.items))
-          ? resSearch.data.items
-          : [];
-
-        const now = Date.now();
-        const normalized = items.map(it => {
-          const out = { ...(it || {}) };
-
-          if (!out.chassisNumber && out.chassis) out.chassisNumber = out.chassis;
-          if (!out.engineNumber && out.engine) out.engineNumber = out.engine;
-          if (!out.modelName && out.model) out.modelName = out.model;
-          if (!out.addedBy && out.added_by) out.addedBy = out.added_by;
-          if (!out.invoiceNumber && out.invoice_no) out.invoiceNumber = out.invoice_no;
-
-          const created = out.createdAt || out.created_at || out.created_date;
-          let createdMs = null;
-          if (created != null && !Number.isNaN(Number(created))) {
-            const n = Number(created);
-            createdMs = n < 1e12 ? n * 1000 : n;
-          }
-          out.inventoryHoldDays = (createdMs != null)
-            ? Math.floor(Math.max(0, now - createdMs) / (1000 * 60 * 60 * 24))
-            : '';
-
-          return out;
-        });
-
-        normalized.sort((a, b) => {
-          const aCt = Number(a.createdAt || a.created_at || a.created_date) || 0;
-          const bCt = Number(b.createdAt || b.created_at || b.created_date) || 0;
-          const aMs = aCt < 1e12 ? aCt * 1000 : aCt;
-          const bMs = bCt < 1e12 ? bCt * 1000 : bCt;
-          return bMs - aMs;
-        });
-
-        this.chassisResults = normalized;
-        this.clearSelection();
-        this.dialogOpen = true;
+        this._handleSearchResponse(resSearch);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('searchInventoryByChassis failed', err);
         this.chassisResults = [];
         this.clearSelection();
-        this.dialogOpen = true;
       } finally {
         this.loadingChassis = false;
+        this.hasSearched = true;
       }
+    },
+
+    // NEW: search by engineNumber
+    async _searchEngineApi(q) {
+      this.loadingChassis = true;
+      this.hasSearched = false;
+      try {
+        const resSearch = await axios.get(
+          `${process.env.VUE_APP_AGENCY_BACKEND_URL}searchInventoryByengineNumber`,
+          { params: { query: q } }
+        );
+
+        this._handleSearchResponse(resSearch);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('searchInventoryByengineNumber failed', err);
+        this.chassisResults = [];
+        this.clearSelection();
+      } finally {
+        this.loadingChassis = false;
+        this.hasSearched = true;
+      }
+    },
+
+    // shared normalization code
+    _handleSearchResponse(resSearch) {
+      const items = (resSearch && resSearch.data && Array.isArray(resSearch.data.items))
+        ? resSearch.data.items
+        : [];
+
+      const now = Date.now();
+      const normalized = items.map(it => {
+        const out = { ...(it || {}) };
+
+        if (!out.chassisNumber && out.chassis) out.chassisNumber = out.chassis;
+        if (!out.engineNumber && out.engine) out.engineNumber = out.engine;
+        if (!out.modelName && out.model) out.modelName = out.model;
+        if (!out.addedBy && out.added_by) out.addedBy = out.added_by;
+        if (!out.invoiceNumber && out.invoice_no) out.invoiceNumber = out.invoice_no;
+
+        const created = out.createdAt || out.created_at || out.created_date;
+        let createdMs = null;
+        if (created != null && !Number.isNaN(Number(created))) {
+          const n = Number(created);
+          createdMs = n < 1e12 ? n * 1000 : n;
+        }
+        out.inventoryHoldDays = (createdMs != null)
+          ? Math.floor(Math.max(0, now - createdMs) / (1000 * 60 * 60 * 24))
+          : '';
+
+        return out;
+      });
+
+      normalized.sort((a, b) => {
+        const aCt = Number(a.createdAt || a.created_at || a.created_date) || 0;
+        const bCt = Number(b.createdAt || b.created_at || b.created_date) || 0;
+        const aMs = aCt < 1e12 ? aCt * 1000 : aCt;
+        const bMs = bCt < 1e12 ? bCt * 1000 : bCt;
+        return bMs - aMs;
+      });
+
+      this.chassisResults = normalized;
+      this.clearSelection();
     },
 
     _rowKey(row) {
@@ -395,6 +501,16 @@ export default {
     clearSelection() {
       this.selectedRowKeys = [];
       this.selectedRows = [];
+    },
+
+    // Clear both queries and results
+    clearSearch() {
+      this.chassisQuery = '';
+      this.engineQuery = '';
+      this.chassisResults = [];
+      this.hasSearched = false;
+      this.loadingChassis = false;
+      this.clearSelection();
     },
 
     getValue(row, key) {
@@ -465,10 +581,6 @@ export default {
       }
 
       this.closeEdit();
-    },
-
-    closeDialog() {
-      this.dialogOpen = false;
     },
 
     onDialogDownloaded() {

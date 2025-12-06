@@ -70,8 +70,6 @@
                 class="category-row px-3"
                 :class="{ 'category-row--active': (c.category || c.name) === form.category }"
               >
-                
-
                 <v-list-item-content>
                   <v-list-item-title class="text-truncate font-weight-medium">
                     {{ c.category || c.name }}
@@ -147,6 +145,18 @@
 
             <v-spacer />
 
+            <!-- NEW: Category filter for models table -->
+            <v-select
+              v-model="selectedCategoryFilter"
+              :items="categoriesData.map(c => c.category || c.name)"
+              label="Filter by category"
+              dense
+              outlined
+              hide-details
+              clearable
+              class="mr-3 category-filter"
+            />
+
             <v-select
               v-model="selectedModelFilter"
               :items="displayModels.map(m => m.modelName)"
@@ -157,7 +167,6 @@
               clearable
               class="mr-3 model-filter"
             />
-
 
             <v-text-field
               v-model="search"
@@ -192,6 +201,9 @@
               :headers="headers"
               :items="filteredModels"
               :items-per-page="13"
+              :footer-props="{
+                'items-per-page-options': [13]
+              }"
               dense
               item-key="modelName"
               :item-class="rowClass"
@@ -806,7 +818,11 @@ export default {
       itemLoading: {},
 
       deleteDialog: { visible: false, item: null },
+
       selectedModelFilter: null,
+
+      // NEW: selected category filter for the models table
+      selectedCategoryFilter: null,
     };
   },
 
@@ -835,7 +851,12 @@ export default {
     filteredModels() {
       let list = this.displayModels;
 
-      // Filter by selected model from dropdown
+      // NEW: Filter by selected category (from header v-select)
+      if (this.selectedCategoryFilter) {
+        list = list.filter(m => m.category === this.selectedCategoryFilter);
+      }
+
+      // Existing model filter from dropdown
       if (this.selectedModelFilter) {
         list = list.filter(m => m.modelName === this.selectedModelFilter);
       }
@@ -1450,180 +1471,221 @@ export default {
 </script>
 
 <style scoped>
+/* =========================
+   Layout background
+   ========================= */
 .model-manager {
-  background: linear-gradient(145deg, #f5f7fb, #ffffff);
+  min-height: 100vh;
+  padding: 24px;
+  background: radial-gradient(circle at top left, #eef2ff 0, #f9fafb 38%, #ffffff 100%);
 }
 
-/* ---------- Generic typography ---------- */
+/* Center content a bit on large screens */
+.model-manager > .v-row {
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+/* =========================
+   Generic typography
+   ========================= */
 .section-title {
   font-size: 1.05rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .section-subtitle {
   font-size: 0.78rem;
-  color: rgba(0, 0, 0, 0.55);
+  color: rgba(15, 23, 42, 0.6);
 }
 
-/* ---------- Categories card ---------- */
-.category-card {
-  overflow: hidden;
-}
-
-.category-count-chip {
-  font-size: 0.7rem;
-  font-weight: 500;
-}
-
+/* Helper text */
 .helper-text {
   font-size: 0.7rem;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(15, 23, 42, 0.55);
 }
 
-/* Scroll area for categories */
-.category-list {
-  max-height: 600px;
-  overflow-y: auto;
-}
-
-/* Category list rows */
-.category-row {
-  cursor: pointer;
-  border-radius: 12px;
-  margin: 2px 4px;
-  transition: background 0.12s ease, transform 0.08s ease;
-}
-
-.category-row:hover {
-  background-color: rgba(99, 102, 241, 0.06);
-  transform: translateY(-1px);
-}
-
-.category-row--active {
-  background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(16,185,129,0.12));
-}
-
-.category-avatar {
-  background-color: rgba(99, 102, 241, 0.08);
-  color: rgba(55, 65, 81, 0.9);
-}
-
-.category-actions .v-btn {
-  margin-left: 4px;
-}
-
-/* ---------- Models card & table ---------- */
-.models-card {
-  overflow: hidden;
-}
-
-.models-header {
-  background-color: rgba(248, 250, 252, 0.9);
-}
-
-.search-field {
-  max-width: 260px;
-}
-
-.models-table .v-data-table__wrapper {
-  max-height: 620px;
-}
-
-.model-cell {
-  width: 100%;
-}
-
-.model-main {
-  min-width: 0;
-  max-width: 420px;
-}
-
-.model-name {
-  font-size: 0.9rem;
-}
-
-.model-category {
-  max-width: 380px;
-}
-
-.model-meta {
-  min-width: 0;
-}
-
-.model-color-count-chip {
-  font-size: 0.74rem;
-}
-
-/* Color chips in table */
-.colors-cell {
-  max-width: 480px;
-}
-
-/* ---------- Actions cell ---------- */
-.actions-cell .v-btn {
-  margin-left: 4px;
-}
-
-/* ---------- Details dialog ---------- */
-.details-header {
-  background: linear-gradient(135deg, rgba(99,102,241,.22), rgba(16,185,129,.22));
-  backdrop-filter: blur(4px);
-  border-bottom: 1px solid rgba(0,0,0,.06);
-}
-
-.label {
-  font-size: .78rem;
-  letter-spacing: .02em;
-  opacity: .7;
-  margin-bottom: .25rem;
-  text-transform: uppercase;
-}
-
-.value {
-  font-size: 1rem;
-}
-
-/* ---------- Color chips (shared) ---------- */
-.color-chip {
-  transition: transform .12s ease, box-shadow .12s ease;
-  max-width: 160px;
-}
-
-.color-chip:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,.08);
-}
-
-.more-chip {
-  font-size: 0.75rem;
-}
-
-.swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  margin-right: 8px;
-  border: 1px solid;
-}
-
+/* Truncate utility */
 .text-truncate {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-/* ---------- Fixed row heights ---------- */
-.fixed-rows .v-data-table__wrapper table tbody tr {
-  height: 48px;
+/* =========================
+   Card shells
+   ========================= */
+.category-card,
+.models-card {
+  border-radius: 18px !important;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow:
+    0 20px 25px -20px rgba(15, 23, 42, 0.25),
+    0 0 0 1px rgba(148, 163, 184, 0.08);
+  background: #ffffff;
 }
 
+/* slight glow on hover */
+.category-card:hover,
+.models-card:hover {
+  box-shadow:
+    0 24px 45px -26px rgba(15, 23, 42, 0.35),
+    0 0 0 1px rgba(129, 140, 248, 0.35);
+  transition: box-shadow 0.18s ease;
+}
+
+/* Accent stripe on left card */
+.category-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.category-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(180deg, #6366f1, #22c55e);
+}
+
+/* =========================
+   Categories area
+   ========================= */
+.category-count-chip {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: rgba(79, 70, 229, 0.09) !important;
+  color: #4f46e5 !important;
+  border-radius: 999px;
+}
+
+/* Scroll area for categories */
+.category-list {
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar (webkit) */
+.category-list::-webkit-scrollbar {
+  width: 6px;
+}
+.category-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.category-list::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.7);
+  border-radius: 999px;
+}
+
+/* Category row */
+.category-row {
+  cursor: pointer;
+  border-radius: 14px;
+  margin: 2px 4px;
+  padding-left: 10px !important;
+  padding-right: 10px !important;
+  transition: background 0.14s ease, transform 0.08s ease, box-shadow 0.12s ease;
+}
+
+.category-row:hover {
+  background: rgba(129, 140, 248, 0.07);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.category-row--active {
+  background: linear-gradient(135deg, rgba(129, 140, 248, 0.16), rgba(34, 197, 94, 0.12));
+  box-shadow: 0 8px 18px rgba(129, 140, 248, 0.25);
+}
+
+/* category row actions */
+.category-actions .v-btn {
+  margin-left: 2px;
+}
+
+/* =========================
+   Models header / filters
+   ========================= */
+.models-header {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(239, 246, 255, 0.95));
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.models-header .v-select,
+.models-header .v-text-field {
+  max-width: 210px;
+}
+
+.search-field {
+  max-width: 260px;
+}
+
+/* Make filter controls more compact */
+.category-filter,
+.model-filter,
+.search-field {
+  margin-right: 10px !important;
+}
+
+/* "Add model" button */
+.models-header .v-btn {
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  font-weight: 600;
+}
+
+/* =========================
+   Data table
+   ========================= */
+.models-table .v-data-table__wrapper {
+  max-height: 620px;
+}
+
+/* sticky header */
+.models-table thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f9fafb;
+}
+
+.models-table thead th {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(15, 23, 42, 0.7) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.5) !important;
+}
+
+/* fixed row size */
+.fixed-rows .v-data-table__wrapper table tbody tr {
+  height: 50px;
+}
+
+/* cells */
 .fixed-rows .v-data-table__wrapper td,
 .fixed-rows .v-data-table__wrapper th {
   padding: 8px 12px;
   vertical-align: middle;
 }
 
-/* Avoid messy wrapping inside cells */
+/* zebra rows */
+.models-table tbody tr:nth-child(even) {
+  background-color: rgba(248, 250, 252, 0.88);
+}
+
+/* row hover */
+.models-table tbody tr:hover:not(.placeholder-row) {
+  background-color: #eef2ff !important;
+  box-shadow: 0 6px 16px rgba(148, 163, 184, 0.5);
+  transform: translateY(-1px);
+}
+
+/* keep text from wrapping badly */
 .fixed-rows .v-data-table__wrapper td > *,
 .fixed-rows .v-data-table__wrapper td div,
 .fixed-rows .v-data-table__wrapper td span {
@@ -1639,47 +1701,164 @@ export default {
   pointer-events: none;
 }
 
-/* Color inputs scroll */
+/* model cell */
+.model-cell {
+  width: 100%;
+}
+
+.model-main {
+  min-width: 0;
+  max-width: 420px;
+}
+
+.model-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.model-category {
+  font-size: 0.75rem;
+  color: rgba(100, 116, 139, 0.95);
+  max-width: 380px;
+}
+
+.model-meta {
+  min-width: 0;
+}
+
+/* =========================
+   Chips in table
+   ========================= */
+.model-color-count-chip {
+  font-size: 0.72rem;
+  background: rgba(59, 130, 246, 0.08) !important;
+  color: #2563eb !important;
+  border-radius: 999px;
+}
+
+.colors-cell {
+  max-width: 480px;
+}
+
+.color-chip {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  max-width: 160px;
+  border-radius: 999px;
+}
+
+.color-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+.more-chip {
+  font-size: 0.75rem;
+  border-radius: 999px;
+}
+
+/* =========================
+   Actions cell
+   ========================= */
+.actions-cell .v-btn {
+  margin-left: 4px;
+}
+
+/* =========================
+   Model dialog / details
+   ========================= */
+.v-dialog .v-card {
+  border-radius: 18px !important;
+}
+
+.details-header {
+  background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.28), rgba(34, 197, 94, 0.24));
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.label {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.value {
+  font-size: 0.95rem;
+}
+
+/* Color chips in details dialog */
+.color-chip {
+  max-width: 180px;
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  margin-right: 8px;
+  border: 1px solid;
+}
+
+/* =========================
+   Color inputs scroll (dialog)
+   ========================= */
 .color-inputs-scroll {
   max-height: 220px;
   overflow-y: auto;
   padding-right: 4px;
-}
 
-/* Responsive tweaks */
-@media (max-width: 960px) {
-  .category-list {
-    max-height: 260px;
-  }
-  .models-table .v-data-table__wrapper {
-    max-height: 400px;
-  }
-}
-
-
-/* Color inputs scroll */
-.color-inputs-scroll {
-  max-height: 220px;
-  overflow-y: auto;
-  padding-right: 4px;
-
-  /* NEW: make them flow like a grid */
   display: flex;
   flex-wrap: wrap;
-  /* 4 * 190 + small gaps ≈ 780px, so max 4 per row */
   max-width: 780px;
 }
 
-/* Each color row behaves like a 190px "card" */
 .color-inputs-scroll .v-row {
   flex: 0 0 190px;
   max-width: 190px;
   margin-right: 8px;
 }
 
-/* Ensure text-field itself respects width and label does not overlap */
 .color-inputs-scroll .v-text-field {
   min-width: 190px;
 }
 
+/* =========================
+   Responsive tweaks
+   ========================= */
+@media (max-width: 1264px) {
+  .models-header {
+    flex-wrap: wrap;
+  }
+
+  .models-header > .v-spacer {
+    display: none;
+  }
+
+  .models-header .v-select,
+  .models-header .v-text-field {
+    max-width: 100%;
+    margin-top: 8px;
+  }
+
+  .models-header .v-btn {
+    margin-top: 8px;
+  }
+}
+
+@media (max-width: 960px) {
+  .category-list {
+    max-height: 260px;
+  }
+
+  .models-table .v-data-table__wrapper {
+    max-height: 420px;
+  }
+
+  .model-manager {
+    padding: 16px;
+  }
+}
 </style>

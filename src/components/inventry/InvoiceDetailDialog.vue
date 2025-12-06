@@ -56,7 +56,7 @@
                 color="primary"
                 class="mr-2"
                 :loading="bulkUpdating"
-                :disabled="!bulkStatus || bulkUpdating || selectedChassisNumbers.length === 0"
+                :disabled="!bulkStatus || bulkUpdating || updatableSelectedChassisNumbers.length === 0"
                 @click="applyBulkStatus"
               >
                 Apply
@@ -219,6 +219,15 @@ export default {
         .filter(Boolean)
         .map(String);
     },
+    // ✅ NEW: Only chassis numbers whose status is NOT SOLD
+    updatableSelectedChassisNumbers() {
+      if (!Array.isArray(this.internalSelected)) return [];
+      return this.internalSelected
+        .filter(r => (r?.status || '').toUpperCase() !== 'SOLD')
+        .map(r => r && (r.chassisNumber || r.chassis))
+        .filter(Boolean)
+        .map(String);
+    },
     serialStart() {
       const p = Number(this.page) || 1;
       const ipp = Number(this.itemsPerPageLocal) || 0;
@@ -272,7 +281,19 @@ export default {
       this.$emit('input', []);
     },
     async applyBulkStatus() {
-      if (!this.bulkStatus || this.selectedChassisNumbers.length === 0) return;
+      const chassisNumbersToUpdate = this.updatableSelectedChassisNumbers;
+
+      // nothing to update (either nothing selected or all SOLD)
+      if (!this.bulkStatus || chassisNumbersToUpdate.length === 0) {
+        if (this.internalSelected.length > 0) {
+          this.snack = {
+            show: true,
+            text: 'Selected items are already SOLD. Nothing to update.',
+            color: 'warning'
+          };
+        }
+        return;
+      }
 
       this.bulkUpdating = true;
       this.bulkMessage = '';
@@ -281,7 +302,7 @@ export default {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chassisNumbers: this.selectedChassisNumbers,
+            chassisNumbers: chassisNumbersToUpdate,
             item: { status: this.bulkStatus }
           })
         });
@@ -291,10 +312,16 @@ export default {
 
         const okCount = Array.isArray(data?.results) ? data.results.filter(r => r.ok).length : 0;
         const failCount = Array.isArray(data?.results) ? data.results.length - okCount : 0;
+        const skippedCount = this.internalSelected.length - chassisNumbersToUpdate.length;
+
+        let msg = `Updated ${okCount} item(s).`;
+        if (skippedCount > 0) msg += ` Skipped ${skippedCount} SOLD item(s).`;
+        if (failCount > 0) msg += ` ${failCount} failed.`;
+        if (failCount === 0) msg += ' All good!';
 
         this.snack = {
           show: true,
-          text: `Updated ${okCount} item(s). ${failCount ? failCount + ' failed.' : 'All good!'}`,
+          text: msg,
           color: failCount ? 'warning' : 'success'
         };
 
