@@ -1,11 +1,33 @@
-<template>
+\<template>
   <v-card style="margin:10px;">
     <v-card-title>
       <div class="d-flex align-center" style="width:100%;">
-        <div style="flex:1;">
+
+        <div v-if="!showAddNewBlock" style="flex:1;">
           <div class="headline">Vendor Accounts</div>
           <div class="text-caption">All vendor accounts (metadata) — quick view & search</div>
         </div>
+        <div v-else style="flex:1;">
+          <v-icon
+            left
+            style="width:40px; height:40px; border:1px solid black; border-radius:50%;"
+            @click="showAddNewBlock = !showAddNewBlock"
+          >
+            mdi-arrow-left
+          </v-icon>
+        </div>
+
+        <!-- New Vendor Buttton -->
+        <v-btn
+          small
+          color=""
+          class="mr-2"
+          @click="createNewVendor()"
+          title="Add new vendor"
+        >
+          <v-icon left>mdi-account-plus</v-icon>
+          Add New Vendor
+        </v-btn>
 
         <!-- 🔹 New Deposit button -->
         <v-btn
@@ -39,107 +61,148 @@
     </v-card-title>
 
     <v-card-text>
-      <v-row dense class="mb-4">
-        <!-- 🔽 Search by name using dropdown -->
-        <v-col cols="12" sm="6" md="4">
-          <v-autocomplete
-            v-model="selectedName"
-            :items="nameOptions"
-            label="Search by Vendor Name"
-            clearable
-            dense
-            outlined
-            @change="applyNameFilter"
+      <div v-if="!showAddNewBlock">
+        <v-row dense class="mb-4">
+          <!-- 🔽 Search by name using dropdown -->
+          <v-col cols="12" sm="6" md="4">
+            <v-autocomplete
+              v-model="selectedName"
+              :items="nameOptions"
+              label="Search by Vendor Name"
+              clearable
+              dense
+              outlined
+              @change="applyNameFilter"
+            />
+          </v-col>
+
+          <!-- dedicated server-side search by clientId -->
+          <v-col cols="12" sm="6" md="4">
+            <v-text-field
+              v-model="searchClientId"
+              label="Search by Client ID"
+              placeholder="Enter clientId"
+              dense
+              outlined
+              clearable
+              @keyup.enter="searchByClientId"
+            >
+            </v-text-field>
+          </v-col>
+
+          <!-- Global search over merged data -->
+          <v-col cols="12" sm="12" md="4">
+            <v-text-field
+              outlined
+              v-model="search"
+              append-icon="mdi-magnify"
+              placeholder="Search id, name, email, phone, GSTIN, status"
+              dense
+              hide-details
+              clearable
+            />
+            <div v-if="clientsError" class="red--text text-caption mt-1">
+              {{ clientsError }}
+            </div>
+          </v-col>
+        </v-row>
+
+        <!-- 🔹 Skeleton loader for main accounts table -->
+        <template v-if="loading">
+          <v-skeleton-loader
+            type="table-heading, table-tbody"
+            class="elevation-1"
           />
-        </v-col>
+        </template>
 
-        <!-- dedicated server-side search by clientId -->
-        <v-col cols="12" sm="6" md="4">
-          <v-text-field
-            v-model="searchClientId"
-            label="Search by Client ID"
-            placeholder="Enter clientId"
+        <!-- 🔹 Actual accounts table once data is loaded -->
+        <template v-else>
+          <v-data-table
+            :headers="headers"
+            :items="finalItems"
+            :items-per-page="itemsPerPage"
+            :loading="loading"
+            class="elevation-1"
             dense
-            outlined
-            clearable
-            @keyup.enter="searchByClientId"
+            :mobile-breakpoint="0"
+            item-key="vendorId"
+            :page.sync="page"
+            :footer-props="vendorFooterProps"
           >
-          </v-text-field>
-        </v-col>
+            <!-- #️⃣ Serial number -->
+            <template #item.sn="{ index }">
+              {{ (page - 1) * itemsPerPage + index + 1 }}
+            </template>
 
-        <v-col cols="12" sm="12" md="4" class="d-flex align-center">
-          <div v-if="clientsError" class="red--text text-caption">{{ clientsError }}</div>
-          <v-spacer></v-spacer>
-        </v-col>
-      </v-row>
+            <!-- ☑️ Header checkbox (Select All) -->
+            <template #header.selected>
+              <v-checkbox
+                v-model="allSelected"
+                :indeterminate="isIndeterminate"
+                hide-details
+                @change="toggleSelectAll"
+              />
+            </template>
 
-      <!-- 🔹 Skeleton loader for main accounts table -->
-      <template v-if="loading">
-        <v-skeleton-loader
-          type="table-heading, table-tbody"
-          class="elevation-1"
-        />
-      </template>
+            <!-- ☑️ Row checkbox -->
+            <template #item.selected="{ item }">
+              <v-checkbox
+                :input-value="isRowSelected(item)"
+                hide-details
+                @change="() => toggleRowSelection(item)"
+              />
+            </template>
 
-      <!-- 🔹 Actual accounts table once data is loaded -->
-      <template v-else>
-        <v-data-table
-          :headers="headers"
-          :items="filteredItems"
-          :items-per-page="itemsPerPage"
-          :loading="loading"
-          class="elevation-1"
-          dense
-          :mobile-breakpoint="0"
-          item-key="vendorId"
-          :page.sync="page"
-        >
-          <!-- #️⃣ Serial number -->
-          <template #item.sn="{ index }">
-            {{ (page - 1) * itemsPerPage + index + 1 }}
-          </template>
+            <!-- Name column -->
+            <template #item.name="{ item }">
+              <div class="font-weight-medium">{{ item.name || '—' }}</div>
+            </template>
 
-          <!-- ☑️ Header checkbox (Select All) -->
-          <template #header.selected>
-            <v-checkbox
-              v-model="allSelected"
-              :indeterminate="isIndeterminate"
-              hide-details
-              @change="toggleSelectAll"
-            />
-          </template>
+            <template #item.gstin="{ item }">
+              {{ item.gstin || '—' }}
+            </template>
 
-          <!-- ☑️ Row checkbox -->
-          <template #item.selected="{ item }">
-            <v-checkbox
-              :input-value="isRowSelected(item)"
-              hide-details
-              @change="() => toggleRowSelection(item)"
-            />
-          </template>
+            <!-- 👁️ Actions column -->
+            <template #item.actions="{ item }">
+              <!-- Existing Account Details / Ledger -->
+              <v-btn small
+                outlined
+                color="primary"
+                title="Show vendor Ledger"
+                class="mr-1" @click="onRowClick(item)">
+                Ledger
+              </v-btn>
 
-          <!-- Name column -->
-          <template #item.name="{ item }">
-            <div class="font-weight-medium">{{ item.name || '—' }}</div>
-          </template>
+              <!-- New Vendor Info dialog (ClientDetail) -->
+              <v-btn
+                small
+                outlined
+                color="primary"
+                class="mr-1"
+                @click.stop="showDetails(item)"
+                title="Show vendor details"
+              >
+                <v-icon left small>mdi-eye</v-icon>
+                Details
+              </v-btn>
+            </template>
 
-          <!-- 👁️ Actions column (Details button) -->
-          <template #item.actions="{ item }">
-            <v-btn small text @click="onRowClick(item)">
-              Details
-            </v-btn>
-          </template>
+            <template #no-data>
+              <v-alert type="info" dense text>
+                No accounts found.
+              </v-alert>
+            </template>
+          </v-data-table>
+        </template>
+      </div>
 
-          <template #no-data>
-            <v-alert type="info" dense text>
-              No accounts found.
-            </v-alert>
-          </template>
-        </v-data-table>
-      </template>
+      <div v-if="showAddNewBlock">
+        <CreateNewVendor @vendor-created="onVendorCreated" />
+      </div>
+
     </v-card-text>
 
-    <!-- details dialog (unchanged) -->
+    <!-- details dialog (unchanged: Account ledger) -->
     <v-dialog persistent v-model="detailsDialog" max-width="1700px">
       <v-card>
         <v-card-title>
@@ -224,7 +287,7 @@
 
                   <v-date-picker
                     v-model="dateFrom"
-                    :max="todayISO" 
+                    :max="todayISO"
                     @input="onFromDateSelected"
                   />
                 </v-menu>
@@ -257,7 +320,7 @@
 
                   <v-date-picker
                     v-model="dateTo"
-                    :min="dateFrom || null" 
+                    :min="dateFrom || null"
                     :max="todayISO"
                     @input="menuTo = false"
                   />
@@ -280,9 +343,16 @@
               :items="filteredLedgerRows"
               dense
               class="elevation-1"
-              :items-per-page="12"
+              :items-per-page="ledgerItemsPerPage"
               :mobile-breakpoint="0"
+              :page.sync="ledgerPage"
+              :footer-props="ledgerFooterProps"
             >
+              <!-- #️⃣ Ledger Serial number -->
+              <template #item.sn="{ index }">
+                {{ (ledgerPage - 1) * ledgerItemsPerPage + index + 1 }}
+              </template>
+
               <template #item.date="{ item }">
                 <span>{{ item.date }}</span>
               </template>
@@ -292,7 +362,7 @@
               </template>
 
               <template #item.narration="{ item }">
-                <span class="text-truncate" style="max-width: 200px; display:inline-block;">
+                <span class="text-truncate" style="max-width: 700px; display:inline-block;">
                   {{ item.narration || '—' }}
                 </span>
               </template>
@@ -391,6 +461,117 @@
       </v-card>
     </v-dialog>
 
+    <!-- 🔹 Vendor details dialog (from ClientDataTableSimple) -->
+    <v-dialog v-model="dialog" max-width="1400px" persistent>
+      <v-card>
+        <v-card-title>
+          Vendor Information
+          <v-spacer></v-spacer>
+          <v-btn icon @click="closeDialog">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <!-- 🔹 includes sold items section -->
+        <v-card-text style="height:700px; overflow-y:auto;">
+          <div v-if="selectedPk">
+            <!-- existing client details component -->
+            <client-detail :pk="selectedPk" />
+
+            <!-- NEW: items sold to this vendor -->
+            <v-divider class="my-4" />
+
+            <div>
+              <div class="subtitle-2 font-weight-medium mb-2">
+                Items Sold to this Vendor
+              </div>
+
+              <!-- loading state -->
+              <v-skeleton-loader
+                v-if="soldItemsLoading"
+                type="table-heading, table-tbody"
+                class="elevation-1"
+              />
+
+              <!-- error state -->
+              <v-alert
+                v-else-if="soldItemsError"
+                type="error"
+                dense
+                text
+                class="mb-2"
+              >
+                {{ soldItemsError }}
+              </v-alert>
+
+              <!-- no data -->
+              <v-alert
+                v-else-if="!soldItems.length"
+                type="info"
+                dense
+                text
+                class="mb-2"
+              >
+                No sold items found for this vendor.
+              </v-alert>
+
+              <!-- data table -->
+              <v-data-table
+                v-else
+                :headers="soldItemHeaders"
+                :items="soldItems"
+                dense
+                class="elevation-1"
+                :items-per-page="5"
+                :mobile-breakpoint="0"
+              >
+                <template #item.invoiceDate="{ item }">
+                  <span>{{ formatInvoiceDate(item.invoiceDate) }}</span>
+                </template>
+
+                <template #item.price="{ item }">
+                  <span>₹ {{ formatAmount(item.price) }}</span>
+                </template>
+              </v-data-table>
+            </div>
+          </div>
+
+          <div v-else>
+            No client selected
+          </div>
+        </v-card-text>
+
+        <v-card-actions>
+          <div style="width:100%; display:flex; flex-direction:row-reverse">
+            <v-btn color="primary dark" @click="onEditClick"> EDIT</v-btn>
+          </div>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 🔹 Edit vendor dialog (from ClientDataTableSimple) -->
+    <v-dialog v-model="editDialog" max-width="1420px">
+      <v-card>
+        <v-card-title>
+          Edit Vendor
+          <v-spacer></v-spacer>
+          <v-btn icon @click="closeEdit">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-card-text style="min-height:400px;">
+          <edit-client
+            v-if="editPk"
+            :pk="editPk"
+            @saved="onClientSaved"
+            @cancel="closeEdit"
+          />
+          <div v-else> No client selected for edit </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
   </v-card>
 </template>
 
@@ -403,25 +584,43 @@ import logoSrc from "@/assets/newLogoTVS.png"; // still imported, but not requir
 
 import VendorDepositForm from "@/components/ledger/AddEntryForm.vue";
 import CreateVendorAccount from "@/components/ledger/CreateVendorAccount.vue";
+import CreateNewVendor from "@/components/client/addclient.vue";
+
+// from details table
+import ClientDetail from "@/components/client/clientdetails.vue";
+import EditClient from "@/components/client/editclient.vue";
 
 export default {
   name: "AccountsTable",
   components: {
     VendorDepositForm,
-    CreateVendorAccount
+    CreateVendorAccount,
+    CreateNewVendor,
+    ClientDetail,
+    EditClient
   },
   data() {
     return {
       loading: false,
       searchLoading: false,
       clientsError: "",
-      items: [],
+      items: [],      // merged (accounts + details)
+
+      // for merging details
+      clients: [],
 
       selectedName: "",
       nameFilterApplied: false,
       searchClientId: "",
       itemsPerPage: 12,
       page: 1,
+
+      // ledger pagination
+      ledgerItemsPerPage: 10,
+      ledgerPage: 1,
+
+      // global search over merged items
+      search: "",
 
       detailsDialog: false,
       selectedRow: null,
@@ -441,7 +640,19 @@ export default {
       depositDialog: false,
       openAccountDialog: false,
       menuFrom: false,
-      menuTo: false
+      menuTo: false,
+      showAddNewBlock: false,
+
+      // dialogs from ClientDataTableSimple
+      dialog: false,
+      selectedPk: null,
+      editDialog: false,
+      editPk: null,
+
+      // sold items section
+      soldItems: [],
+      soldItemsLoading: false,
+      soldItemsError: ""
     };
   },
   computed: {
@@ -475,6 +686,7 @@ export default {
         { text: "Name", value: "name", sortable: true },
         { text: "Phone", value: "phone", sortable: false },
         { text: "Email", value: "email", sortable: false },
+        { text: "GSTIN", value: "gstin", sortable: false },
         { text: "Status", value: "status", sortable: false },
         { text: "Actions", value: "actions", sortable: false }
       ];
@@ -482,12 +694,44 @@ export default {
 
     ledgerHeaders() {
       return [
+        { text: "S.No", value: "sn", sortable: false },
         { text: "Date", value: "date" },
         { text: "Time", value: "time" },
         { text: "Narration", value: "narration" },
         { text: "Debit (₹)", value: "debit" },
         { text: "Credit (₹)", value: "credit" },
         { text: "Running Balance (₹)", value: "runningBalance" }
+      ];
+    },
+
+    // rows-per-page controls for Vendor Accounts table
+    vendorFooterProps() {
+      return {
+        "items-per-page-options": [12, 25, 50, 100],
+        "items-per-page-text": "Rows per page:"
+      };
+    },
+
+    // rows-per-page controls for Ledger table
+    ledgerFooterProps() {
+      return {
+        "items-per-page-options": [10, 25, 50, 100],
+        "items-per-page-text": "Rows per page:"
+      };
+    },
+
+    // headers for items sold section
+    soldItemHeaders() {
+      return [
+        { text: "Invoice No", value: "invoiceNumber", sortable: false },
+        { text: "Invoice Date", value: "invoiceDate", sortable: false },
+        { text: "Model", value: "modelName", sortable: false },
+        { text: "Chassis No", value: "chassisNumber", sortable: false },
+        { text: "Engine No", value: "engineNumber", sortable: false },
+        { text: "Color", value: "color", sortable: false },
+        { text: "Category", value: "category", sortable: false },
+        { text: "Qty", value: "quantity", sortable: false },
+        { text: "Price (₹)", value: "price", sortable: false }
       ];
     },
 
@@ -498,11 +742,34 @@ export default {
       return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
     },
 
+    // 1. apply name filter (existing behavior)
     filteredItems() {
       if (this.nameFilterApplied && this.selectedName) {
         return this.items.filter(i => i.name === this.selectedName);
       }
       return this.items;
+    },
+
+    // 2. apply global search on top of filteredItems
+    finalItems() {
+      const q = (this.search || "").toString().trim().toLowerCase();
+      if (!q) return this.filteredItems;
+
+      return this.filteredItems.filter(row => {
+        const fields = [
+          row.vendorId,
+          row.pk,
+          row.name,
+          row.email,
+          row.phone,
+          row.status,
+          row.gstin
+        ];
+        return fields.some(f => {
+          if (f === undefined || f === null) return false;
+          return f.toString().toLowerCase().includes(q);
+        });
+      });
     },
 
     filteredLedgerRows() {
@@ -537,7 +804,7 @@ export default {
     },
 
     isIndeterminate() {
-      const allIds = this.filteredItems.map(i => i.vendorId || i.pk);
+      const allIds = this.finalItems.map(i => i.vendorId || i.pk);
       if (!allIds.length) return false;
       const selectedCount = allIds.filter(id =>
         this.selectedVendorIds.includes(id)
@@ -546,7 +813,7 @@ export default {
     }
   },
   watch: {
-    filteredItems() {
+    finalItems() {
       this.syncAllSelectedState();
     }
   },
@@ -554,6 +821,13 @@ export default {
     this.fetchAccounts();
   },
   methods: {
+    createNewVendor() {
+      this.showAddNewBlock = true;
+    },
+
+    onVendorCreated(flag) {
+      this.showAddNewBlock = false;
+    },
     onFromDateSelected(value) {
       this.dateFrom = value;
       if (this.dateTo && this.dateTo < this.dateFrom) {
@@ -578,6 +852,13 @@ export default {
       return `${day}/${month}/${year}`;
     },
 
+    // format invoice date (full ISO) as dd/mm/yyyy
+    formatInvoiceDate(value) {
+      if (!value) return "";
+      const iso = value.slice(0, 10);
+      return this.formatISOToDisplay(iso);
+    },
+
     formatAmount(value) {
       if (value === null || value === undefined || value === "") return "";
       const num = Number(value) || 0;
@@ -593,6 +874,7 @@ export default {
         this.page = 1;
       } else {
         this.nameFilterApplied = false;
+        this.page = 1;
       }
     },
     resetNameFilter() {
@@ -617,7 +899,7 @@ export default {
     },
     toggleSelectAll() {
       if (this.allSelected) {
-        this.selectedVendorIds = this.filteredItems.map(
+        this.selectedVendorIds = this.finalItems.map(
           i => i.vendorId || i.pk
         );
       } else {
@@ -625,7 +907,7 @@ export default {
       }
     },
     syncAllSelectedState() {
-      const allIds = this.filteredItems.map(i => i.vendorId || i.pk);
+      const allIds = this.finalItems.map(i => i.vendorId || i.pk);
       if (!allIds.length) {
         this.allSelected = false;
         return;
@@ -651,6 +933,7 @@ export default {
 
         this.ledgerRows = this.buildLedgerRows(txns, vendorId);
         this.clearDateFilter();
+        this.ledgerPage = 1; // reset to first page when loading history
       } catch (err) {
         console.error(err);
         this.$emit("notify", { text: "Failed to load history", color: "error" });
@@ -718,30 +1001,7 @@ export default {
       });
     },
 
-    async fetchAccounts() {
-      this.loading = true;
-      this.clientsError = "";
-      try {
-        const url = `${this.BASE}/getAllAccountVendors`;
-        const res = await fetch(url);
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
-        this.items = Array.isArray(data.items)
-          ? data.items.map(i => this.normalizeItem(i))
-          : [];
-      } catch (err) {
-        console.error("fetchAccounts error", err);
-        this.clientsError = "Failed to load accounts";
-        this.$emit("notify", {
-          text: err?.message || "Failed to load accounts",
-          color: "error"
-        });
-      } finally {
-        this.loading = false;
-      }
-    },
-
-    normalizeItem(i) {
+    normalizeAccountItem(i) {
       return {
         pk: i.pk || null,
         vendorId: i.vendorId || (i.pk ? String(i.pk).split("#")[1] : null),
@@ -756,8 +1016,128 @@ export default {
             : null,
         currency: i.currency || null,
         status: i.status || null,
+        gstin: i.gstin || null,
         raw: i
       };
+    },
+
+    // from ClientDataTableSimple
+    normalizeClientRow(source) {
+      return {
+        pk: source.pk || source.id || source.clientId || null,
+        name: source.name || source.customerName || "-",
+        clientId: source.clientId || source.pk || "-",
+        email: source.email || source.userEmail || "-",
+        phone: source.phone || source.mobile || "-",
+        gstin: source.gstin || source.gstin || "-",
+        status:
+          source.status ||
+          (source.active === true
+            ? "Active"
+            : source.active === false
+            ? "Inactive"
+            : "-")
+      };
+    },
+
+    mergeAccountAndClient(accountItems, clientsArray) {
+      const map = new Map();
+
+      // 1) Seed with accounts
+      accountItems.forEach(acc => {
+        const key = acc.vendorId || acc.pk || acc.clientId;
+        if (!key) return;
+        map.set(key, {
+          ...acc,
+          vendorId: key,          // main id for account/ledger
+          accountPk: acc.pk || null // keep account pk separately if needed
+        });
+      });
+
+      // 2) Merge client/vendor details
+      clientsArray.forEach(item => {
+        const source = item.customer || item;
+        const c = this.normalizeClientRow(source);
+        const key = c.clientId || c.pk;
+        if (!key) return;
+
+        const existing = map.get(key) || {};
+
+        map.set(key, {
+          ...existing,
+
+          // 🔹 client pk (this is what /getClientByPk expects)
+          clientPk: c.pk || existing.clientPk || null,
+
+          // 🔹 keep accountPk from existing (from accounts)
+          accountPk: existing.accountPk || null,
+
+          // 🔹 ensure vendorId is set
+          vendorId: existing.vendorId || key,
+
+          // 🔹 fields that may be missing on account side
+          pk: existing.pk || c.pk,
+          name: existing.name || c.name,
+          email: existing.email || c.email,
+          phone: existing.phone || c.phone,
+          gstin: c.gstin || existing.gstin,
+          status: existing.status || c.status,
+          clientId: c.clientId
+        });
+      });
+
+      return Array.from(map.values());
+    },
+
+    async fetchAccounts() {
+      this.loading = true;
+      this.clientsError = "";
+      try {
+        // 1) fetch accounts
+        const urlAcc = `${this.BASE}/getAllAccountVendors`;
+        const resAcc = await fetch(urlAcc);
+        const dataAcc = await resAcc.json().catch(() => ({}));
+        if (!resAcc.ok) throw new Error(dataAcc?.message || `HTTP ${resAcc.status}`);
+        const accountItems = Array.isArray(dataAcc.items)
+          ? dataAcc.items.map(i => this.normalizeAccountItem(i))
+          : [];
+
+        // 2) fetch clients/vendor details (best effort; don't break if fails)
+        let clientsArray = [];
+        try {
+          const urlCli = `${this.BASE}/getAllClient`;
+          const resCli = await fetch(urlCli);
+          const d = await resCli.json().catch(() => ({}));
+          if (resCli.ok) {
+            if (Array.isArray(d)) clientsArray = d;
+            else if (d && Array.isArray(d.items)) clientsArray = d.items;
+            else if (d && Array.isArray(d.data)) clientsArray = d.data;
+            else if (d && typeof d === "object") {
+              const arr = Object.values(d).find(v => Array.isArray(v));
+              clientsArray = arr || [];
+            }
+          } else {
+            console.warn("getAllClient failed", d);
+          }
+        } catch (e) {
+          console.warn("Failed to fetch clients", e);
+        }
+
+        this.clients = clientsArray;
+
+        // 3) merge into union table
+        this.items = this.mergeAccountAndClient(accountItems, clientsArray);
+      } catch (err) {
+        console.error("fetchAccounts error", err);
+        this.clientsError = "Failed to load accounts";
+        this.$emit("notify", {
+          text: err?.message || "Failed to load accounts",
+          color: "error"
+        });
+        this.items = [];
+      } finally {
+        this.loading = false;
+      }
     },
 
     async searchByClientId() {
@@ -791,15 +1171,22 @@ export default {
           vendor?.vendorId ||
           (vendor?.pk ? String(vendor.pk).split("#")[1] : null);
         if (vendorId) {
+          const normalized = this.normalizeAccountItem(vendor);
+          normalized.raw = vendor;
+
+          // merge with any client data if exists
+          const merged = this.mergeAccountAndClient(
+            [normalized],
+            this.clients
+          )[0];
+
           const idx = this.items.findIndex(
             it => it.vendorId === vendorId || it.pk === vendor.pk
           );
-          const normalized = this.normalizeItem(vendor);
-          normalized.raw = vendor;
           if (idx >= 0) {
-            this.items.splice(idx, 1, { ...normalized });
+            this.items.splice(idx, 1, { ...merged });
           } else {
-            this.items.unshift(normalized);
+            this.items.unshift(merged);
           }
         }
       } catch (err) {
@@ -830,6 +1217,7 @@ export default {
       this.selectedDetails = null;
       this.ledgerRows = [];
       this.clearDateFilter();
+      this.ledgerPage = 1;
 
       try {
         const url = `${this.BASE}/getAccountByClientId?clientId=${encodeURIComponent(
@@ -902,7 +1290,7 @@ export default {
       }
     },
 
-    // ========== PDF / Excel functions (PDF UPDATED TO OPEN NEW TAB) ==========
+    // ========== PDF / Excel functions (unchanged behavior) ==========
     downloadPdf() {
       if (!this.filteredLedgerRows.length) {
         this.$emit("notify", {
@@ -1057,21 +1445,16 @@ export default {
 
       const fileName = `Ledger_${vendorName || vendorId || "vendor"}.pdf`;
 
-      // 🔴 IMPORTANT CHANGE: open in NEW TAB instead of direct download
+      // open in new tab
       const blob = doc.output("blob");
       const blobUrl = URL.createObjectURL(blob);
-
-      // open in a new tab/window, from there user can download / save / print
       const win = window.open(blobUrl, "_blank");
 
-      // optional: try to revoke URL after some time to free memory
       setTimeout(() => {
         URL.revokeObjectURL(blobUrl);
       }, 60 * 1000);
 
-      // If popup blocked, you could fallback to direct download:
       if (!win) {
-        // fallback so feature never "breaks"
         doc.save(fileName);
       }
     },
@@ -1188,6 +1571,109 @@ export default {
 
       const fileName = `Ledger_${vendorName || vendorId || "vendor"}.xlsx`;
       XLSX.writeFile(wb, fileName);
+    },
+
+    // ========== Vendor details / edit from ClientDataTableSimple ==========
+    showDetails(item) {
+      // Prefer clientPk from the merged row
+      const pk = item && item.clientPk;
+
+      if (!pk) {
+        // Do NOT call backend if we don't have a client pk
+        this.$emit("notify", {
+          text: "No client details linked to this vendor.",
+          color: "warning"
+        });
+        return;
+      }
+
+      this.selectedPk = encodeURIComponent(String(pk));
+      this.dialog = true;
+
+      // load sold items for this client
+      this.fetchSoldItemsForClientPk(this.selectedPk);
+    },
+
+    closeDialog() {
+      this.dialog = false;
+      this.$nextTick(() => {
+        this.selectedPk = null;
+        this.soldItems = [];
+        this.soldItemsError = "";
+        this.soldItemsLoading = false;
+      });
+    },
+
+    onEditClick() {
+      if (!this.selectedPk) {
+        console.warn("No selectedPk to edit");
+        return;
+      }
+      const decoded = decodeURIComponent(this.selectedPk);
+      const id = decoded.includes("#") ? decoded.split("#")[1] : decoded;
+      this.editPk = id;
+      this.editDialog = true;
+    },
+
+    closeEdit() {
+      this.editDialog = false;
+      this.$nextTick(() => { this.editPk = null; });
+    },
+
+    onClientSaved(payload) {
+      console.log("client saved:", payload);
+      this.closeEdit();
+      this.closeDialog();
+      this.fetchAccounts();
+    },
+
+    // fetch sold items for vendor using /getClientByPk/:pk
+    async fetchSoldItemsForClientPk(selectedPk) {
+      this.soldItemsLoading = true;
+      this.soldItemsError = "";
+      this.soldItems = [];
+
+      try {
+        if (!selectedPk) {
+          this.soldItemsLoading = false;
+          return;
+        }
+
+        const decoded = decodeURIComponent(String(selectedPk));
+        // API expects only id part (without "client#")
+        let id = decoded;
+        if (decoded.includes("#")) {
+          id = decoded.split("#")[1];
+        }
+
+        const url = `${this.BASE}/getClientByPk/${encodeURIComponent(id)}`;
+        const res = await fetch(url);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          this.soldItemsError = data?.message || `Failed to fetch sold items (HTTP ${res.status})`;
+          return;
+        }
+
+        const rawSold = Array.isArray(data.soldItems) ? data.soldItems : [];
+
+        this.soldItems = rawSold.map(it => ({
+          invoiceNumber: it.invoiceNumber,
+          invoiceDate: it.invoiceDate,
+          modelName: it.modelName || it.label,
+          chassisNumber: it.chassisNumber,
+          engineNumber: it.engineNumber,
+          color: it.color,
+          category: it.category || "",
+          quantity: it.quantity || 1,
+          price: it.price || it.totalWithTax || 0
+        }));
+      } catch (err) {
+        console.error("fetchSoldItemsForClientPk error", err);
+        this.soldItemsError = err?.message || "Failed to fetch sold items";
+      } finally {
+        this.soldItemsLoading = false;
+      }
     }
   }
 };

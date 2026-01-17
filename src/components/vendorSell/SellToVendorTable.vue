@@ -1,364 +1,393 @@
 <template>
-  <div style="margin:10px;">
-    <!-- ===== LIST VIEW ===== -->
-    <template v-if="!embedded.show">
-      <v-card class="pa-4" elevation="6">
-        <v-toolbar flat dense class="mb-3">
-          <v-toolbar-title class="subtitle-1 font-weight-medium">
-            Sell To Vendor — Records
-          </v-toolbar-title>
-          <v-spacer />
+  <div style="margin:10px;" >
+    <div v-if="showAddNewSellDialog" style="padding:5px; width:100%; background-color:white;">
+       <v-icon style="width:40px; height:40px; border:1px solid black; border-radius:50%;" @click="backtoTable()" left>mdi-arrow-left</v-icon>
+    </div>
+    <div v-if="!showAddNewSellDialog">
+      <!-- ===== LIST VIEW ===== -->
+      <template v-if="!embedded.show">
+        <v-card class="pa-4" elevation="6">
+          <v-toolbar flat dense class="mb-3">
+            <v-toolbar-title class="subtitle-1 font-weight-medium">
+              Sell To Vendor — Records
+            </v-toolbar-title>
+            <v-spacer />
 
-          <!-- Download buttons -->
-          <v-btn
-            small
-            depressed
-            class="mr-2"
-            color="secondary"
-            @click="downloadPdf"
-            :loading="pdfBusy"
-            :disabled="loading || pdfBusy || !rows.length"
-            style="cursor:pointer;"
-          >
-            <v-icon left>mdi-file-pdf-box</v-icon>
-            PDF
-          </v-btn>
-          <v-btn
-            small
-            depressed
-            class="mr-4"
-            color="success"
-            @click="downloadExcel"
-            :disabled="loading || !rows.length"
-            style="cursor:pointer;"
-          >
-            <v-icon style="cursor:pointer;" left>mdi-microsoft-excel</v-icon>
-            Excel
-          </v-btn>
+            <v-btn
+              v-if="!showAddNewSellDialog"
+              small
+              depressed
+              class="mr-2"
+              color="Success"
+              @click="showAddNewSellDialogFunction"
+              style="cursor:pointer;"
+            >
+              <v-icon left>mdi-add</v-icon>
+              Add New
+            </v-btn>
 
-          <v-btn small style="cursor:pointer;" depressed color="primary" @click="loadAll" :loading="loading">
-            Refresh
-          </v-btn>
-        </v-toolbar>
+            <!-- Download buttons -->
+            <v-btn v-if="!showAddNewSellDialog"
+              small
+              depressed
+              class="mr-2"
+              color="secondary"
+              @click="downloadPdf"
+              :loading="pdfBusy"
+              :disabled="loading || pdfBusy || !rows.length"
+              style="cursor:pointer;"
+            >
+              <v-icon left>mdi-file-pdf-box</v-icon>
+              PDF
+            </v-btn>
 
-        <!-- Filters -->
-        <v-card class="pa-3 mb-3" outlined>
-          <v-row dense>
-            <v-col cols="12" md="3">
-              <v-text-field dense outlined clearable hide-details
-                v-model.trim="filters.invoiceNumber"
-                label="Invoice number" prepend-inner-icon="mdi-pound"
-                @click:clear="loadAll"/>
-            </v-col>
-            <v-col cols="12" md="3">
-              <v-text-field dense outlined clearable hide-details
-                v-model.trim="filters.clientId"
-                label="Client ID" prepend-inner-icon="mdi-account"
-                @click:clear="loadAll"/>
-            </v-col>
-            <v-col cols="12" md="3">
-              <v-select dense outlined clearable hide-details
-                v-model="filters.statusD"
-                label="Select Status" prepend-inner-icon="mdi-clock"
-                :items="['SOLD', 'ACTIVE', 'PENDING', 'CANCELLED', 'INACTIVE']"
-                @click:clear="loadAll"/>
-            </v-col>
-            <v-col cols="12" md="3">
-              <v-text-field dense outlined clearable hide-details
-                v-model.trim="filters.chassisNumber"
-                label="Chassis Number"
-                prepend-inner-icon="mdi-account"
-                @click:clear="loadAll"/>
-            </v-col>
-            <v-col cols="12" md="3">
-              <v-text-field dense outlined clearable hide-details
-                v-model.trim="filters.name"
-                label="Exact Name (vendor/buyer/consignee)"
-                prepend-inner-icon="mdi-card-account-details"
-                @click:clear="loadAll"/>
-            </v-col>
+            <v-btn
+              v-if="!showAddNewSellDialog" 
+              small
+              depressed
+              class="mr-4"
+              color="success"
+              @click="downloadExcel"
+              :disabled="loading || !rows.length"
+              style="cursor:pointer;"
+            >
+              <v-icon style="cursor:pointer;" left>mdi-microsoft-excel</v-icon>
+              Excel
+            </v-btn>
 
-            <!-- From date: display dd/mm/yyyy but keep v-model as YYYY-MM-DD -->
-            <v-col cols="12" md="3">
-              <v-menu v-model="menus.from" :close-on-content-click="false" max-width="320" offset-y>
-                <template v-slot:activator="{ on, attrs }">
-                  <v-text-field v-bind="attrs" v-on="on" dense outlined readonly clearable hide-details
-                    label="From (DD/MM/YYYY)" prepend-inner-icon="mdi-calendar"
-                    :value="displayDateSlash(filters.from)" @click:clear="filters.from=null"/>
-                </template>
-                <v-date-picker v-model="filters.from" @input="menus.from=false" scrollable />
-              </v-menu>
-            </v-col>
+            <v-btn v-if="!showAddNewSellDialog" small style="cursor:pointer;" depressed color="primary" @click="loadAll" :loading="loading">
+              Refresh
+            </v-btn>
+          </v-toolbar>
 
-            <!-- To date: display dd/mm/yyyy but keep v-model as YYYY-MM-DD -->
-            <v-col cols="12" md="3">
-              <v-menu v-model="menus.to" :close-on-content-click="false" max-width="320" offset-y>
-                <template v-slot:activator="{ on, attrs }">
-                  <v-text-field v-bind="attrs" v-on="on" dense outlined readonly clearable hide-details
-                    label="To (DD/MM/YYYY)" prepend-inner-icon="mdi-calendar"
-                    :value="displayDateSlash(filters.to)" @click:clear="filters.to=null"/>
-                </template>
-                <v-date-picker v-model="filters.to" @input="menus.to=false" scrollable />
-              </v-menu>
-            </v-col>
+          <!-- Filters -->
+          <v-card v-if="!showAddNewSellDialog"  class="pa-3 mb-3" outlined>
+            <v-row dense>
+              <v-col cols="12" md="3">
+                <v-text-field dense outlined clearable hide-details
+                  v-model.trim="filters.invoiceNumber"
+                  label="Invoice number" prepend-inner-icon="mdi-pound"
+                  @click:clear="loadAll"/>
+              </v-col>
+              <v-col cols="12" md="3">
+                <v-text-field dense outlined clearable hide-details
+                  v-model.trim="filters.clientId"
+                  label="Client ID" prepend-inner-icon="mdi-account"
+                  @click:clear="loadAll"/>
+              </v-col>
+              <v-col cols="12" md="3">
+                <v-select dense outlined clearable hide-details
+                  v-model="filters.statusD"
+                  label="Select Status" prepend-inner-icon="mdi-clock"
+                  :items="['SOLD', 'ACTIVE', 'PENDING', 'CANCELLED', 'INACTIVE']"
+                  @click:clear="loadAll"/>
+              </v-col>
+              <v-col cols="12" md="3">
+                <v-text-field dense outlined clearable hide-details
+                  v-model.trim="filters.chassisNumber"
+                  label="Chassis Number"
+                  prepend-inner-icon="mdi-account"
+                  @click:clear="loadAll"/>
+              </v-col>
+              <v-col cols="12" md="3">
+                <v-text-field dense outlined clearable hide-details
+                  v-model.trim="filters.name"
+                  label="Exact Name (vendor/buyer/consignee)"
+                  prepend-inner-icon="mdi-card-account-details"
+                  @click:clear="loadAll"/>
+              </v-col>
 
-            <v-col cols="12" md="3">
-              <v-btn color="primary" @click="runSearch" :loading="loading">
-                <v-icon left>mdi-magnify</v-icon> Search
-              </v-btn>
-              <v-btn text @click="resetFilters" :disabled="loading">Clear</v-btn>
-            </v-col>
-          </v-row>
-        </v-card>
+              <!-- From date: display dd/mm/yyyy but keep v-model as YYYY-MM-DD -->
+              <v-col cols="12" md="3">
+                <v-menu v-model="menus.from" :close-on-content-click="false" max-width="320" offset-y>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-text-field v-bind="attrs" v-on="on" dense outlined readonly clearable hide-details
+                      label="From (DD/MM/YYYY)" prepend-inner-icon="mdi-calendar"
+                      :value="displayDateSlash(filters.from)" @click:clear="filters.from=null"/>
+                  </template>
+                  <v-date-picker v-model="filters.from" @input="menus.from=false" scrollable />
+                </v-menu>
+              </v-col>
 
-        <!-- Table -->
-        <v-data-table
-          :headers="headers"
-          :items="rows"
-          :loading="loading"
-          :items-per-page="15"
-          :footer-props="{ itemsPerPageOptions: [15, 30, 45, 60] }"
-          class="elevation-1"
-          item-key="pk"
-          dense
-        >
-          <!-- Serial number column (first) - now global index across rows -->
-          <template v-slot:item.serial="{ index }">
-             {{ index + 1 }}
-          </template>
+              <!-- To date: display dd/mm/yyyy but keep v-model as YYYY-MM-DD -->
+              <v-col cols="12" md="3">
+                <v-menu v-model="menus.to" :close-on-content-click="false" max-width="320" offset-y>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-text-field v-bind="attrs" v-on="on" dense outlined readonly clearable hide-details
+                      label="To (DD/MM/YYYY)" prepend-inner-icon="mdi-calendar"
+                      :value="displayDateSlash(filters.to)" @click:clear="filters.to=null"/>
+                  </template>
+                  <v-date-picker v-model="filters.to" @input="menus.to=false" scrollable />
+                </v-menu>
+              </v-col>
 
-          <!-- Date column formatted as dd/mm/yyyy -->
-          <template v-slot:item.invoiceDate="{ item }">
-            {{ fmtDate(item.invoiceDate) }}
-          </template>
-
-          <template v-slot:item.totals.grandTotal="{ item }">
-            ₹{{ money(item.totals && item.totals.grandTotal) }}
-          </template>
-
-          <!-- Items column: show item count and tooltip with labels -->
-          <template v-slot:item.itemsDisplay="{ item }">
-            <div>
-              <v-tooltip top>
-                <template v-slot:activator="{ on, attrs }">
-                  <span v-bind="attrs" v-on="on">
-                    <span v-if="item.items && item.items.length">
-                      {{ item.items.length }}
-                    </span>
-                    <span v-else>0 items</span>
-                  </span>
-                </template>
-                <div style="max-width:320px; white-space:normal;">
-                  <div v-if="item.items && item.items.length">
-                    <div v-for="(it, idx) in item.items" :key="idx">
-                      • {{ it.label || it.modelName || '—' }}
-                    </div>
-                  </div>
-                  <div v-else>—</div>
-                </div>
-              </v-tooltip>
-            </div>
-          </template>
-
-          <template v-slot:item.meta.statusType="{ item }">
-            <v-chip small :color="statusColor(item.meta && item.meta.statusType)" dark>
-              {{ (item.meta && item.meta.statusType) || '—' }}
-            </v-chip>
-          </template>
-
-          <template v-slot:item.actions="{ item }">
-            <v-tooltip top>
-              <template v-slot:activator="{ on }">
-                <v-btn icon small color="primary" v-on="on" @click.stop="openView(item)">
-                  <v-icon small>mdi-eye</v-icon>
+              <v-col cols="12" md="3">
+                <v-btn color="primary" @click="runSearch" :loading="loading">
+                  <v-icon left>mdi-magnify</v-icon> Search
                 </v-btn>
-              </template>
-              <span>View</span>
-            </v-tooltip>
-
-            <v-tooltip top>
-              <template v-slot:activator="{ on }">
-                <v-btn icon small color="teal" v-on="on" @click.stop="openEmbeddedEditor(item)">
-                  <v-icon small>mdi-pencil</v-icon>
-                </v-btn>
-              </template>
-              <span>Edit (full screen)</span>
-            </v-tooltip>
-
-            <v-tooltip top>
-              <template v-slot:activator="{ on }">
-                <v-btn icon small color="orange darken-2" v-on="on" @click.stop="openQuickUpdate(item)">
-                  <v-icon small>mdi-file-document-edit</v-icon>
-                </v-btn>
-              </template>
-              <span>Quick Update</span>
-            </v-tooltip>
-          </template>
-
-          <template v-slot:no-data>
-            <div class="pa-6 text-center grey--Text">
-              No records. Try changing filters or click Refresh.
-            </div>
-          </template>
-        </v-data-table>
-
-        <!-- View Dialog -->
-        <v-dialog v-model="dialogs.view" max-width="900px" scrollable>
-          <v-card>
-            <v-card-title class="subtitle-1">
-              Invoice {{ current?.invoiceNumber || '—' }}
-              <v-spacer />
-              <v-btn icon @click="dialogs.view=false"><v-icon>mdi-close</v-icon></v-btn>
-            </v-card-title>
-            <v-divider></v-divider>
-            <v-card-text>
-              <v-row dense>
-                <v-col cols="12" md="6">
-                  <div class="caption text--secondary">Vendor</div>
-                  <div class="font-weight-medium">{{ current?.vendorName || '—' }}</div>
-                  <div class="caption">Client: {{ current?.clientId || '—' }}</div>
-                </v-col>
-                <v-col cols="12" md="6" class="text-right">
-                  <div class="caption text--secondary">Date</div>
-                  <div class="font-weight-medium">{{ fmtDate(current?.invoiceDate) }}</div>
-                </v-col>
-              </v-row>
-
-              <v-simple-table dense class="mt-3">
-                <thead>
-                  <tr>
-                    <th class="text-left">Item</th>
-                    <th class="text-left">HSN</th>
-                    <th class="text-right">Qty</th>
-                    <th class="text-right">Rate</th>
-                    <th class="text-right">CGST</th>
-                    <th class="text-right">SGST</th>
-                    <th class="text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="it in (current?.items || [])" :key="it.lineNo">
-                    <td>{{ it.label }}</td>
-                    <td>{{ it.hsn || '—' }}</td>
-                    <td class="text-right">{{ it.quantity }}</td>
-                    <td class="text-right">₹{{ money(it.price) }}</td>
-                    <td class="text-right">{{ it.cgst || 0 }}%</td>
-                    <td class="text-right">{{ it.sgst || 0 }}%</td>
-                    <td class="text-right">₹{{ money(it.totalWithTax) }}</td>
-                  </tr>
-                </tbody>
-              </v-simple-table>
-
-              <v-divider class="my-3" />
-              <v-row dense>
-                <v-col cols="12" md="4">Subtotal: <b>₹{{ money(current?.totals?.subtotal) }}</b></v-col>
-                <v-col cols="12" md="4">Tax: <b>₹{{ money(current?.totals?.tax) }}</b></v-col>
-                <v-col cols="12" md="4" class="text-right">Grand: <b>₹{{ money(current?.totals?.grandTotal) }}</b></v-col>
-              </v-row>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer />
-              <v-btn text @click="dialogs.view=false">Close</v-btn>
-            </v-card-actions>
+                <v-btn text @click="resetFilters" :disabled="loading">Clear</v-btn>
+              </v-col>
+            </v-row>
           </v-card>
-        </v-dialog>
 
-        <!-- Quick Update Dialog -->
-        <v-dialog v-model="dialogs.update" max-width="640px" persistent>
-          <v-card>
-            <v-card-title class="subtitle-1">
-              Update — {{ quickModel.invoiceNumber }}
-              <v-spacer />
-              <v-btn icon @click="dialogs.update=false"><v-icon>mdi-close</v-icon></v-btn>
-            </v-card-title>
-            <v-divider />
-            <v-card-text>
-              <v-form ref="updateForm" v-model="updateValid" lazy-validation>
+          <!-- Table -->
+          <v-data-table v-if="!showAddNewSellDialog"  
+            :headers="headers"
+            :items="rows"
+            :loading="loading"
+            :items-per-page="15"
+            :footer-props="{ itemsPerPageOptions: [15, 30, 45, 60] }"
+            class="elevation-1"
+            item-key="pk"
+            dense
+          >
+            <!-- Serial number column (first) - now global index across rows -->
+            <template v-slot:item.serial="{ index }">
+              {{ index + 1 }}
+            </template>
+
+            <!-- Date column formatted as dd/mm/yyyy -->
+            <template v-slot:item.invoiceDate="{ item }">
+              {{ fmtDate(item.invoiceDate) }}
+            </template>
+
+            <template v-slot:item.totals.grandTotal="{ item }">
+              ₹{{ money(item.totals && item.totals.grandTotal) }}
+            </template>
+
+            <!-- Items column: show item count and tooltip with labels -->
+            <template v-slot:item.itemsDisplay="{ item }">
+              <div>
+                <v-tooltip top>
+                  <template v-slot:activator="{ on, attrs }">
+                    <span v-bind="attrs" v-on="on">
+                      <span v-if="item.items && item.items.length">
+                        {{ item.items.length }}
+                      </span>
+                      <span v-else>0 items</span>
+                    </span>
+                  </template>
+                  <div style="max-width:320px; white-space:normal;">
+                    <div v-if="item.items && item.items.length">
+                      <div v-for="(it, idx) in item.items" :key="idx">
+                        • {{ it.label || it.modelName || '—' }}
+                      </div>
+                    </div>
+                    <div v-else>—</div>
+                  </div>
+                </v-tooltip>
+              </div>
+            </template>
+
+            <template v-slot:item.meta.statusType="{ item }">
+              <v-chip small :color="statusColor(item.meta && item.meta.statusType)" dark>
+                {{ (item.meta && item.meta.statusType) || '—' }}
+              </v-chip>
+            </template>
+
+            <template v-slot:item.actions="{ item }">
+              <v-tooltip top>
+                <template v-slot:activator="{ on }">
+                  <v-btn icon small color="primary" v-on="on" @click.stop="openView(item)">
+                    <v-icon small>mdi-eye</v-icon>
+                  </v-btn>
+                </template>
+                <span>View</span>
+              </v-tooltip>
+
+              <v-tooltip top>
+                <template v-slot:activator="{ on }">
+                  <v-btn icon small color="teal" v-on="on" @click.stop="openEmbeddedEditor(item)">
+                    <v-icon small>mdi-pencil</v-icon>
+                  </v-btn>
+                </template>
+                <span>Edit (full screen)</span>
+              </v-tooltip>
+
+              <v-tooltip top>
+                <template v-slot:activator="{ on }">
+                  <v-btn icon small color="orange darken-2" v-on="on" @click.stop="openQuickUpdate(item)">
+                    <v-icon small>mdi-file-document-edit</v-icon>
+                  </v-btn>
+                </template>
+                <span>Quick Update</span>
+              </v-tooltip>
+            </template>
+
+            <template v-slot:no-data>
+              <div class="pa-6 text-center grey--Text">
+                No records. Try changing filters or click Refresh.
+              </div>
+            </template>
+          </v-data-table>
+
+          <!-- View Dialog -->
+          <v-dialog v-if="!showAddNewSellDialog" persistent v-model="dialogs.view" max-width="1400px" scrollable>
+            <v-card>
+              <v-card-title class="subtitle-1">
+                Invoice {{ current?.invoiceNumber || '—' }}
+                <v-spacer />
+                <v-btn icon @click="dialogs.view=false"><v-icon>mdi-close</v-icon></v-btn>
+              </v-card-title>
+              <v-divider></v-divider>
+              <v-card-text>
                 <v-row dense>
                   <v-col cols="12" md="6">
-                    <v-text-field dense outlined label="Vendor name"
-                      v-model.trim="quickModel.vendorName" />
+                    <div class="caption text--secondary">Vendor</div>
+                    <div class="font-weight-medium">{{ current?.vendorName || '—' }}</div>
+                    <div class="caption">Client: {{ current?.clientId || '—' }}</div>
                   </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-select dense outlined :items="statusOptions" label="Status"
-                      v-model="quickModel.statusType" />
-                  </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-text-field dense outlined type="number" min="0"
-                      label="Amount paid"
-                      v-model.number="quickModel.payment.amountPaid" />
-                  </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-select dense outlined :items="paymentTypes" clearable
-                      label="Payment type"
-                      v-model="quickModel.payment.paymentType" />
-                  </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-text-field dense outlined type="number" min="0"
-                      label="Due amount"
-                      v-model.number="quickModel.payment.dueAmount" />
-                  </v-col>
-
-                  <v-col cols="12" md="6">
-                    <v-text-field dense outlined type="number" min="0"
-                      label="Change due"
-                      v-model.number="quickModel.payment.changeDue" />
-                  </v-col>
-
-                  <v-col cols="12">
-                    <v-text-field dense outlined label="Buyer (JSON, optional)"
-                      v-model="quickModel.buyerJson" hint="Leave blank to keep existing" persistent-hint />
-                  </v-col>
-                  <v-col cols="12">
-                    <v-text-field dense outlined label="Consignee (JSON, optional)"
-                      v-model="quickModel.consigneeJson" hint="Leave blank to keep existing" persistent-hint />
+                  <v-col cols="12" md="6" class="text-right">
+                    <div class="caption text--secondary">Date</div>
+                    <div class="font-weight-medium">{{ fmtDate(current?.invoiceDate) }}</div>
                   </v-col>
                 </v-row>
-              </v-form>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer />
-              <v-btn text @click="dialogs.update=false">Cancel</v-btn>
-              <v-btn color="primary" :loading="saving" @click="submitQuickUpdate">
-                <v-icon left>mdi-content-save</v-icon> Save
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
 
-        <v-snackbar v-model="snack.show" :color="snack.color" timeout="2200">
-          {{ snack.text }}
-        </v-snackbar>
-      </v-card>
-    </template>
+                <!-- ===== INVOICE ITEMS TABLE (UPDATED WITH CHASSIS & ENGINE) ===== -->
+                <v-simple-table dense class="mt-3">
+                  <thead>
+                    <tr>
+                      <th class="text-left">Item</th>
+                      <th class="text-left">Chassis No.</th>
+                      <th class="text-left">Engine No.</th>
+                      <th class="text-left">HSN</th>
+                      <th class="text-right">Qty</th>
+                      <th class="text-right">Rate</th>
+                      <th class="text-right">CGST</th>
+                      <th class="text-right">SGST</th>
+                      <th class="text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="it in (current?.items || [])" :key="it.lineNo">
+                      <td>{{ it.label }}</td>
+                      <td>{{ it.chassisNumber || it.chassisNo || '—' }}</td>
+                      <td>{{ it.engineNumber || '—' }}</td>
+                      <td>{{ it.hsn || '—' }}</td>
+                      <td class="text-right">{{ it.quantity }}</td>
+                      <td class="text-right">₹{{ money(it.price) }}</td>
+                      <td class="text-right">{{ it.cgst || 0 }}%</td>
+                      <td class="text-right">{{ it.sgst || 0 }}%</td>
+                      <td class="text-right">₹{{ money(it.totalWithTax) }}</td>
+                    </tr>
+                  </tbody>
+                </v-simple-table>
 
-    <!-- ===== EMBEDDED FULL EDIT VIEW ===== -->
-    <template v-else>
-      <v-card class="pa-0" elevation="6">
-        <v-toolbar dense flat class="px-2">
-          <v-btn icon @click="closeEmbedded"><v-icon>mdi-arrow-left</v-icon></v-btn>
-          <v-toolbar-title class="subtitle-1 font-weight-medium">
-            Edit — {{ embedded.invoiceNumber || '—' }}
-          </v-toolbar-title>
-          <v-spacer />
-          <v-btn small depressed color="primary" @click="reloadEmbedded">Reload</v-btn>
-        </v-toolbar>
-        <v-divider />
-        <div style="padding:8px;">
-          <SellToVendorEmbedded
-            :passed-invoice-number="embedded.invoiceNumber"
-            @done="closeEmbeddedAndRefresh"
-          />
-        </div>
-      </v-card>
-    </template>
+                <v-divider class="my-3" />
+                <v-row dense>
+                  <v-col cols="12" md="4">Subtotal: <b>₹{{ money(current?.totals?.subtotal) }}</b></v-col>
+                  <v-col cols="12" md="4">Tax: <b>₹{{ money(current?.totals?.tax) }}</b></v-col>
+                  <v-col cols="12" md="4" class="text-right">Grand: <b>₹{{ money(current?.totals?.grandTotal) }}</b></v-col>
+                </v-row>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer />
+                <v-btn text @click="dialogs.view=false">Close</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
 
-    <!-- Hidden container for html2pdf rendering -->
-    <div ref="pdfContainer" style="display:none;"></div>
+          <!-- Quick Update Dialog -->
+          <v-dialog v-if="!showAddNewSellDialog"  v-model="dialogs.update" max-width="640px" persistent>
+            <v-card>
+              <v-card-title class="subtitle-1">
+                Update — {{ quickModel.invoiceNumber }}
+                <v-spacer />
+                <v-btn icon @click="dialogs.update=false"><v-icon>mdi-close</v-icon></v-btn>
+              </v-card-title>
+              <v-divider />
+              <v-card-text>
+                <v-form ref="updateForm" v-model="updateValid" lazy-validation>
+                  <v-row dense>
+                    <v-col cols="12" md="6">
+                      <v-text-field dense outlined label="Vendor name"
+                        v-model.trim="quickModel.vendorName" />
+                    </v-col>
+
+                    <v-col cols="12" md="6">
+                      <v-select dense outlined :items="statusOptions" label="Status"
+                        v-model="quickModel.statusType" />
+                    </v-col>
+
+                    <v-col cols="12" md="6">
+                      <v-text-field dense outlined type="number" min="0"
+                        label="Amount paid"
+                        v-model.number="quickModel.payment.amountPaid" />
+                    </v-col>
+
+                    <v-col cols="12" md="6">
+                      <v-select dense outlined :items="paymentTypes" clearable
+                        label="Payment type"
+                        v-model="quickModel.payment.paymentType" />
+                    </v-col>
+
+                    <v-col cols="12" md="6">
+                      <v-text-field dense outlined type="number" min="0"
+                        label="Due amount"
+                        v-model.number="quickModel.payment.dueAmount" />
+                    </v-col>
+
+                    <v-col cols="12" md="6">
+                      <v-text-field dense outlined type="number" min="0"
+                        label="Change due"
+                        v-model.number="quickModel.payment.changeDue" />
+                    </v-col>
+
+                    <v-col cols="12">
+                      <v-text-field dense outlined label="Buyer (JSON, optional)"
+                        v-model="quickModel.buyerJson" hint="Leave blank to keep existing" persistent-hint />
+                    </v-col>
+                    <v-col cols="12">
+                      <v-text-field dense outlined label="Consignee (JSON, optional)"
+                        v-model="quickModel.consigneeJson" hint="Leave blank to keep existing" persistent-hint />
+                    </v-col>
+                  </v-row>
+                </v-form>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer />
+                <v-btn text @click="dialogs.update=false">Cancel</v-btn>
+                <v-btn color="primary" :loading="saving" @click="submitQuickUpdate">
+                  <v-icon left>mdi-content-save</v-icon> Save
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
+          <v-snackbar v-model="snack.show" :color="snack.color" timeout="2200">
+            {{ snack.text }}
+          </v-snackbar>
+        </v-card>
+      </template>
+
+      <!-- ===== EMBEDDED FULL EDIT VIEW ===== -->
+      <template  v-else>
+        <v-card class="pa-0" elevation="6">
+          <v-toolbar dense flat class="px-2">
+            <v-btn icon @click="closeEmbedded"><v-icon>mdi-arrow-left</v-icon></v-btn>
+            <v-toolbar-title class="subtitle-1 font-weight-medium">
+              Edit — {{ embedded.invoiceNumber || '—' }}
+            </v-toolbar-title>
+            <v-spacer />
+            <v-btn small depressed color="primary" @click="reloadEmbedded">Reload</v-btn>
+          </v-toolbar>
+          <v-divider />
+          <div style="padding:8px;">
+            <SellToVendorEmbedded
+              :passed-invoice-number="embedded.invoiceNumber"
+              @done="closeEmbeddedAndRefresh"
+            />
+          </div>
+        </v-card>
+      </template>
+
+      <!-- Hidden container for html2pdf rendering -->
+      <div ref="pdfContainer" style="display:none;"></div>
+    </div>
+
+    <div v-if="showAddNewSellDialog">
+      <NewSellToVendorForm />
+    </div>    
   </div>
 </template>
 
@@ -366,6 +395,7 @@
 import axios from 'axios'
 import html2pdf from 'html2pdf.js'
 import SellToVendor from './sellToVendor.vue'
+import NewSellToVendorForm from './sellToVendor.vue'
 
 const SellToVendorEmbedded = {
   name: 'SellToVendorEmbedded',
@@ -441,6 +471,7 @@ const SellToVendorEmbedded = {
           stateName: this.consignee?.stateName || '',
           stateCode: this.consignee?.stateCode || '',
           address: this.formatAddressPlain(this.consignee?.address || ''),
+
           phone: this.consignee?.phone || ''
         }
       }
@@ -507,7 +538,7 @@ const SellToVendorEmbedded = {
 
 export default {
   name: 'SellToVendorTable',
-  components: { SellToVendorEmbedded },
+  components: { SellToVendorEmbedded, NewSellToVendorForm },
   data () {
     return {
       base: process.env.VUE_APP_AGENCY_BACKEND_URL,
@@ -543,7 +574,8 @@ export default {
       saving: false,
       embedded: { show: false, invoiceNumber: null },
       snack: { show: false, color: 'success', text: '' },
-      pdfBusy: false
+      pdfBusy: false,
+      showAddNewSellDialog: false
     }
   },
 
@@ -572,6 +604,13 @@ export default {
   },
 
   methods: {
+    showAddNewSellDialogFunction () {
+      this.showAddNewSellDialog = true
+    },
+    backtoTable () {
+      this.showAddNewSellDialog = false
+      this.loadAll()
+    },
     url (name, arg) {
       const B = this.base
       switch (name) {
@@ -809,9 +848,9 @@ export default {
           return
         }
 
-        container.innerHTML = `
-          <div id="sell-to-vendor-pdf-root" class="pdf-root">
-            <style>
+        container.innerHTML = ``
+          + `<div id="sell-to-vendor-pdf-root" class="pdf-root">`
+          + `<style>
               .pdf-root {
                 font-family: "Courier New", monospace;
                 font-size: 9pt;
@@ -859,9 +898,7 @@ export default {
               .text-right { text-align: right; }
               .text-center { text-align: center; }
             </style>
-
             ${pagesHtml.join('')}
-
           </div>
         `
 
@@ -878,20 +915,16 @@ export default {
           filename: `sell-to-vendor-records-${new Date().toISOString().slice(0, 10)}.pdf`,
           image: { type: 'jpeg', quality: 0.95 },
           html2canvas: {
-            // lower scale to speed up and reduce memory usage
             scale: 1.2,
             useCORS: true
           },
           jsPDF: { unit: 'pt', format: 'a4', orientation: 'landscape' }
         }
 
-        // Get a blob URL directly from html2pdf (lighter than get('pdf') + manual blob)
         const pdfUrl = await html2pdf().set(opt).from(el).outputPdf('bloburl')
 
-        // Open PDF in new tab so user can download / save / print
         const win = window.open(pdfUrl, '_blank')
         if (!win) {
-          // Fallback if popup blocked
           const link = document.createElement('a')
           link.href = pdfUrl
           link.download = opt.filename
@@ -900,7 +933,6 @@ export default {
           document.body.removeChild(link)
         }
 
-        // Cleanup
         if (typeof pdfUrl === 'string' && pdfUrl.startsWith('blob:')) {
           setTimeout(() => {
             URL.revokeObjectURL(pdfUrl)

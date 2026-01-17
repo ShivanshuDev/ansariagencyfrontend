@@ -1,52 +1,124 @@
 <template>
-  <div style="background-color:white; height:91vh; padding:12px; margin:12px; border-radius:5px;">
-    <!-- SEARCH FIELDS -->
-    <v-row class="px-4 py-2" no-gutters>
-      <!-- Search by Chassis Number -->
-      <v-col cols="12" md="3" class="pa-0 pr-2">
-        <v-text-field
-          v-model="chassisQuery"
-          @input="onChassisInput"
-          label="Search by Chassis Number"
-          dense
-          outlined
-          clearable
-          hide-details
-          placeholder="Chassis number..."
-        />
-      </v-col>
+  <div class="chassis-search-wrapper">
+    <!-- ===== PAGE HEADER ===== -->
+    <div class="page-header d-flex align-center justify-space-between">
+      <div>
+        <div class="page-title">
+          Inventory Search
+        </div>
+        <div class="page-subtitle">
+          Search results by <strong>Chassis</strong> &amp; <strong>Engine</strong> number
+        </div>
+      </div>
 
-      <!-- Search by Engine Number -->
-      <v-col cols="12" md="3" class="pa-0 pr-2">
-        <v-text-field
-          v-model="engineQuery"
-          @input="onEngineInput"
-          label="Search by Engine Number"
-          dense
-          outlined
-          clearable
-          hide-details
-          placeholder="Engine number..."
-        />
-      </v-col>
-    </v-row>
+      <div class="d-flex align-center header-chips">
+        <v-chip
+          v-if="activeQuery"
+          class="mr-2"
+          size="small"
+          label
+          color="primary"
+          variant="tonal"
+        >
+          {{ searchModeLabel }}: {{ activeQuery }}
+        </v-chip>
 
-    <!-- INLINE RESULT CARD (NO DIALOG) -->
+        <v-chip
+          v-if="hasSearched"
+          size="small"
+          label
+          variant="outlined"
+        >
+          {{ localChassisResults.length }} result{{ localChassisResults.length === 1 ? '' : 's' }}
+        </v-chip>
+      </div>
+    </div>
+
+    <!-- ===== SEARCH SECTION ===== -->
+    <v-card class="search-card" elevation="2">
+      <v-card-title class="search-card-title">
+        <div class="d-flex align-center">
+          <v-icon class="mr-2">mdi-magnify</v-icon>
+          <span>Search Inventory</span>
+        </div>
+        <div class="text-caption grey--text">
+          Type at least 3 characters in Chassis or Engine number to search
+        </div>
+      </v-card-title>
+
+      <v-divider />
+
+      <v-card-text class="py-3">
+        <v-row dense>
+          <!-- Search by Chassis Number -->
+          <v-col cols="12" md="3" class="pr-md-4 pr-0">
+            <v-text-field
+              v-model="chassisQuery"
+              @input="onChassisInput"
+              label="Search by Chassis Number"
+              dense
+              outlined
+              clearable
+              hide-details
+              placeholder="Enter chassis number..."
+              prepend-inner-icon="mdi-car-info"
+            />
+          </v-col>
+
+          <!-- Search by Engine Number -->
+          <v-col cols="12" md="3" class="pr-md-4 pr-0 mt-3 mt-md-0">
+            <v-text-field
+              v-model="engineQuery"
+              @input="onEngineInput"
+              label="Search by Engine Number"
+              dense
+              outlined
+              clearable
+              hide-details
+              placeholder="Enter engine number..."
+              prepend-inner-icon="mdi-engine"
+            />
+          </v-col>
+
+          <!-- Spacer -->
+          <v-col cols="12" md="3" class="mt-3 mt-md-0 d-flex align-center">
+            <div class="text-caption grey--text">
+              Only one field is active at a time. Typing in one clears the other automatically.
+            </div>
+          </v-col>
+
+          <!-- Clear button -->
+          <v-col cols="12" md="3" class="mt-3 mt-md-0 d-flex justify-end align-center">
+            <v-btn
+              text
+              small
+              @click="clearSearch"
+              :disabled="!chassisQuery && !engineQuery && !hasSearched"
+            >
+              <v-icon left size="18">mdi-broom</v-icon>
+              Clear Search
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+
+    <!-- ===== INLINE RESULT CARD ===== -->
     <v-card
       v-if="hasSearched || loadingChassis"
-      class="mt-4"
+      class="results-card mt-4"
       elevation="2"
     >
-      <v-card-title class="d-flex align-center justify-space-between">
+      <v-card-title class="results-card-title d-flex align-center justify-space-between">
         <div>
-          <span class="headline">
-            Search results for:
-            "
-            {{ activeQuery }}
-            "
-          </span>
+          <div class="results-title">
+            Search results
+            <span v-if="activeQuery">
+              for "<strong>{{ activeQuery }}</strong>"
+            </span>
+          </div>
 
-          <div v-if="!loadingChassis && hasSearched && !localChassisResults.length" class="subtitle-2 mt-1">
+          <div v-if="!loadingChassis && hasSearched && !localChassisResults.length" class="subtitle-2 mt-1 grey--text">
             No results found
           </div>
           <div v-if="loadingChassis" class="subtitle-2 mt-1">
@@ -54,7 +126,7 @@
           </div>
         </div>
 
-        <div class="d-flex align-center" style="gap:8px;">
+        <div class="d-flex align-center results-actions">
           <!-- Downloads operate on selectedRows -->
           <DownloadPdf
             :items="selectedRows"
@@ -67,23 +139,29 @@
             @downloaded="onDialogDownloaded"
             :disabled="loadingChassis || !selectedRows.length"
           />
-          <v-btn
-            text
-            @click="clearSearch"
-          >
-            Clear
-          </v-btn>
+          <v-divider vertical class="mx-3" />
+          <div class="text-caption mr-3 grey--text">
+            <span v-if="selectedRows.length">
+              {{ selectedRows.length }} row{{ selectedRows.length === 1 ? '' : 's' }} selected
+            </span>
+            <span v-else>
+              No row selected
+            </span>
+          </div>
         </div>
       </v-card-title>
 
-      <v-card-text>
+      <v-divider />
+
+      <v-card-text class="pa-0">
         <v-skeleton-loader v-if="loadingChassis" type="table" />
-        <div v-else>
-          <v-simple-table dense>
-            <thead style="background-color:#dff3f79c; color:white;">
+
+        <div v-else class="results-table-wrapper">
+          <v-simple-table dense class="results-table">
+            <thead>
               <tr>
                 <!-- Checkbox header -->
-                <th style="width:48px; text-align:center;">
+                <th class="checkbox-header">
                   <v-checkbox
                     :input-value="allSelected"
                     @change="toggleSelectAll"
@@ -93,20 +171,24 @@
                 </th>
 
                 <!-- Dynamic headers -->
-                <th v-for="h in dialogHeaders" :key="h.value">
+                <th
+                  v-for="h in dialogHeaders"
+                  :key="h.value"
+                  class="text-left"
+                >
                   {{ h.text }}
                 </th>
 
                 <!-- Actions column -->
-                <th style="width:160px; text-align:center;">Actions</th>
+                <th class="text-center actions-header">Actions</th>
               </tr>
             </thead>
 
             <tbody>
               <!-- Empty state -->
               <tr v-if="!localChassisResults.length && hasSearched">
-                <td :colspan="dialogHeaders.length + 2" class="text-center">
-                  No items found
+                <td :colspan="dialogHeaders.length + 2" class="text-center py-6 grey--text">
+                  No items found for the current search.
                 </td>
               </tr>
 
@@ -114,9 +196,10 @@
               <tr
                 v-for="(row, idx) in localChassisResults"
                 :key="row.pk || row.chassisNumber || row.engineNumber || idx"
+                class="result-row"
               >
                 <!-- Row checkbox -->
-                <td style="text-align:center;">
+                <td class="checkbox-cell">
                   <v-checkbox
                     :input-value="isSelected(row)"
                     @change="toggleRowSelection(row)"
@@ -126,12 +209,16 @@
                 </td>
 
                 <!-- Data cells -->
-                <td v-for="h in dialogHeaders" :key="h.value">
+                <td
+                  v-for="h in dialogHeaders"
+                  :key="h.value"
+                  class="cell-text"
+                >
                   {{ getValue(row, h.value) }}
                 </td>
 
                 <!-- Actions -->
-                <td style="text-align:center; white-space:nowrap;">
+                <td class="text-center actions-cell">
                   <!-- Edit -->
                   <v-tooltip text="Edit Item" location="top">
                     <template #activator="{ props }">
@@ -149,7 +236,7 @@
                     </template>
                   </v-tooltip>
 
-                  <!-- Inventory History -->
+                  <!-- Inventory History (directly opens history component) -->
                   <v-tooltip text="View Inventory History" location="top">
                     <template #activator="{ props }">
                       <v-btn
@@ -171,17 +258,15 @@
         </div>
       </v-card-text>
 
-      <v-card-actions>
+      <v-card-actions class="results-footer">
         <v-spacer />
-        <div class="mr-4">
-          <small v-if="selectedRows.length">
-            {{ selectedRows.length }} selected
-          </small>
+        <div class="mr-4 text-caption grey--text" v-if="selectedRows.length">
+          {{ selectedRows.length }} row{{ selectedRows.length === 1 ? '' : 's' }} selected
         </div>
       </v-card-actions>
     </v-card>
 
-    <!-- Inventory History Dialog (kept same behavior) -->
+    <!-- Inventory History Dialog (opens directly on History click) -->
     <InventoryHistoryDialog
       v-if="true"
       v-model="historyDialogOpen"
@@ -189,7 +274,7 @@
       :chassisNumber="historyChassisNumber"
     />
 
-    <!-- Edit dialog (same as before) -->
+    <!-- Edit dialog -->
     <v-dialog v-model="editDialog" persistent max-width="920px">
       <v-card>
         <v-card-title>
@@ -199,6 +284,8 @@
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
+
+        <v-divider />
 
         <v-card-text>
           <EditInventory
@@ -245,14 +332,14 @@ export default {
 
       // search local state
       chassisQuery: '',
-      engineQuery: '',        // NEW: engine search query
+      engineQuery: '',        // engine search query
       _chassisTimer: null,
-      _engineTimer: null,     // NEW: engine debounce timer
+      _engineTimer: null,     // engine debounce timer
       engineDebounceMs: 420,
       loadingChassis: false,
       chassisResults: [],
       dialogOpen: false,      // kept for compatibility, no longer used
-      hasSearched: false,     // NEW: to show "no results" / card
+      hasSearched: false,     // to show "no results" / card
 
       // selection state
       selectedRowKeys: [],
@@ -294,9 +381,16 @@ export default {
       );
     },
 
-    // NEW: which query text to show in title
+    // which query text to show in title
     activeQuery() {
       return this.chassisQuery || this.engineQuery || '';
+    },
+
+    // label showing whether user searched by chassis or engine
+    searchModeLabel() {
+      if (this.chassisQuery) return 'Chassis Number';
+      if (this.engineQuery) return 'Engine Number';
+      return 'Search';
     }
   },
   methods: {
@@ -342,7 +436,7 @@ export default {
       }, this.engineDebounceMs);
     },
 
-    // NEW: debounce handler for engine search
+    // debounce handler for engine search
     onEngineInput() {
       // when user types in engine box, clear chassis search
       if (this.chassisQuery) {
@@ -398,7 +492,7 @@ export default {
       }
     },
 
-    // NEW: search by engineNumber
+    // search by engineNumber
     async _searchEngineApi(q) {
       this.loadingChassis = true;
       this.hasSearched = false;
@@ -591,7 +685,135 @@ export default {
 </script>
 
 <style scoped>
-.headline {
+.chassis-search-wrapper {
+  background-color: #ffffff;
+  height: 91vh;
+  padding: 16px 20px;
+  margin: 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ===== Page Header ===== */
+.page-header {
+  margin-bottom: 16px;
+}
+
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  margin-top: 4px;
+  color: #6b6b6b;
+}
+
+.header-chips {
+  gap: 8px;
+}
+
+/* ===== Search Card ===== */
+.search-card {
+  border-radius: 12px;
+}
+
+.search-card-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-bottom: 4px !important;
   font-weight: 600;
+}
+
+/* ===== Results Card / Table ===== */
+.results-card {
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(91vh - 160px);
+}
+
+.results-card-title {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+.results-title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.results-actions {
+  gap: 8px;
+}
+
+.results-table-wrapper {
+  max-height: calc(91vh - 260px);
+  overflow: auto;
+}
+
+.results-table thead {
+  background-color: #e3f2fd;
+}
+
+.results-table thead th {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.checkbox-header,
+.checkbox-cell {
+  width: 48px;
+  text-align: center;
+}
+
+.actions-header,
+.actions-cell {
+  width: 180px;
+  white-space: nowrap;
+}
+
+.result-row:hover {
+  background-color: #f5f7fb;
+}
+
+.cell-text {
+  font-size: 13px;
+  padding: 6px 12px;
+}
+
+/* Footer */
+.results-footer {
+  padding-top: 4px !important;
+  padding-bottom: 8px !important;
+}
+
+/* Small screens */
+@media (max-width: 960px) {
+  .chassis-search-wrapper {
+    padding: 12px;
+    margin: 8px;
+    height: auto;
+  }
+
+  .results-card {
+    max-height: none;
+  }
+
+  .results-table-wrapper {
+    max-height: none;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
 }
 </style>

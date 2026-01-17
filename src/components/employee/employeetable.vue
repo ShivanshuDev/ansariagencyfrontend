@@ -1,10 +1,15 @@
 <template>
   <div class="tableData">
     <v-card>
-      <v-card-title>Employee Details</v-card-title>
-
+      <div style="display:flex; flex-direction:row; justify-content:space-between; align-items:center; padding:5px 15px; ">
+        <div v-if="showAddEmployee">
+          <v-icon @click="showAddEmployee= !showAddEmployee" style="width:40px; height:40px; border:1px solid black; border-radius:50%;" left>mdi-arrow-left</v-icon>
+        </div>
+        <v-card-title v-if="!showAddEmployee">Employee Details</v-card-title>
+        <v-btn v-if="!showAddEmployee" @click="showAddEmployee = true" color="primary">Add Employee</v-btn>
+      </div>
       <!-- Search and Filter Row -->
-      <v-row class="mx-2 mb-4" align="center">
+      <v-row v-if="!showAddEmployee" class="mx-2 mb-4" align="center">
         <v-col cols="2" class="pa-0">
           <v-text-field
             v-model="search"
@@ -30,43 +35,45 @@
         </v-col>
       </v-row>
 
-      <v-data-table
-        :headers="headers"
-        :items="filteredEmployees"
-        class="elevation-1"
-        :items-per-page="itemsPerPage"
-        :page.sync="page"                   
-        :loading="loading"
-        :hide-default-footer="true" 
-      >
-        <!-- Serial number (continuous across pages) -->
-        <template v-slot:item.sn="{ index }">
-          {{ (page - 1) * itemsPerPage + index + 1 }}
-        </template>
+      <div v-if="!showAddEmployee">
+        <v-data-table
+          :headers="headers"
+          :items="filteredEmployees"
+          class="elevation-1"
+          :items-per-page="itemsPerPage"
+          :page.sync="page"                   
+          :loading="loading"
+          :hide-default-footer="true" 
+        >
+          <!-- Serial number (continuous across pages) -->
+          <template v-slot:item.sn="{ index }">
+            {{ (page - 1) * itemsPerPage + index + 1 }}
+          </template>
 
-        <!-- Data cells -->
-        <template v-slot:item.employeeRole="{ item }">{{ item.employeeRole || '-' }}</template>
-        <template v-slot:item.employeeName="{ item }">{{ item.employeeName || '-' }}</template>
-        <template v-slot:item.phone="{ item }">{{ item.phone || '-' }}</template>
-        <template v-slot:item.userName="{ item }">{{ item.userName || '-' }}</template>
+          <!-- Data cells -->
+          <template v-slot:item.employeeRole="{ item }">{{ item.employeeRole || '-' }}</template>
+          <template v-slot:item.employeeName="{ item }">{{ item.employeeName || '-' }}</template>
+          <template v-slot:item.phone="{ item }">{{ item.phone || '-' }}</template>
+          <template v-slot:item.userName="{ item }">{{ item.userName || '-' }}</template>
 
-        <!-- Details action (icon/button at end) -->
-        <template v-slot:item.actions="{ item }">
-          <v-btn
-            style="margin-right:20px;"
-            icon
-            color="primary"
-            @click.stop="showDetails(item)"
-            :title="`Show details for ${item.employeeName || 'employee'}`"
-          >
-            <span>Show</span>
-            <v-icon small>mdi-eye-outline</v-icon>
-          </v-btn>
-        </template>
-      </v-data-table>
+          <!-- Details action (icon/button at end) -->
+          <template v-slot:item.actions="{ item }">
+            <v-btn
+              style="margin-right:20px;"
+              icon
+              color="primary"
+              @click.stop="showDetails(item)"
+              :title="`Show details for ${item.employeeName || 'employee'}`"
+            >
+              <span>Show</span>
+              <v-icon small>mdi-eye-outline</v-icon>
+            </v-btn>
+          </template>
+        </v-data-table>
+      </div>
 
       <!-- Custom Pagination -->
-      <div class="pa-3 d-flex justify-end">
+      <div v-if="!showAddEmployee" class="pa-3 d-flex justify-end">
         <v-pagination
           v-model="page"
           :length="pageCount"
@@ -79,7 +86,12 @@
       <v-overlay :value="loading" absolute>
         <v-progress-circular indeterminate size="64" />
       </v-overlay>
+    <div v-if="showAddEmployee">
+      <AddNewEmployee />
+    </div>
+
     </v-card>
+
 
     <!-- Single dialog for employee details -->
     <v-dialog v-model="detailDialog" max-width="1420px">
@@ -131,10 +143,11 @@
 import axios from 'axios';
 import EmployeeDetail from './employeedetails.vue';
 import EditEmployee from './editemployee.vue';
+import AddNewEmployee from './addemployee.vue'
 
 export default {
   name: 'EmployeeTableWithDetailAndEdit',
-  components: { EmployeeDetail, EditEmployee },
+  components: { EmployeeDetail, EditEmployee, AddNewEmployee },
   data() {
     return {
       employees: [],
@@ -146,10 +159,10 @@ export default {
       selectedEmployee: null,
       editDialog: false,
       editingEmployeePk: null,
-
       // Pagination state
       page: 1,
-      itemsPerPage: 10
+      itemsPerPage: 10,
+      showAddEmployee: false
     };
   },
   computed: {

@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card style="margin:10px;">
     <v-card-title>
       Spares Details
       <v-spacer />
@@ -15,8 +15,21 @@
           dense
           outlined
           hide-details
-          @input="getByPartNumber"
-          @click:clear="fetchSparesParts"
+          @input="debouncedSearch"
+          @click:clear="clearPartNumberSearch"
+        />
+      </v-col>
+
+      <v-col cols="12" md="2">
+        <v-text-field
+          v-model="searchPartName"
+          label="Search by Part Name"
+          clearable
+          dense
+          outlined
+          hide-details
+          @input="debouncedSearch"
+          @click:clear="clearPartNameSearch"
         />
       </v-col>
 
@@ -28,146 +41,157 @@
           dense
           outlined
           hide-details
-          @input="getByInvoiceNumber"
-          @click:clear="fetchSparesParts"
+          @input="debouncedSearch"
+          @click:clear="clearInvoiceSearch"
         />
       </v-col>
 
       <v-col cols="12" md="2">
-        <v-menu
-          ref="menuFrom"
-          v-model="menuFrom"
-          :close-on-content-click="false"
-          :nudge-right="40"
-          transition="scale-transition"
-          offset-y
-          max-width="290px"
-          min-width="auto"
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-text-field
-              v-model="invoiceDateFrom"
-              label="Invoice Date From"
-              prepend-icon="mdi-calendar"
-              readonly
-              dense
-              hide-details
-              outlined
-              v-bind="attrs"
-              v-on="on"
-              clearable
-              @click:clear="clearDateFrom"
-            />
-          </template>
-          <v-date-picker
-            v-model="invoiceDateFrom"
-            @input="menuFrom = false;"
-            no-title
-            scrollable
-          />
-        </v-menu>
-        
+        <v-text-field
+          v-model="searchRackNumber"
+          label="Search by Rack Number"
+          clearable
+          dense
+          outlined
+          hide-details
+          @input="debouncedSearch"
+          @click:clear="clearRackSearch"
+        />
       </v-col>
 
-      <v-col cols="12" md="2">
-        <v-menu
-          ref="menuTo"
-          v-model="menuTo"
-          :close-on-content-click="false"
-          :nudge-right="40"
-          transition="scale-transition"
-          offset-y
-          max-width="290px"
-          min-width="auto"
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-text-field
-              v-model="invoiceDateTo"
-              label="Invoice Date To"
-              prepend-icon="mdi-calendar"
-              readonly
-              dense
-              outlined
-              hide-details
-              v-bind="attrs"
-              v-on="on"
-              clearable
-              @click:clear="clearDateTo"
-            />
-          </template>
-          <v-date-picker
-            v-model="invoiceDateTo"
-            @input="menuTo = false;"
-            no-title
-            scrollable
-          />
-        </v-menu>
-      </v-col>
-
-      <v-col cols="12" md="1" style="display:flex; flex-direction:row;">
-        <v-btn color="black" style="color:white; margin-right:20px;" @click="filterByDate">Filter</v-btn>
-        <v-btn color="red" @click="fetchSparesParts">Reset</v-btn>
-        <div style="margin-left:20px;">
+      <v-col cols="12" md="3" style="display:flex; flex-direction:row; gap:10px;">
+        <v-btn color="black" style="color:white;" @click="performSearch">Search</v-btn>
+        <v-btn color="red" @click="resetAllFilters">Reset All</v-btn>
+        <div>
           <DownloadPdf :items="selectedItems" :headers="headers" />
         </div>
       </v-col>
     </v-row>
 
-    <br />
-
-    <!-- Inventory Data Table -->
+    <!-- Inventory Data Table with Pagination -->
     <v-data-table
       :headers="headers"
-      :items="sparesParts"
-      :search="search"
+      :items="filteredParts"
       item-key="partNumber"
       class="elevation-1"
       dense
-      :items-per-page="options.itemsPerPage"
+      :items-per-page="itemsPerPage"
+      :page.sync="page"
+      :loading="isLoading"
+      loading-text="Loading parts data..."
       show-select
       v-model="selectedItems"
-      :options.sync="options"
-      @click:row="onRowClick"
+      hide-default-footer
+      @page-count="pageCount = $event"
     >
-      <!-- Serial number column cells (after checkbox) -->
+      <!-- Serial number column with continuous numbering -->
       <template v-slot:item.sno="{ index }">
-        {{ (options.page - 1) * options.itemsPerPage + index + 1 }}
+        {{ (page - 1) * itemsPerPage + index + 1 }}
       </template>
 
-      <template v-slot:item.quantity="{ item }">{{ item.quantity || '-' }}</template>
-      <template v-slot:item.invoiceNumber="{ item }">{{ item.invoiceNumber || '-' }}</template>
-      <template v-slot:item.invoiceDate="{ item }">{{ item.invoiceDate || '-' }}</template>
-      <template v-slot:item.partNumber="{ item }">{{ item.partNumber || '-' }}</template>
+      <template v-slot:item.quantity="{ item }">
+        <v-chip :color="getQuantityColor(item.quantity)" small>
+          {{ item.quantity || 0 }}
+        </v-chip>
+      </template>
+      
+      <template v-slot:item.invoiceNumber="{ item }">
+        <v-chip color="primary" small @click.stop="showInvoiceDetails(item.invoiceNumber)">
+          {{ item.invoiceNumber || '-' }}
+        </v-chip>
+      </template>
+      
+      <template v-slot:item.invoiceDate="{ item }">
+        {{ formatDate(item.invoiceDate) || '-' }}
+      </template>
+      
+      <template v-slot:item.partNumber="{ item }">
+        <strong>{{ item.partNumber || '-' }}</strong>
+      </template>
+      
       <template v-slot:item.partName="{ item }">{{ item.partName || '-' }}</template>
-      <template v-slot:item.price="{ item }">{{ item.price != null ? item.price : '-' }}</template>
-      <template v-slot:item.rakNumber="{ item }">{{ item.rakNumber || '-' }}</template>
+      
+      <template v-slot:item.price="{ item }">
+        {{ item.price != null ? formatCurrency(item.price) : '-' }}
+      </template>
+      
+      <template v-slot:item.rakNumber="{ item }">
+        <v-chip color="secondary" small>{{ item.rakNumber || '-' }}</v-chip>
+      </template>
+      
       <template v-slot:item.addedBy="{ item }">{{ item.addedBy || '-' }}</template>
+      
+      <template v-slot:item.updatedAt="{ item }">
+        {{ formatDate(item.updatedAt) || '-' }}
+      </template>
 
-      <!-- Actions column with Show button -->
+      <!-- Actions column -->
       <template v-slot:item.actions="{ item }">
-        <v-btn small text @click.stop="showDetails(item)">Show</v-btn>
+        <v-menu offset-y>
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn small icon v-bind="attrs" v-on="on">
+              <v-icon>mdi-dots-vertical</v-icon>
+            </v-btn>
+          </template>
+          <v-list dense>
+            <v-list-item @click="showDetails(item)">
+              <v-list-item-icon>
+                <v-icon small>mdi-eye</v-icon>
+              </v-list-item-icon>
+              <v-list-item-title>View Details</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="checkPartExistence(item.partNumber)">
+              <v-list-item-icon>
+                <v-icon small>mdi-check-circle</v-icon>
+              </v-list-item-icon>
+              <v-list-item-title>Check Status</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </template>
     </v-data-table>
 
-    <!-- Dialog fallback -->
-    <v-dialog v-model="showDialog" max-width="900px">
-      <template v-slot:activator="{ on }"></template>
+    <!-- Pagination Controls -->
+    <div class="text-center pt-2" v-if="filteredParts.length > 0">
+      <v-pagination
+        v-model="page"
+        :length="pageCount"
+        :total-visible="7"
+        circle
+      ></v-pagination>
+      <div class="text-caption mt-2">
+        Showing {{ Math.min((page - 1) * itemsPerPage + 1, totalItems) }} to 
+        {{ Math.min(page * itemsPerPage, totalItems) }} of {{ totalItems }} entries
+      </div>
+    </div>
+
+    <!-- Part Details Dialog -->
+    <v-dialog v-model="showPartDialog" max-width="800px">
       <v-card>
         <v-card-title>
-          Details
+          <span class="text-h5">Part Details</span>
           <v-spacer />
-          <v-btn icon @click="showDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+          <v-btn icon @click="showPartDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
         </v-card-title>
         <v-card-text>
-          <SparesDetailspage :item="detailItem" @close="showDialog = false" />
+          <SparesDetailspage v-if="detailItem" :item="detailItem" @close="showPartDialog = false" @refresh-data="handleRefreshData" />
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <!-- Check Part Existence Snackbar -->
+    <v-snackbar v-model="showCheckSnackbar" :timeout="3000" :color="checkResultColor">
+      {{ checkResultMessage }}
+    </v-snackbar>
+
   </v-card>
 </template>
 
 <script>
 import axios from 'axios';
+import _ from 'lodash';
 import DownloadPdf from '../../views/DownloadPdf.vue';
 import SparesDetailspage from './sparesDetailspage.vue';
 
@@ -175,160 +199,362 @@ export default {
   components: { DownloadPdf, SparesDetailspage },
   data() {
     return {
-      sparesParts: [],
+      sparesParts: [], // All parts data
       selectedItems: [],
-      search: '',
       searchPartNumber: '',
+      searchPartName: '',
       searchInvoiceNumber: '',
-      filters: {
-        partNumber: '',
-        invoiceNumber: '',
-      },
+      searchRackNumber: '',
       invoiceDateFrom: null,
       invoiceDateTo: null,
-      menuFrom: false,
-      menuTo: false,
-      showDialog: false,
+      
+      // Pagination
+      page: 1,
+      pageCount: 0,
+      itemsPerPage: 15,
+      totalItems: 0,
+      
+      // Dialog states
+      showPartDialog: false,
+      
+      // Data states
       detailItem: null,
-
-      // Keep pagination in one place (used for S.No calculation)
-      options: {
-        page: 1,
-        itemsPerPage: 10,
-        sortBy: [],
-        sortDesc: [],
-        groupBy: [],
-        groupDesc: [],
-        multiSort: false,
-        mustSort: false,
+      
+      // Loading states
+      isLoading: false,
+      
+      // Check result states
+      showCheckSnackbar: false,
+      checkResultMessage: '',
+      checkResultColor: 'info',
+      
+      // Summary stats
+      summaryStats: {
+        totalParts: 0,
+        totalQuantity: 0,
+        totalValue: 0,
+        averagePrice: 0
       },
 
       headers: [
-        // Selection checkboxes are injected as the very first column.
-        // This S.No column will therefore appear right after the checkbox.
-        { text: 'S.No', value: 'sno', sortable: false, width: 80 },
-        { text: 'Part Number', value: 'partNumber' },
-        { text: 'Part Name', value: 'partName' },
-        { text: 'Quantity', value: 'quantity' },
-        { text: 'Price', value: 'price' },
-        { text: 'Rack Number', value: 'rakNumber' },
-        { text: 'Invoice Number', value: 'invoiceNumber' },
-        { text: 'Invoice Date', value: 'invoiceDate' },
-        { text: 'Added By', value: 'addedBy' },
-        { text: 'Actions', value: 'actions', sortable: false },
+        { text: 'S.No', value: 'sno', sortable: false, width: 70 },
+        { text: 'Part Number', value: 'partNumber', width: 150 },
+        { text: 'Part Name', value: 'partName', width: 200 },
+        { text: 'Quantity', value: 'quantity', width: 120 },
+        { text: 'Price', value: 'price', width: 120 },
+        { text: 'Rack Number', value: 'rakNumber', width: 130 },
+        { text: 'Invoice Number', value: 'invoiceNumber', width: 150 },
+        { text: 'Invoice Date', value: 'invoiceDate', width: 130 },
+        { text: 'Added By', value: 'addedBy', width: 130 },
+        { text: 'Last Updated', value: 'updatedAt', width: 130 },
+        { text: 'Actions', value: 'actions', sortable: false, width: 100 },
       ],
     };
   },
+  computed: {
+    // Filter parts based on search criteria
+    filteredParts() {
+      if (!this.hasAnySearchCriteria() || !this.sparesParts.length) {
+        return this.sparesParts;
+      }
+
+      return this.sparesParts.filter(part => {
+        // Check each search field
+        const matchesPartNumber = !this.searchPartNumber || 
+          (part.partNumber && part.partNumber.toLowerCase().includes(this.searchPartNumber.toLowerCase()));
+        
+        const matchesPartName = !this.searchPartName || 
+          (part.partName && part.partName.toLowerCase().includes(this.searchPartName.toLowerCase()));
+        
+        const matchesInvoiceNumber = !this.searchInvoiceNumber || 
+          (part.invoiceNumber && part.invoiceNumber.toLowerCase().includes(this.searchInvoiceNumber.toLowerCase()));
+        
+        const matchesRackNumber = !this.searchRackNumber || 
+          (part.rakNumber && part.rakNumber.toLowerCase().includes(this.searchRackNumber.toLowerCase()));
+        
+        // Date filtering (if you enable it later)
+        const matchesDate = true; // Add date filtering logic here if needed
+        
+        return matchesPartNumber && matchesPartName && 
+               matchesInvoiceNumber && matchesRackNumber && matchesDate;
+      });
+    }
+  },
+  watch: {
+    filteredParts() {
+      this.totalItems = this.filteredParts.length;
+      this.page = 1; // Reset to page 1 when filters change
+      this.calculateSummaryStats();
+    }
+  },
+  created() {
+    // Create debounced function for search
+    this.debouncedSearch = _.debounce(this.performSearch, 500);
+  },
   methods: {
-    async filterByDate() {
-      this.searchPartNumber = '';
-      try {
-        let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}partsRangeFilter/${this.invoiceDateFrom}/${this.invoiceDateTo}`;
-        const res = await axios.get(url);
-        this.sparesParts = Array.isArray(res.data.items) ? res.data.items : [res.data.items];
-      } catch (error) {
-        console.error('Failed to fetch inventory:', error);
-        this.sparesParts = [];
-      }
+    handleRefreshData() {
+      this.fetchSparesParts(); // Refresh the table data
+      this.showPartDialog = false; // Close the dialog
     },
 
-    async getByPartNumber() {
-      this.searchInvoiceNumber = '';
-      try {
-        if (!this.searchPartNumber) {
-          this.fetchSparesPart();
-        } else {
-          let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}parts/${this.searchPartNumber}`;
-          const res = await axios.get(url);
-          this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
+    // ========== UNIFIED SEARCH METHOD ==========
+    async performSearch() {
+      this.isLoading = true;
+
+      // Check if there are any search criteria
+      if (!this.hasAnySearchCriteria()) {
+        // No search criteria, fetch all parts
+        await this.fetchSparesParts();
+        this.isLoading = false;
+        return;
+      }
+      
+      // Build query parameters for the new search endpoint
+      const params = {
+        partNumber: this.searchPartNumber?.trim() || undefined,
+        partName: this.searchPartName?.trim() || undefined,
+        invoiceNumber: this.searchInvoiceNumber?.trim() || undefined,
+        rakNumber: this.searchRackNumber?.trim() || undefined,
+        fromDate: this.invoiceDateFrom || undefined,
+        toDate: this.invoiceDateTo || undefined,
+        // Remove page and limit for client-side filtering
+      };
+
+      // Remove undefined parameters
+      Object.keys(params).forEach(key => {
+        if (params[key] === undefined || params[key] === '') {
+          delete params[key];
         }
-      } catch (error) {
-        console.error('Failed to fetch inventory:', error);
-        this.sparesParts = [];
-      }
-    },
+      });
 
-    async getByInvoiceNumber() {
-      this.searchPartNumber = '';
       try {
-        if (!this.searchInvoiceNumber) {
-          this.fetchSparesPart();
+        // Use the new unified search endpoint
+        const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}spares/search`;
+        const response = await axios.get(url, { params });
+
+        // Handle response - store ALL results
+        if (response.data.results) {
+          this.sparesParts = response.data.results;
         } else {
-          let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}invoice/${this.searchInvoiceNumber}`;
-          const res = await axios.get(url);
-          this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
+          this.sparesParts = [];
         }
+
+        this.calculateSummaryStats();
+        
       } catch (error) {
-        console.error('Failed to fetch inventory:', error);
-        this.sparesParts = [];
+        console.error('Search failed:', error);
+        
+        // Fallback to fetching all parts if search fails
+        if (!this.hasAnySearchCriteria()) {
+          await this.fetchSparesParts();
+        } else {
+          this.showToast('Search failed. Please try again.', 'error');
+          this.sparesParts = [];
+        }
+      } finally {
+        this.isLoading = false;
       }
     },
 
-    async fetchSparesPart() {
-      this.searchPartNumber = '';
-      this.searchInvoiceNumber = '';
-      this.invoiceDateFrom = null;
-      this.invoiceDateTo = null;
-      try {
-        const params = {};
-        if (this.filters.partNumber) params.partNumber = this.filters.partNumber;
-        if (this.filters.invoiceNumber) params.invoiceNumber = this.filters.invoiceNumber;
-        if (this.filters.invoiceDateFrom) params.invoiceDateFrom = this.filters.invoiceDateFrom;
-        if (this.filters.invoiceDateTo) params.invoiceDateTo = this.filters.invoiceDateTo;
-
-        const queryString = new URLSearchParams(params).toString();
-        const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}Spares${queryString ? '?' + queryString : ''}`;
-
-        const res = await axios.get(url);
-        this.sparesParts = Array.isArray(res.data) ? res.data : [];
-      } catch (error) {
-        console.error('Failed to fetch inventory:', error);
-      }
+    hasAnySearchCriteria() {
+      return !!(
+        this.searchPartNumber ||
+        this.searchPartName ||
+        this.searchInvoiceNumber ||
+        this.searchRackNumber ||
+        this.invoiceDateFrom ||
+        this.invoiceDateTo
+      );
     },
 
+    // ========== FETCH METHODS ==========
     async fetchSparesParts() {
+      this.isLoading = true;
       try {
-        let url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}Spares`;
+        const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}Spares`;
         const res = await axios.get(url);
-        this.sparesParts = Array.isArray(res.data) ? res.data : [res.data];
+        // Extract parts array from response
+        const parts = res.data.parts || [];
+        this.sparesParts = parts;
+        this.totalItems = parts.length;
+        this.page = 1; // Reset to first page on fetch
+        this.calculateSummaryStats();
       } catch (error) {
         console.error('Failed to fetch inventory:', error);
         this.sparesParts = [];
+        this.totalItems = 0;
+        this.showToast('Failed to load parts data', 'error');
+      } finally {
+        this.isLoading = false;
       }
     },
 
-    onRowClick(item) {
-      console.log('Row clicked:', item);
+    // ========== DETAIL VIEW METHODS ==========
+    showDetails(item) {
+      this.detailItem = item;
+      if (this.$router && this.$router.options.routes?.some(r => r.name === 'SparesDetails')) {
+        this.$router.push({ name: 'SparesDetails', params: { partNumber: item.partNumber } });
+      } else {
+        this.showPartDialog = true;
+      }
+    },
+
+    // ========== CHECK PART EXISTENCE ==========
+    async checkPartExistence(partNumber) {
+      try {
+        const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}checkPartNumber/${partNumber}`;
+        const res = await axios.get(url);
+        
+        if (res.data.exists) {
+          this.checkResultMessage = `Part ${partNumber} exists with ${res.data.part.quantity} units in stock`;
+          this.checkResultColor = 'success';
+        } else {
+          this.checkResultMessage = `Part ${partNumber} not found in database`;
+          this.checkResultColor = 'warning';
+        }
+        
+        this.showCheckSnackbar = true;
+      } catch (error) {
+        console.error('Failed to check part:', error);
+        this.checkResultMessage = 'Error checking part status';
+        this.checkResultColor = 'error';
+        this.showCheckSnackbar = true;
+      }
+    },
+
+    // ========== INVOICE DETAILS METHOD ==========
+    async showInvoiceDetails(invoiceNumber) {
+      try {
+        const url = `${process.env.VUE_APP_AGENCY_BACKEND_URL}invoice/${invoiceNumber}`;
+        const res = await axios.get(url);
+        
+        // Show invoice details in an alert or dialog
+        if (res.data.items) {
+          const message = `Invoice: ${invoiceNumber}\n` +
+                         `Date: ${res.data.invoiceDate}\n` +
+                         `Total Items: ${res.data.items.length}\n` +
+                         `Added By: ${res.data.addedBy || 'N/A'}`;
+          alert(message);
+        } else {
+          alert(`Invoice ${invoiceNumber} details not available`);
+        }
+      } catch (error) {
+        console.error('Failed to fetch invoice details:', error);
+        alert('Failed to load invoice details');
+      }
+    },
+
+    // ========== UTILITY METHODS ==========
+    calculateSummaryStats() {
+      const partsToCalculate = this.filteredParts.length > 0 ? this.filteredParts : this.sparesParts;
+      
+      const stats = {
+        totalParts: partsToCalculate.length,
+        totalQuantity: 0,
+        totalValue: 0,
+        averagePrice: 0
+      };
+
+      partsToCalculate.forEach(part => {
+        const quantity = Number(part.quantity) || 0;
+        const price = Number(part.price) || 0;
+        
+        stats.totalQuantity += quantity;
+        stats.totalValue += quantity * price;
+      });
+
+      stats.averagePrice = stats.totalParts > 0 ? stats.totalValue / stats.totalParts : 0;
+      
+      this.summaryStats = stats;
+    },
+
+    getQuantityColor(quantity) {
+      const qty = Number(quantity) || 0;
+      if (qty === 0) return 'red';
+      if (qty < 10) return 'orange';
+      return 'green';
+    },
+
+    formatCurrency(amount) {
+      if (!amount && amount !== 0) return '0.00';
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 2
+      }).format(amount);
+    },
+
+    formatDate(dateString) {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    },
+
+    showToast(message, type = 'info') {
+      // Use Vuetify toast or console
+      if (this.$toast) {
+        this.$toast[type](message);
+      } else {
+        console.log(`${type}: ${message}`);
+      }
+    },
+
+    // ========== CLEAR METHODS ==========
+    clearPartNumberSearch() {
+      this.searchPartNumber = '';
+      this.performSearch();
+    },
+
+    clearPartNameSearch() {
+      this.searchPartName = '';
+      this.performSearch();
+    },
+
+    clearInvoiceSearch() {
+      this.searchInvoiceNumber = '';
+      this.performSearch();
+    },
+
+    clearRackSearch() {
+      this.searchRackNumber = '';
+      this.performSearch();
+    },
+
+    clearAllSearches() {
+      this.searchPartNumber = '';
+      this.searchPartName = '';
+      this.searchInvoiceNumber = '';
+      this.searchRackNumber = '';
     },
 
     clearDateFrom() {
-      this.filters.invoiceDateFrom = null;
-      this.fetchSparesPart();
+      this.invoiceDateFrom = null;
+      this.performSearch();
     },
+
     clearDateTo() {
-      this.filters.invoiceDateTo = null;
-      this.fetchSparesPart();
+      this.invoiceDateTo = null;
+      this.performSearch();
     },
 
-    showDetails(item) {
-      this.detailItem = item || null;
-
-      if (this.$router && this.$router.options && this.$router.options.routes) {
-        const routeExists = this.$router.options.routes.some(r => r.name === 'SparesDetails');
-        if (routeExists) {
-          this.$router.push({ name: 'SparesDetails', params: { partNumber: item.partNumber }});
-          return;
-        }
-      }
-      this.showDialog = true;
+    resetAllFilters() {
+      this.clearAllSearches();
+      this.invoiceDateFrom = null;
+      this.invoiceDateTo = null;
+      this.page = 1;
+      this.performSearch();
     },
-  },
-  watch: {
-    'filters.partNumber': 'fetchSparesPart',
-    'filters.invoiceNumber': 'fetchSparesPart',
+
+    onRowClick(item) {
+      this.showDetails(item);
+    },
   },
   mounted() {
-    this.fetchSparesPart();
+    this.fetchSparesParts();
   },
 };
 </script>
@@ -340,7 +566,6 @@ export default {
   color: #222;
 }
 
-/* Header background + text color + header height */
 .v-data-table-header th {
   background: #dff3f79c !important;
   color: #000 !important;
@@ -348,14 +573,66 @@ export default {
   font-weight: 600;
 }
 
-/* Row height */
 .v-data-table .v-data-table__wrapper tr > td {
   height: 50px !important;
   vertical-align: middle;
 }
 
-/* Optional: slightly larger checkbox for better alignment */
 .v-data-table .v-simple-checkbox {
   transform: scale(1.05);
+}
+
+/* Chip styling */
+.v-chip {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.v-chip:hover {
+  opacity: 0.8;
+}
+
+/* Card stats styling */
+.v-card {
+  border-radius: 8px;
+}
+
+.text-caption {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.text-h5 {
+  font-size: 1.5rem;
+}
+
+/* Action menu styling */
+.v-list-item {
+  min-height: 36px;
+}
+
+.v-list-item-icon {
+  margin-right: 8px;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Pagination styling */
+.v-pagination {
+  margin: 0;
+}
+
+.v-pagination__item {
+  margin: 0 2px;
+}
+
+.v-pagination__navigation {
+  margin: 0 2px;
+}
+
+/* Showing entries text */
+.text-caption {
+  font-size: 0.875rem;
+  color: rgba(0, 0, 0, 0.6);
 }
 </style>

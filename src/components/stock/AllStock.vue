@@ -207,17 +207,27 @@
         :headers="headers"
         :items="filteredAndSorted"
         :loading="loading"
-        :items-per-page="14"
+        :items-per-page="10"
+        :page.sync="paginationTable.page"
+        :footer-props="{
+          itemsPerPageOptions: []
+        }"
+        @update:items-per-page="paginationTable.itemsPerPage = $event"
         class="elevation-1"
-        item-key="pk"
+        item-key="chassisNumber"
         dense
         :custom-sort="customSort"
         :sort-by="['invoiceDate']"
         :sort-desc="[true]"
-      >
+>
+
         <!-- 👇 S.No = visible row index + 1 (always 1..N) -->
         <template v-slot:item.serial="{ index }">
-          {{ index + 1 }}
+          {{
+            (paginationTable.page - 1) * paginationTable.itemsPerPage
+            + index
+            + 1
+          }}
         </template>
 
         <template v-slot:item.modelName="{ item }">
@@ -463,7 +473,18 @@ export default {
   data () {
     return {
       loading: false,
+      loadingMore: false,
       rawItems: [],
+      pagination: {
+        lastEvaluatedKey: null,
+        hasMore: true,
+        limit: 50, // Items per load
+        totalLoaded: 0
+      },
+      paginationTable: {
+        page: 1,
+        itemsPerPage: 10
+      },
       filters: {
         modelName: null,
         categoryName: null,
@@ -480,11 +501,10 @@ export default {
       headers: [
         // S.No will always be 1..N via slot index
         { text: 'S.No', value: 'serial', width: 70, sortable: false },
-        { text: 'Model', value: 'modelName' },
         { text: 'Category', value: 'categoryName' },
+        { text: 'Model', value: 'modelName' },
         { text: 'Chassis', value: 'chassisNumber', width: 180 },
         { text: 'Engine', value: 'engineNumber', width: 160 },
-        // Invoice No column in table headers (before Invoice Date)
         { text: 'Invoice No', value: 'invoiceNumber', width: 140 },
         { text: 'Invoice Date', value: 'invoiceDate', width: 140 },
         { text: 'Stock by days', value: 'stockDays', width: 150 },
@@ -505,29 +525,48 @@ export default {
       const lc = v => (v == null ? '' : String(v).toLowerCase())
 
       let out = rows.filter(it => {
+        // EXCLUDE SOLD ITEMS - this is the only mandatory filter
         if (lc(it.status) === 'sold') return false
 
+        // OPTIONAL: Apply other filters only if user has set them
+        // Model name filter (only if user typed something)
         if (this.filters.modelName && this.filters.modelName.trim()) {
-          if (!lc(it.modelName).includes(lc(this.filters.modelName))) return false
+          const modelValue = it.modelName || ''
+          if (!lc(modelValue).includes(lc(this.filters.modelName))) return false
         }
+        
+        // Category filter (only if user typed something)
         if (this.filters.categoryName && this.filters.categoryName.trim()) {
-          if (!lc(it.categoryName).includes(lc(this.filters.categoryName))) return false
+          const categoryValue = it.categoryName || ''
+          if (!lc(categoryValue).includes(lc(this.filters.categoryName))) return false
         }
+        
+        // Chassis filter (only if user typed something)
         if (this.filters.chassisNumber && this.filters.chassisNumber.trim()) {
-          if (!lc(it.chassisNumber).includes(lc(this.filters.chassisNumber))) return false
+          const chassisValue = it.chassisNumber || ''
+          if (!lc(chassisValue).includes(lc(this.filters.chassisNumber))) return false
         }
+        
+        // Engine filter (only if user typed something)
         if (this.filters.engineNumber && this.filters.engineNumber.trim()) {
-          if (!lc(it.engineNumber).includes(lc(this.filters.engineNumber))) return false
+          const engineValue = it.engineNumber || ''
+          if (!lc(engineValue).includes(lc(this.filters.engineNumber))) return false
         }
+        
+        // Warehouse filter (only if user typed something)
         if (this.filters.warehouse && this.filters.warehouse.trim()) {
-          if (!lc(it.warehouse).includes(lc(this.filters.warehouse))) return false
+          const warehouseValue = it.warehouse || ''
+          if (!lc(warehouseValue).includes(lc(this.filters.warehouse))) return false
         }
 
+        // Status multi-select (only if user selected something)
         if (Array.isArray(this.filters.status) && this.filters.status.length > 0) {
           const selected = this.filters.status.map(s => lc(s))
-          if (!selected.includes(lc(it.status))) return false
+          const itemStatus = lc(it.status || '')
+          if (!selected.includes(itemStatus)) return false
         }
 
+        // Date range filter (only if user set dates)
         if (this.filters.from || this.filters.to) {
           const itYmd = this.toYmd(it.invoiceDate || it.createdAt || it.lastModified)
           if (!itYmd) return false
@@ -540,20 +579,22 @@ export default {
           }
         }
 
+        // Global search (only if user typed something)
         if (this.globalSearch && this.globalSearch.trim()) {
           const q = lc(this.globalSearch).trim()
           const fields = [
-            it.modelName, it.categoryName, it.chassisNumber, it.engineNumber,
-            it.invoiceNumber, it.pk, it.sk, it.warehouse, it.status, it.color, it.source
+            it.modelName || '', it.categoryName || '', it.chassisNumber || '', it.engineNumber || '',
+            it.invoiceNumber || '', it.pk || '', it.sk || '', it.warehouse || '', 
+            it.status || '', it.color || '', it.source || ''
           ]
-          const found = fields.some(f => lc(f).includes(q))
+          const found = fields.some(f => f && lc(f).includes(q))
           if (!found) return false
         }
 
         return true
       })
 
-      // keep existing sorting behavior (by invoice date desc)
+      // Sorting
       out.sort((a, b) => {
         const ta = this.toTime(a.invoiceDate || a.createdAt || a.lastModified)
         const tb = this.toTime(b.invoiceDate || b.lastModified || b.createdAt)
@@ -563,7 +604,6 @@ export default {
       return out
     },
 
-    // Category -> Model -> Items, then paginated
     pdfGroups () {
       const src = this.filteredAndSorted || []
       const groups = []
@@ -686,42 +726,144 @@ export default {
       }
 
       return pages
+    },
+
+    hasMoreItems() {
+      return this.pagination.hasMore
+    },
+    
+    loadedItemsCount() {
+      return this.rawItems.length
+    },
+    
+    totalItemsCount() {
+      // This is approximate - you might want to get this from an API
+      return this.loadedItemsCount + (this.hasMoreItems ? '+' : '')
     }
   },
 
   methods: {
-    onRefresh () {
-      this.resetFilters()
-      this.menus = { from: false, to: false }
-      this.loadData()
-    },
-
-    async loadData () {
+    async loadData (reset = true) {
       try {
-        this.loading = true
-        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry')
-        const items = (res.data && res.data.items) ? res.data.items : []
-        this.rawItems = this.dedupeItems(items)
+        if (reset) {
+          this.loading = true
+        } else {
+          this.loadingMore = true
+        }
+        
+        if (reset) {
+          // Reset pagination when loading fresh data
+          this.pagination = {
+            lastEvaluatedKey: null,
+            hasMore: true,
+            limit: 50,
+            totalLoaded: 0
+          }
+          this.rawItems = []
+        }
 
-        // keep your original sorting (invoice date desc)
+        const params = {
+          limit: this.pagination.limit
+        }
+        
+        // IMPORTANT: Only send the key if it exists and we're not resetting
+        if (this.pagination.lastEvaluatedKey && !reset) {
+          params.lastEvaluatedKey = this.pagination.lastEvaluatedKey
+        }
+
+        // Log for debugging
+        
+
+        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllInventry', { 
+          params,
+          // Add paramsSerializer to handle URL encoding properly
+          paramsSerializer: function(params) {
+            const searchParams = new URLSearchParams();
+            Object.keys(params).forEach(key => {
+              searchParams.append(key, params[key]);
+            });
+            return searchParams.toString();
+          }
+        })
+        
+        
+        const newItems = (res.data && res.data.items) ? res.data.items : []
+        
+        if (reset) {
+          this.rawItems = this.dedupeItems(newItems)
+        } else {
+          // Append new items when loading more
+          this.rawItems = this.dedupeItems([...this.rawItems, ...newItems])
+        }
+        
+        // IMPORTANT: Update pagination state - only update lastEvaluatedKey if we got one
+        // This prevents overwriting with null when we've reached the end
+        if (res.data.lastEvaluatedKey) {
+          this.pagination.lastEvaluatedKey = res.data.lastEvaluatedKey
+        }
+        this.pagination.hasMore = res.data.hasMore || false
+        this.pagination.totalLoaded += newItems.length
+
+        // Sort after loading
         this.rawItems.sort((a, b) => {
           const ta = this.toTime(a.invoiceDate || a.createdAt || a.lastModified)
           const tb = this.toTime(b.invoiceDate || b.lastModified || b.createdAt)
           return tb - ta
         })
+        
       } catch (err) {
-        console.error(err)
-        this.showSnack('Failed to load inventory', 'error')
+        console.error('Error loading data:', err)
+        console.error('Error response:', err.response?.data)
+        
+        // Show more specific error message
+        let errorMsg = 'Failed to load inventory'
+        if (err.response?.data?.error) {
+          errorMsg += `: ${err.response.data.error}`
+        } else if (err.message) {
+          errorMsg += `: ${err.message}`
+        }
+        
+        this.showSnack(errorMsg, 'error')
+        
+        // If there's a validation error with the lastEvaluatedKey, reset it
+        if (err.response?.status === 400 && err.response?.data?.message?.includes('lastEvaluatedKey')) {
+          console.log('Resetting pagination due to invalid lastEvaluatedKey')
+          this.pagination.lastEvaluatedKey = null
+          this.pagination.hasMore = true
+        }
       } finally {
         this.loading = false
+        this.loadingMore = false
       }
+    },
+
+        
+    async loadMore() {
+      // Check if we have more to load and aren't already loading
+      if (!this.pagination.hasMore || this.loadingMore || this.loading) {
+        return
+      }
+      
+      console.log('Loading more data...', {
+        hasMore: this.pagination.hasMore,
+        lastEvaluatedKey: this.pagination.lastEvaluatedKey ? 'present' : 'none',
+        currentCount: this.rawItems.length
+      })
+      
+      await this.loadData(false) // false = don't reset, append
+    },
+
+    onRefresh () {
+      this.resetFilters()
+      this.menus = { from: false, to: false }
+      this.loadData(true) // true = reset data
     },
 
     dedupeItems (items) {
       if (!Array.isArray(items)) return []
       const map = new Map()
       for (const it of items) {
-        const key = it.pk || it.id || (it.sk ? String(it.sk) : null)
+        const key = it.sk || it.pk || it.id || null  // Use sk first since it contains chassis number
         if (!key) continue
         if (!map.has(key)) {
           map.set(key, it)
@@ -737,7 +879,9 @@ export default {
       return Array.from(map.values())
     },
 
-    applyFilters () {},
+    applyFilters () {
+      this.loadData(true)
+    },
 
     resetFilters () {
       this.filters = {
@@ -751,6 +895,7 @@ export default {
         warehouse: null
       }
       this.globalSearch = ''
+      // Don't reload here - let user click Search or it will auto-reload
     },
 
     fmtDate (isoOrYmd) {

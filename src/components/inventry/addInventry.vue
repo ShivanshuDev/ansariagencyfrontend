@@ -30,6 +30,9 @@
           Could not verify chassis number
         </div>
       </div>
+      <div v-if="isTableFull" class="table-limit-reached">
+        Maximum limit reached (23/23 bikes)
+      </div>
     </div>
 
     <!-- ===== INVOICE ROW (3 FIELDS) ===== -->
@@ -44,6 +47,7 @@
             outlined
             dense
             hide-details
+            :disabled="isTableFull"
           />
           <div v-if="commonErrors.invoiceNumber" class="error-msg">
             {{ commonErrors.invoiceNumber }}
@@ -59,6 +63,7 @@
             offset-y
             max-width="290px"
             min-width="290px"
+            :disabled="isTableFull"
           >
             <template v-slot:activator="{ on, attrs }">
               <v-text-field
@@ -71,6 +76,7 @@
                 hide-details
                 v-bind="attrs"
                 v-on="on"
+                :disabled="isTableFull"
               />
             </template>
             <v-date-picker
@@ -93,6 +99,7 @@
             outlined
             dense
             hide-details
+            :disabled="isTableFull"
           />
           <div v-if="singleBikeErrors.source" class="error-msg">
             {{ singleBikeErrors.source }}
@@ -118,6 +125,7 @@
             outlined
             dense
             hide-details
+            :disabled="isTableFull"
           />
           <div v-if="singleBikeErrors.categoryName" class="error-msg">
             {{ singleBikeErrors.categoryName }}
@@ -135,6 +143,7 @@
             outlined
             dense
             hide-details
+            :disabled="isTableFull"
           />
           <div v-if="singleBikeErrors.modelName" class="error-msg">
             {{ singleBikeErrors.modelName }}
@@ -150,6 +159,7 @@
             outlined
             dense
             hide-details
+            :disabled="isTableFull"
           />
           <div v-if="singleBikeErrors.color" class="error-msg">
             {{ singleBikeErrors.color }}
@@ -165,6 +175,7 @@
             dense
             hide-details
             readonly
+            :disabled="isTableFull"
           />
         </div>
       </div>
@@ -188,6 +199,7 @@
             maxlength="17"
             @input="onChassisInput"
             @blur="triggerImmediateChassisCheck"
+            :disabled="isTableFull"
           />
           <div v-if="singleBikeErrors.chassisNumber" class="error-msg">
             {{ singleBikeErrors.chassisNumber }}
@@ -210,6 +222,7 @@
             hide-details
             maxlength="12"
             @input="onEngineInput"
+            :disabled="isTableFull"
           />
           <div v-if="singleBikeErrors.engineNumber" class="error-msg">
             {{ singleBikeErrors.engineNumber }}
@@ -234,6 +247,7 @@
             outlined
             dense
             hide-details
+            :disabled="isTableFull"
           />
           <div v-if="singleBikeErrors.warehouse" class="error-msg">
             {{ singleBikeErrors.warehouse }}
@@ -264,7 +278,7 @@
         type="button"
         class="btn primary"
         @click="saveBikeToTable"
-        :disabled="isSavingBike || chassisCheck.loading || chassisCheck.available === false"
+        :disabled="isSavingBike || chassisCheck.loading || chassisCheck.available === false || isTableFull"
       >
         {{ isSavingBike ? (editingIndex !== null ? 'Updating...' : 'Saving...') : (editingIndex !== null ? 'Update' : 'Add More') }}
       </button>
@@ -273,7 +287,7 @@
         type="button"
         class="btn primary"
         @click="saveBikeToTable"
-        :disabled="isSavingBike || chassisCheck.loading || chassisCheck.available === false"
+        :disabled="isSavingBike || chassisCheck.loading || chassisCheck.available === false || isTableFull"
       >
         Draft
       </button>
@@ -300,7 +314,7 @@
 
     <!-- TABLE OF ADDED BIKES (Invoice cols hidden) -->
     <section>
-      <h3>Added Bikes</h3>
+      <h3>Added Bikes ({{ addedBikes.length }}/23)</h3>
       <div v-if="addedBikes.length === 0" style="color:#666; margin-bottom:12px;">
         No bikes added yet. Fill the form above and click <strong>Add More</strong>.
       </div>
@@ -310,7 +324,6 @@
           <thead>
             <tr>
               <th>#</th>
-              <!-- Invoice No / Date removed from UI -->
               <th>Category</th>
               <th>Model</th>
               <th>HSN</th>
@@ -329,7 +342,16 @@
 
               <td>
                 <template v-if="inlineEditIndex === idx">
-                  <input v-model="b.categoryName" class="inline-input" />
+                  <v-autocomplete
+                    v-model="addedBikes[idx].categoryName"
+                    :items="categoriesForInlineEdit"
+                    item-text="category"
+                    item-value="category"
+                    placeholder="Select Category"
+                    dense
+                    hide-details
+                    @input="onInlineCategoryChange(idx)"
+                  />
                 </template>
                 <template v-else>
                   {{ b.categoryName }}
@@ -338,7 +360,16 @@
 
               <td>
                 <template v-if="inlineEditIndex === idx">
-                  <input v-model="b.modelName" class="inline-input" />
+                  <v-autocomplete
+                    v-model="addedBikes[idx].modelName"
+                    :items="modelsForInlineEdit[idx] || []"
+                    item-text="modelName"
+                    item-value="modelName"
+                    placeholder="Select Model"
+                    dense
+                    hide-details
+                    @input="onInlineModelChange(idx)"
+                  />
                 </template>
                 <template v-else>
                   {{ b.modelName }}
@@ -347,7 +378,7 @@
 
               <td>
                 <template v-if="inlineEditIndex === idx">
-                  <input v-model="b.hsn" class="inline-input" />
+                  <input v-model="addedBikes[idx].hsn" class="inline-input" />
                 </template>
                 <template v-else>
                   {{ b.hsn || '-' }}
@@ -356,7 +387,13 @@
 
               <td>
                 <template v-if="inlineEditIndex === idx">
-                  <input v-model="b.color" class="inline-input" />
+                  <v-autocomplete
+                    v-model="addedBikes[idx].color"
+                    :items="colorsForInlineEdit[idx] || []"
+                    placeholder="Select Color"
+                    dense
+                    hide-details
+                  />
                 </template>
                 <template v-else>
                   {{ b.color }}
@@ -365,7 +402,11 @@
 
               <td>
                 <template v-if="inlineEditIndex === idx">
-                  <input v-model="b.chassisNumber" class="inline-input" />
+                  <input 
+                    v-model="addedBikes[idx].chassisNumber" 
+                    class="inline-input" 
+                    @input="onInlineChassisInput($event, idx)"
+                  />
                 </template>
                 <template v-else>
                   {{ b.chassisNumber }}
@@ -374,7 +415,11 @@
 
               <td>
                 <template v-if="inlineEditIndex === idx">
-                  <input v-model="b.engineNumber" class="inline-input" />
+                  <input 
+                    v-model="addedBikes[idx].engineNumber" 
+                    class="inline-input" 
+                    @input="onInlineEngineInput($event, idx)"
+                  />
                 </template>
                 <template v-else>
                   {{ b.engineNumber }}
@@ -383,7 +428,15 @@
 
               <td>
                 <template v-if="inlineEditIndex === idx">
-                  <input v-model="b.warehouse" class="inline-input" />
+                  <v-autocomplete
+                    v-model="addedBikes[idx].warehouse"
+                    :items="warehouses"
+                    item-text="text"
+                    item-value="value"
+                    placeholder="Select Warehouse"
+                    dense
+                    hide-details
+                  />
                 </template>
                 <template v-else>
                   {{ b.warehouse }}
@@ -392,7 +445,7 @@
 
               <td>
                 <template v-if="inlineEditIndex === idx">
-                  <input v-model="b.source" class="inline-input" />
+                  <input v-model="addedBikes[idx].source" class="inline-input" />
                 </template>
                 <template v-else>
                   {{ b.source }}
@@ -401,7 +454,7 @@
 
               <td>
                 <template v-if="inlineEditIndex === idx">
-                  <input v-model="b.addedBy" class="inline-input" />
+                  <input v-model="addedBikes[idx].addedBy" class="inline-input" />
                 </template>
                 <template v-else>
                   {{ b.addedBy }}
@@ -432,7 +485,7 @@
       </div>
     </section>
 
-    <!-- CONFIRM / SNACKBAR -->
+    <!-- CONFIRM DIALOG -->
     <v-dialog persistent v-model="showConfirmation" max-width="520px">
       <v-card>
         <v-card-title>
@@ -451,6 +504,42 @@
       </v-card>
     </v-dialog>
 
+    <!-- SUBMISSION RESULT DIALOG -->
+    <v-dialog v-model="showSubmissionResult" max-width="500px" persistent>
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon 
+            :color="submissionResult.type === 'success' ? 'green' : 'red'" 
+            class="mr-2"
+          >
+            {{ submissionResult.type === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+          </v-icon>
+          {{ submissionResult.type === 'success' ? 'Success!' : 'Failed!' }}
+        </v-card-title>
+        <v-card-text class="pt-4">
+          <div class="submission-result-message">
+            {{ submissionResult.message }}
+          </div>
+          <div v-if="submissionResult.details" class="submission-result-details mt-3">
+            <strong>Details:</strong> {{ submissionResult.details }}
+          </div>
+          <div v-if="submissionResult.submittedCount !== undefined" class="submission-stats mt-3">
+            <strong>Submitted:</strong> {{ submissionResult.submittedCount }} bike(s)
+          </div>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn 
+            color="primary" 
+            @click="showSubmissionResult = false"
+          >
+            OK
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- SNACKBAR FOR OTHER NOTIFICATIONS -->
     <v-snackbar
       v-model="snackbar.show"
       :timeout="snackbar.timeout"
@@ -495,6 +584,13 @@ export default {
       isSavingBike: false,
       isSubmitting: false,
       showConfirmation: false,
+      showSubmissionResult: false,
+      submissionResult: {
+        type: 'success',
+        message: '',
+        details: '',
+        submittedCount: 0
+      },
       snackbar: {
         show: false,
         message: "",
@@ -512,14 +608,39 @@ export default {
         chassisNumber: "",
       },
       invoiceDateMenu: false,
-      // track which row is being edited by top form
       editingIndex: null,
-      // used to avoid resetting dropdowns when we change values programmatically
       suppressDependentResets: false,
-      // inline edit state for table rows
       inlineEditIndex: null,
       inlineEditBackup: null,
+      // For inline edit dropdowns
+      inlineEditModels: {},
+      inlineEditColors: {},
+      // Track submitted bikes to prevent duplicate submission
+      submittedBikeIds: new Set()
     };
+  },
+  computed: {
+    formattedInvoiceDate() {
+      return this.formatDate(this.commonInvoiceDate);
+    },
+    isTableFull() {
+      return this.addedBikes.length >= 23;
+    },
+    categoriesForInlineEdit() {
+      // Return categories for inline edit (allow custom entry)
+      return [
+        ...this.categories,
+        { category: this.addedBikes[this.inlineEditIndex]?.categoryName, category: this.addedBikes[this.inlineEditIndex]?.categoryName }
+      ].filter((v, i, a) => a.findIndex(t => t.category === v.category) === i);
+    },
+    modelsForInlineEdit() {
+      // Cache models for each row during inline edit
+      return this.inlineEditModels;
+    },
+    colorsForInlineEdit() {
+      // Cache colors for each row during inline edit
+      return this.inlineEditColors;
+    }
   },
   mounted() {
     const storedStr = localStorage.getItem("auth_user");
@@ -596,11 +717,23 @@ export default {
         this.scheduleChassisCheck(trimmed);
       }, this.debounceDelayMs);
     },
-  },
-  computed: {
-    formattedInvoiceDate() {
-      return this.formatDate(this.commonInvoiceDate);
-    },
+
+    // Watch inline edit index to load models/colors when editing starts
+    inlineEditIndex(newVal) {
+      if (newVal !== null) {
+        const row = this.addedBikes[newVal];
+        if (row) {
+          // Fetch models for this category
+          if (row.categoryName) {
+            this.fetchModelsForInlineEdit(row.categoryName, newVal);
+          }
+          // Set colors for this model
+          if (row.modelName) {
+            this.setColorsForInlineEdit(row.modelName, newVal);
+          }
+        }
+      }
+    }
   },
   methods: {
     getEmptyBikeForm() {
@@ -624,12 +757,10 @@ export default {
     formatDate(d) {
       if (!d) return "";
 
-      // already in dd/mm/yyyy
       if (/^\d{2}\/\d{2}\/\d{4}$/.test(d)) {
         return d;
       }
 
-      // handle yyyy-mm-dd or yyyy/mm/dd from v-date-picker
       const parts = String(d).split(/[-\/]/);
       if (parts.length === 3) {
         const [y, m, day] = parts;
@@ -683,6 +814,49 @@ export default {
         console.error("Failed to fetch getCategory:", err);
         this.categories = [];
       }
+    },
+    async fetchModelsForInlineEdit(categoryName, rowIndex) {
+      if (!categoryName) {
+        this.$set(this.inlineEditModels, rowIndex, []);
+        return;
+      }
+      try {
+        const res = await axios.get(
+          process.env.VUE_APP_AGENCY_BACKEND_URL +
+            "getCategoryModel/" +
+            categoryName
+        );
+        if (res.data && Array.isArray(res.data.models)) {
+          // Add current model if not in list (for custom entries)
+          const currentModel = this.addedBikes[rowIndex]?.modelName;
+          const models = [...res.data.models];
+          if (currentModel && !models.some(m => m.modelName === currentModel)) {
+            models.push({ modelName: currentModel, hsn: '' });
+          }
+          this.$set(this.inlineEditModels, rowIndex, models);
+        } else {
+          this.$set(this.inlineEditModels, rowIndex, []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch models for inline edit:", err);
+        this.$set(this.inlineEditModels, rowIndex, []);
+      }
+    },
+    setColorsForInlineEdit(modelName, rowIndex) {
+      const model = this.modelsForInlineEdit[rowIndex]?.find(m => m.modelName === modelName);
+      let colors = [];
+      
+      if (model && Array.isArray(model.colors)) {
+        colors = model.colors;
+      }
+      
+      // Add current color if not in list (for custom entries)
+      const currentColor = this.addedBikes[rowIndex]?.color;
+      if (currentColor && !colors.includes(currentColor)) {
+        colors.push(currentColor);
+      }
+      
+      this.$set(this.inlineEditColors, rowIndex, colors);
     },
     findModelByName(modelName) {
       if (!modelName) return null;
@@ -751,7 +925,6 @@ export default {
       else if (e && e.target && typeof e.target.value === "string") v = e.target.value;
       else v = this.bikeForm.chassisNumber || "";
 
-      // keep only letters + digits, then uppercase
       v = v.toUpperCase().replace(/[^A-Z0-9]/g, "");
       if (v.length > 17) v = v.slice(0, 17);
       this.bikeForm.chassisNumber = v;
@@ -769,7 +942,6 @@ export default {
       else if (e && e.target && typeof e.target.value === "string") v = e.target.value;
       else v = this.bikeForm.engineNumber || "";
 
-      // keep only letters + digits, then uppercase
       v = v.toUpperCase().replace(/[^A-Z0-9]/g, "");
       if (v.length > 12) v = v.slice(0, 12);
       this.bikeForm.engineNumber = v;
@@ -780,6 +952,39 @@ export default {
       } else {
         if (len === 12 || len === 0) delete this.singleBikeErrors.engineNumber;
       }
+    },
+    onInlineChassisInput(e, idx) {
+      let v = e.target.value || "";
+      v = v.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (v.length > 17) v = v.slice(0, 17);
+      this.addedBikes[idx].chassisNumber = v;
+    },
+    onInlineEngineInput(e, idx) {
+      let v = e.target.value || "";
+      v = v.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (v.length > 12) v = v.slice(0, 12);
+      this.addedBikes[idx].engineNumber = v;
+    },
+    onInlineCategoryChange(rowIndex) {
+      const category = this.addedBikes[rowIndex].categoryName;
+      if (category) {
+        this.fetchModelsForInlineEdit(category, rowIndex);
+      }
+      // Reset dependent fields
+      this.addedBikes[rowIndex].modelName = "";
+      this.addedBikes[rowIndex].color = "";
+      this.addedBikes[rowIndex].hsn = "";
+    },
+    onInlineModelChange(rowIndex) {
+      const modelName = this.addedBikes[rowIndex].modelName;
+      // Find HSN for selected model
+      const models = this.modelsForInlineEdit[rowIndex] || [];
+      const model = models.find(m => m.modelName === modelName);
+      if (model && model.hsn) {
+        this.addedBikes[rowIndex].hsn = String(model.hsn);
+      }
+      // Set colors for this model
+      this.setColorsForInlineEdit(modelName, rowIndex);
     },
     validateCommon() {
       this.commonErrors = {};
@@ -832,7 +1037,6 @@ export default {
       return errors;
     },
 
-    // NEW: utility to check duplicates in addedBikes
     isDuplicateInAddedBikes(bike, ignoreIndex = null) {
       const norm = (s) => (s || "").toString().trim().toUpperCase();
       const c = norm(bike.chassisNumber);
@@ -849,7 +1053,6 @@ export default {
         const re = norm(row.engineNumber);
         if (c && rc && c === rc) chassisDupIndex = i;
         if (e && re && e === re) engineDupIndex = i;
-        // early exit if both found
         if (chassisDupIndex !== -1 && engineDupIndex !== -1) break;
       }
 
@@ -857,6 +1060,11 @@ export default {
     },
 
     saveBikeToTable() {
+      if (this.isTableFull) {
+        this.showSnackbar("error", "Maximum limit reached (23 bikes). Cannot add more.");
+        return;
+      }
+
       this.ensureModelFieldsDefaults();
 
       const commonValid = this.validateCommon();
@@ -872,10 +1080,9 @@ export default {
         return;
       }
 
-      // check duplicates in addedBikes
+      // Check duplicates in addedBikes
       const dup = this.isDuplicateInAddedBikes(this.bikeForm, this.editingIndex);
       if (dup.chassisDupIndex !== -1 || dup.engineDupIndex !== -1) {
-        // prepare user friendly message and error fields
         if (dup.chassisDupIndex !== -1) {
           this.singleBikeErrors.chassisNumber = `Duplicate chassis found in row ${dup.chassisDupIndex + 1}`;
         }
@@ -890,7 +1097,7 @@ export default {
       this.isSavingBike = true;
       try {
         if (this.editingIndex !== null) {
-          // UPDATE existing row at same index (old behaviour preserved)
+          // UPDATE existing row
           const existing = this.addedBikes[this.editingIndex] || {};
           const updatedBike = {
             ...this.bikeForm,
@@ -900,7 +1107,7 @@ export default {
           this.editingIndex = null;
           this.showSnackbar("success", "Bike updated in list.");
 
-          // reset form for next new entry
+          // Reset form for next new entry
           this.suppressDependentResets = true;
           this.bikeForm = this.getEmptyBikeForm();
           this.bikeForm.addedBy = this.userName || "";
@@ -908,7 +1115,12 @@ export default {
           this.bikeForm.invoiceDate = this.commonInvoiceDate || "";
           this.suppressDependentResets = false;
         } else {
-          // ADD new row
+          // ADD new row (check if we've reached the limit)
+          if (this.addedBikes.length >= 23) {
+            this.showSnackbar("error", "Maximum limit reached (23 bikes). Cannot add more.");
+            return;
+          }
+          
           const payloadBike = {
             ...this.bikeForm,
             _localId: Date.now() + Math.floor(Math.random() * 1000),
@@ -916,7 +1128,7 @@ export default {
           this.addedBikes.push(payloadBike);
           this.showSnackbar("success", "Bike added to list.");
 
-          // after Add More: keep dropdowns, clear chassis/engine/warehouse
+          // After Add More: keep dropdowns, clear chassis/engine/warehouse
           const prevCategory = this.bikeForm.categoryName;
           const prevModel = this.bikeForm.modelName;
           const prevColor = this.bikeForm.color;
@@ -956,7 +1168,7 @@ export default {
 
     // INLINE EDIT HELPERS
     startInlineEdit(index) {
-      // if another row is already editing, restore it first
+      // If another row is already editing, restore it first
       if (this.inlineEditIndex !== null && this.inlineEditIndex !== index) {
         this.cancelInlineEdit();
       }
@@ -964,22 +1176,28 @@ export default {
       if (!row) return;
       this.inlineEditIndex = index;
       this.inlineEditBackup = { ...row }; // shallow backup
+      
+      // Initialize models and colors for this row
+      if (row.categoryName) {
+        this.fetchModelsForInlineEdit(row.categoryName, index);
+      }
+      if (row.modelName) {
+        this.setColorsForInlineEdit(row.modelName, index);
+      }
     },
     saveInlineEdit(index) {
       const row = this.addedBikes[index];
       if (!row) return;
 
-      // run validation for the inline row
+      // Run validation for the inline row
       const errors = this.validateSingleBike(row);
       if (Object.keys(errors).length) {
-        // show errors via snackbar (inline form area not same as top form)
         this.showSnackbar("error", "Validation failed for edited row. Fix required.");
-        // set top-level errors so user sees them (useful if editing then switching to top form)
         this.singleBikeErrors = errors;
         return;
       }
 
-      // check duplicates excluding current edited row
+      // Check duplicates excluding current edited row
       const dup = this.isDuplicateInAddedBikes(row, index);
       if (dup.chassisDupIndex !== -1 || dup.engineDupIndex !== -1) {
         let msg = "Duplicate found in table: ";
@@ -989,7 +1207,7 @@ export default {
         return;
       }
 
-      // all good: commit inline edit
+      // All good: commit inline edit
       this.inlineEditIndex = null;
       this.inlineEditBackup = null;
       this.showSnackbar("success", "Row updated successfully.");
@@ -1012,12 +1230,27 @@ export default {
     removeFromTable(index) {
       this.addedBikes.splice(index, 1);
 
-      // adjust inline edit index if needed
+      // Clean up inline edit data
       if (this.inlineEditIndex === index) {
         this.inlineEditIndex = null;
         this.inlineEditBackup = null;
+        this.$delete(this.inlineEditModels, index);
+        this.$delete(this.inlineEditColors, index);
       } else if (this.inlineEditIndex !== null && index < this.inlineEditIndex) {
         this.inlineEditIndex = this.inlineEditIndex - 1;
+        // Shift inline edit data
+        const newModels = {};
+        const newColors = {};
+        Object.keys(this.inlineEditModels).forEach(key => {
+          const newKey = key > index ? key - 1 : key;
+          newModels[newKey] = this.inlineEditModels[key];
+        });
+        Object.keys(this.inlineEditColors).forEach(key => {
+          const newKey = key > index ? key - 1 : key;
+          newColors[newKey] = this.inlineEditColors[key];
+        });
+        this.inlineEditModels = newModels;
+        this.inlineEditColors = newColors;
       }
 
       if (this.editingIndex === index) {
@@ -1044,6 +1277,9 @@ export default {
       this.editingIndex = null;
       this.inlineEditIndex = null;
       this.inlineEditBackup = null;
+      this.inlineEditModels = {};
+      this.inlineEditColors = {};
+      this.submittedBikeIds.clear();
     },
     onReset() {
       this.suppressDependentResets = true;
@@ -1066,6 +1302,33 @@ export default {
         this.showSnackbar("Alert", "No bikes to submit.");
         return;
       }
+      
+      // Check for duplicates in the table before submission
+      const duplicates = [];
+      const seenChassis = new Set();
+      const seenEngine = new Set();
+      
+      for (let i = 0; i < this.addedBikes.length; i++) {
+        const bike = this.addedBikes[i];
+        const chassis = bike.chassisNumber?.trim().toUpperCase();
+        const engine = bike.engineNumber?.trim().toUpperCase();
+        
+        if (chassis && seenChassis.has(chassis)) {
+          duplicates.push(`Row ${i + 1}: Duplicate chassis number`);
+        }
+        if (engine && seenEngine.has(engine)) {
+          duplicates.push(`Row ${i + 1}: Duplicate engine number`);
+        }
+        
+        if (chassis) seenChassis.add(chassis);
+        if (engine) seenEngine.add(engine);
+      }
+      
+      if (duplicates.length > 0) {
+        this.showSnackbar("error", "Duplicate chassis/engine numbers found. Please resolve before submission.");
+        return;
+      }
+      
       this.showConfirmation = true;
     },
     noConfirmation() {
@@ -1076,8 +1339,26 @@ export default {
       this.isSubmitting = true;
 
       try {
+        // Filter out bikes that have already been submitted
+        const bikesToSubmit = this.addedBikes.filter(bike => {
+          const bikeId = `${bike.chassisNumber}_${bike.engineNumber}`;
+          return !this.submittedBikeIds.has(bikeId);
+        });
+
+        if (bikesToSubmit.length === 0) {
+          this.showSubmissionResult = true;
+          this.submissionResult = {
+            type: 'error',
+            message: 'No new bikes to submit',
+            details: 'All bikes have already been submitted in previous requests.',
+            submittedCount: 0
+          };
+          this.isSubmitting = false;
+          return;
+        }
+
         const firstWarehouse =
-          (this.addedBikes[0] && this.addedBikes[0].warehouse) ||
+          (bikesToSubmit[0] && bikesToSubmit[0].warehouse) ||
           this.bikeForm.warehouse ||
           "";
 
@@ -1086,12 +1367,13 @@ export default {
           invoiceNumber:
             this.commonInvoiceNumber || this.bikeForm.invoiceNumber,
           warehouse: firstWarehouse,
-          bikes: this.addedBikes.map((b) => {
+          bikes: bikesToSubmit.map((b) => {
             const copy = { ...b };
             delete copy._localId;
             return copy;
           }),
         };
+        
         console.log("payload", JSON.stringify(payload, null, 2));
         const response = await axios.post(
           process.env.VUE_APP_AGENCY_BACKEND_URL + "addInventry",
@@ -1099,9 +1381,38 @@ export default {
         );
         console.log("✅ Bike details submitted:", response.data);
 
-        this.addedBikes = [];
-        this.onReset();
-        this.showSnackbar("success", "Bikes submitted successfully.");
+        // Mark these bikes as submitted
+        bikesToSubmit.forEach(bike => {
+          const bikeId = `${bike.chassisNumber}_${bike.engineNumber}`;
+          this.submittedBikeIds.add(bikeId);
+        });
+
+        // Remove submitted bikes from the table
+        this.addedBikes = this.addedBikes.filter(bike => {
+          const bikeId = `${bike.chassisNumber}_${bike.engineNumber}`;
+          return !this.submittedBikeIds.has(bikeId);
+        });
+
+        // Clear inline edit data for removed bikes
+        this.inlineEditModels = {};
+        this.inlineEditColors = {};
+        if (this.inlineEditIndex !== null) {
+          this.inlineEditIndex = null;
+          this.inlineEditBackup = null;
+        }
+
+        this.showSubmissionResult = true;
+        this.submissionResult = {
+          type: 'success',
+          message: `Successfully submitted ${bikesToSubmit.length} bike(s)`,
+          details: 'Bikes have been added to inventory successfully.',
+          submittedCount: bikesToSubmit.length
+        };
+
+        // Only reset the form if all bikes were submitted
+        if (this.addedBikes.length === 0) {
+          this.onReset();
+        }
       } catch (error) {
         console.error("❌ Error saving bikes:", error);
         const msg =
@@ -1110,7 +1421,14 @@ export default {
             error.response.data &&
             error.response.data.message) ||
           "Failed to save bikes. Check console.";
-        this.showSnackbar("error", msg);
+        
+        this.showSubmissionResult = true;
+        this.submissionResult = {
+          type: 'error',
+          message: 'Failed to submit bikes',
+          details: msg,
+          submittedCount: 0
+        };
       } finally {
         this.isSubmitting = false;
       }
@@ -1121,7 +1439,7 @@ export default {
       this.snackbar.show = true;
     },
     onEditRow(index) {
-      // old top-form edit still available (not used by table now)
+      // Old top-form edit still available
       const bike = this.addedBikes[index];
       if (!bike) return;
       this.editingIndex = index;
@@ -1158,16 +1476,29 @@ export default {
 .header-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
+  margin-bottom: 15px;
 }
 .title {
-  width: 50%;
+  width: 40%;
   margin: 0;
 }
 .header-status {
-  width: 50%;
-  text-align: right;
+  width: 40%;
+  text-align: center;
   font-size: 10px;
+}
+.table-limit-reached {
+  width: 20%;
+  text-align: right;
+  color: #ff5722;
+  font-weight: 600;
+  font-size: 14px;
+  background: #fff3e0;
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #ffcc80;
 }
 .status-strong {
   font-size: 1.2rem;
@@ -1223,6 +1554,14 @@ export default {
   border-color: #2563eb;
 }
 
+/* Disabled state */
+.field-block :deep(.v-input--is-disabled .v-input__slot),
+.field-detail :deep(.v-input--is-disabled .v-input__slot) {
+  background-color: #f5f5f5;
+  border-color: #e0e0e0;
+  color: #9e9e9e;
+}
+
 /* fallback for any plain input */
 .field-detail input,
 .field-block input {
@@ -1252,11 +1591,15 @@ export default {
   text-align: center;
   transition: background 0.3s ease, box-shadow 0.1s ease, transform 0.1s ease;
 }
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 .btn.primary {
   background: #283593;
   color: #fff;
 }
-.btn.primary:hover {
+.btn.primary:hover:not(:disabled) {
   background: #1f2a79;
   box-shadow: 0 4px 10px rgba(40, 53, 147, 0.45);
   transform: translateY(-1px);
@@ -1265,7 +1608,7 @@ export default {
   background: #d9534f;
   color: #fff;
 }
-.btn.remove:hover {
+.btn.remove:hover:not(:disabled) {
   background: #b52b27;
 }
 .btn.edit {
@@ -1273,7 +1616,7 @@ export default {
   color: #fff;
   margin-right: 4px;
 }
-.btn.edit:hover {
+.btn.edit:hover:not(:disabled) {
   background: #ec971f;
 }
 
@@ -1304,9 +1647,9 @@ export default {
 .bikes-table th,
 .bikes-table td {
   border: 1px solid #e6e6e6;
-  padding: 4px 6px; /* reduced padding for smaller row height */
+  padding: 4px 6px;
   text-align: left;
-  font-size: 12px; /* compact */
+  font-size: 12px;
   background: #fff;
 }
 .bikes-table thead {
@@ -1321,6 +1664,28 @@ export default {
   font-weight: bold;
 }
 
+/* Inline dropdowns in table */
+.bikes-table td :deep(.v-input) {
+  margin: 0;
+  padding: 0;
+}
+.bikes-table td :deep(.v-input__slot) {
+  min-height: 28px !important;
+  height: 28px !important;
+  margin: 0 !important;
+  padding: 0 4px !important;
+}
+.bikes-table td :deep(.v-input__control) {
+  min-height: 28px !important;
+}
+.bikes-table td :deep(.v-select__slot) {
+  margin: 0 !important;
+}
+.bikes-table td :deep(.v-select__selection) {
+  font-size: 12px !important;
+  line-height: 28px !important;
+}
+
 /* narrow action column */
 .bikes-table th:last-child,
 .bikes-table td:last-child {
@@ -1328,19 +1693,35 @@ export default {
   white-space: nowrap;
 }
 
-/* inline inputs in table: keep same height/width feel */
+/* inline inputs in table */
 .inline-input {
   width: 100%;
   box-sizing: border-box;
-  border: none;
-  padding: 2px 4px;
+  border: 1px solid #d1d5db;
+  padding: 4px 6px;
   font-size: 12px;
   background: #ffffff;
   outline: none;
+  border-radius: 3px;
+  height: 28px;
 }
 .bikes-table td .inline-input {
-  height: 20px;
-  line-height: 20px;
+  height: 28px;
+  line-height: 28px;
+}
+
+/* Submission result dialog */
+.submission-result-message {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+.submission-result-details {
+  font-size: 14px;
+  color: #666;
+}
+.submission-stats {
+  font-size: 14px;
+  color: #2196f3;
 }
 
 /* responsive */
@@ -1353,6 +1734,14 @@ export default {
   }
   .button-bar {
     flex-wrap: wrap;
+  }
+  .header-row {
+    flex-wrap: wrap;
+  }
+  .title, .header-status, .table-limit-reached {
+    width: 100%;
+    text-align: left;
+    margin-bottom: 10px;
   }
 }
 </style>

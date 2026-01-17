@@ -2,7 +2,7 @@
   <v-container fluid class="model-manager pa-4">
     <v-row dense>
       <!-- ========== LEFT: CATEGORIES PANEL ========== -->
-      <v-col cols="12" md="4">
+      <v-col cols="12" md="3">
         <v-card class="rounded elevation-3 category-card">
           <!-- Header -->
           <v-card-title class="py-3 px-4 d-flex align-center">
@@ -128,7 +128,7 @@
       </v-col>
 
       <!-- ========== RIGHT: MODELS TABLE ========== -->
-      <v-col cols="12" md="8">
+      <v-col cols="12" md="9">
         <v-card class="rounded elevation-3 models-card">
           <!-- Header -->
           <v-card-title class="py-3 px-4 d-flex align-center models-header">
@@ -186,6 +186,7 @@
               class="text-none rounded-lg"
               small
               @click="openModelDialog()"
+              style="height:40px;"
             >
               <v-icon left small>mdi-plus</v-icon>
               Add Model
@@ -211,7 +212,7 @@
             >
               <!-- MODEL NAME + CATEGORY + COLORS SUMMARY -->
               <template v-slot:item.modelName="{ item }">
-                <div class="d-flex align-center justify-space-between model-cell">
+                <div class="d-flex align-center justify-space-between model-cell" style="width:480px;">
                   <div class="model-main">
                     <!-- Model name with tooltip -->
                     <v-tooltip bottom>
@@ -225,8 +226,8 @@
                           }"
                         >
                           {{
-                            item.modelName && item.modelName.length > 30
-                              ? item.modelName.substring(0, 30) + '...'
+                            item.modelName && item.modelName.length > 50
+                              ? item.modelName.substring(0, 50) + '...'
                               : item.modelName
                           }}
                         </div>
@@ -748,6 +749,29 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    
+    <!-- ========== GLOBAL SNACKBAR ========== -->
+    <v-snackbar
+      v-model="snackbar.visible"
+      :timeout="3000"
+      :color="snackbar.color || 'success'"
+      top
+      right
+      elevation="6"
+    >
+      {{ snackbar.message }}
+
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          text
+          v-bind="attrs"
+          @click="snackbar.visible = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
+
   </v-container>
 </template>
 
@@ -787,7 +811,7 @@ export default {
       snackbar: { visible: false, message: "" },
 
       headers: [
-        { text: "Category", value: "category", sortable: true },
+        
         { text: "Model Name", value: "modelName", sortable: true },
         { text: "HSN", value: "hsn", sortable: true },
         { text: "Color", value: "color", sortable: false },
@@ -967,10 +991,16 @@ export default {
       return encodeURIComponent(name).replace(/%/g, "_");
     },
 
-    showSnackbar(msg) {
-      this.snackbar.message = msg;
-      this.snackbar.visible = true;
-    },
+    showSnackbar(message, color = "success") {
+  this.snackbar.visible = false;
+
+  this.$nextTick(() => {
+    this.snackbar.message = message;
+    this.snackbar.color = color;
+    this.snackbar.visible = true;
+  });
+},
+
 
     // ---- CATEGORIES ----
     async fetchCategories() {

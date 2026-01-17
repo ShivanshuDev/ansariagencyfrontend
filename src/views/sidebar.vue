@@ -22,8 +22,8 @@
     <!-- Navigation Sections -->
     <v-list dense class="drawer-list">
       <!-- Super Admin Section (permission based) -->
-        <!-- v-if="hasSuperAdmin" -->
       <v-list-group
+        v-if="hasSuperAdmin"
         v-model="superAdminOpen"
         prepend-icon="mdi-shield-account"
         color="white"
@@ -37,7 +37,7 @@
 
         <!-- Vendor Submenu -->
           <!-- v-if="canAddVendor || canViewVendorDetails" -->
-        <v-list-group
+        <!-- <v-list-group
           value="true"
           sub-group
           class="submenu"
@@ -49,7 +49,7 @@
           </template>
           
             <!-- v-if="canAddVendor" -->
-          <v-list-item 
+          <!-- <v-list-item 
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'Addclient')"
@@ -62,10 +62,9 @@
             <v-list-item-content>
               <v-list-item-title class="item-title">Add Vendor</v-list-item-title>
             </v-list-item-content>
-          </v-list-item>
-          
+          </v-list-item> -->
             <!-- v-if="canViewVendorDetails" -->
-          <v-list-item 
+          <!-- <v-list-item 
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'ClientTable')"
@@ -79,10 +78,10 @@
               <v-list-item-title class="item-title">Vendor Details</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
-        </v-list-group>
-
+        </v-list-group> --> 
           <!-- v-if="canAddEmployee || canViewEmployeeTable" -->
         <!-- Employee Submenu -->
+
         <v-list-group
           value="true"
           sub-group
@@ -95,7 +94,7 @@
           </template>
           
             <!-- v-if="canAddEmployee" -->
-          <v-list-item 
+          <!-- <v-list-item 
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'Addemployee')"
@@ -108,7 +107,7 @@
             <v-list-item-content>
               <v-list-item-title class="item-title">Add Employee</v-list-item-title>
             </v-list-item-content>
-          </v-list-item>
+          </v-list-item> -->
           
             <!-- v-if="canViewEmployeeTable" -->
           <v-list-item 
@@ -129,8 +128,8 @@
       </v-list-group>
 
       <!-- Admin Section (permission based) -->
-        <!-- v-if="hasAdmin" -->
       <v-list-group
+        v-if="hasAdmin"
         v-model="adminOpen"
         prepend-icon="mdi-cog"
         color="white"
@@ -143,8 +142,8 @@
         </template>
 
         <!-- SEARCHBYCHASSIS Process -->
-          <!-- v-if="canSearchByChassis" -->
         <v-list-group
+          v-if="canSearchByChassis"
           value="true"
           sub-group
           class="submenu"
@@ -155,8 +154,8 @@
             </v-list-item-content>
           </template>
           
-            <!-- v-if="canSearchByChassis" -->
           <v-list-item 
+            v-if="canSearchByChassis"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'SEARCHBYCHASSIS')"
@@ -173,8 +172,8 @@
         </v-list-group>
 
         <!-- Invoice Process -->
-          <!-- v-if="canViewVendorBillDetail || canVendorBilling" -->
         <v-list-group
+          v-if="canViewVendorBillDetail || canVendorBilling"
           value="true"
           sub-group
           class="submenu"
@@ -185,8 +184,8 @@
             </v-list-item-content>
           </template>
           
-            <!-- v-if="canViewVendorBillDetail" -->
           <v-list-item 
+            v-if="canViewVendorBillDetail"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'SellToVendorDetails')"
@@ -202,7 +201,7 @@
           </v-list-item>
 
             <!-- v-if="canVendorBilling" -->
-          <v-list-item 
+          <!-- <v-list-item 
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'SellToVendor')"
@@ -215,12 +214,12 @@
             <v-list-item-content>
               <v-list-item-title class="item-title">Vendor Billing</v-list-item-title>
             </v-list-item-content>
-          </v-list-item>
+          </v-list-item> -->
         </v-list-group>
 
         <!-- Stock Process -->
-          <!-- v-if="canViewStock" -->
         <v-list-group
+          v-if="canViewStock"
           value="true"
           sub-group
           class="submenu"
@@ -231,8 +230,8 @@
             </v-list-item-content>
           </template>
           
-            <!-- v-if="canViewStock" -->
           <v-list-item 
+            v-if="canViewStock"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'STOCK')"
@@ -249,8 +248,8 @@
         </v-list-group>
 
         <!-- Inventory -->
-          <!-- v-if="canViewInventoryDetails || canAddInventory || canBikeModel" -->
         <v-list-group
+          v-if="canViewInventoryDetails || canAddInventory || canBikeModel"
           value="true"
           sub-group
           class="submenu"
@@ -261,8 +260,8 @@
             </v-list-item-content>
           </template>
           
-            <!-- v-if="canViewInventoryDetails" -->
           <v-list-item 
+            v-if="canViewInventoryDetails"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'InventryTable')"
@@ -277,8 +276,8 @@
             </v-list-item-content>
           </v-list-item>
           
-            <!-- v-if="canAddInventory" -->
           <v-list-item 
+            v-if="canAddInventory"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'AddInventryVue')"
@@ -293,8 +292,8 @@
             </v-list-item-content>
           </v-list-item>
           
-            <!-- v-if="canBikeModel" -->
           <v-list-item 
+            v-if="canBikeModel"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'MODELNAME')"
@@ -312,8 +311,8 @@
       </v-list-group>
 
       <!-- Workshop Section (permission based) -->
-        <!-- v-if="hasWorkshop" -->
       <v-list-group
+        v-if="hasWorkshop"
         v-model="workshopOpen"
         prepend-icon="mdi-wrench"
         color="white"
@@ -326,8 +325,8 @@
         </template>
 
         <!-- Spares -->
-          <!-- v-if="canAddSpares || canViewSparesTable" -->
         <v-list-group
+          v-if="canAddSpares || canViewSparesTable"
           value="true"
           sub-group
           class="submenu"
@@ -338,8 +337,8 @@
             </v-list-item-content>
           </template>
           
-            <!-- v-if="canAddSpares" -->
           <v-list-item 
+            v-if="canAddSpares"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'ADDSPARES')"
@@ -354,8 +353,8 @@
             </v-list-item-content>
           </v-list-item>
           
-            <!-- v-if="canViewSparesTable" -->
           <v-list-item 
+            v-if="canViewSparesTable"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'sparesTable')"
@@ -372,8 +371,8 @@
         </v-list-group>
 
         <!-- Services -->
-          <!-- v-if="canServiceRequests || canServiceHistory" -->
         <v-list-group
+          v-if="canServiceRequests || canServiceHistory"
           value="true"
           sub-group
           class="submenu"
@@ -384,8 +383,8 @@
             </v-list-item-content>
           </template>
           
-            <!-- v-if="canServiceRequests" -->
           <v-list-item 
+            v-if="canServiceRequests"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'ServiceRequests')"
@@ -400,8 +399,8 @@
             </v-list-item-content>
           </v-list-item>
           
-            <!-- v-if="canServiceHistory" -->
           <v-list-item 
+            v-if="canServiceHistory"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'ServiceHistory')"
@@ -419,8 +418,8 @@
       </v-list-group>
 
       <!-- Accounts Section (permission based) -->
-        <!-- v-if="hasAccounts" -->
       <v-list-group
+        v-if="hasAccounts"
         v-model="accountsOpen"
         prepend-icon="mdi-calculator"
         color="white"
@@ -433,8 +432,8 @@
         </template>
 
         <!-- LEDGER -->
-          <!-- v-if="canVendorAccounts || canDayBook || accounts_vendorLedger" -->
         <v-list-group
+          v-if="canVendorAccounts || canDayBook || accounts_vendorLedger"
           value="true"
           sub-group
           class="submenu"
@@ -445,8 +444,8 @@
             </v-list-item-content>
           </template>
 
-            <!-- v-if="canVendorAccounts" -->
           <v-list-item 
+            v-if="canVendorAccounts"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'VENDORACCOUNTDetail')"
@@ -461,8 +460,8 @@
             </v-list-item-content>
           </v-list-item>
           
-            <!-- v-if="canDayBook" -->
           <v-list-item 
+            v-if="canDayBook"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'DAYBOOK')"
@@ -479,8 +478,8 @@
         </v-list-group>
 
         <!-- Customer Ledger -->
-          <!-- v-if="canCustomerAccounts || accounts_customerLedger" -->
         <v-list-group
+          v-if="canCustomerAccounts || accounts_customerLedger"
           value="true"
           sub-group
           class="submenu"
@@ -491,8 +490,8 @@
             </v-list-item-content>
           </template>
 
-            <!-- v-if="canCustomerAccounts" -->
           <v-list-item 
+            v-if="canCustomerAccounts"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'CUSTOMERACCOUNTDetail')"
@@ -511,8 +510,8 @@
       </v-list-group>
 
       <!-- SALES (RTO etc.) Section (permission based) -->
-        <!-- v-if="hasSales" -->
       <v-list-group
+        v-if="hasSales"
         v-model="rtoOpen"
         prepend-icon="mdi-file-document-multiple"
         color="white"
@@ -525,8 +524,8 @@
         </template>
 
         <!-- RTO & INS Details -->
-          <!-- v-if="canRtoInsDetails" -->
         <v-list-group
+          v-if="canRtoInsDetails"
           value="true"
           sub-group
           class="submenu"
@@ -537,8 +536,8 @@
             </v-list-item-content>
           </template>
           
-            <!-- v-if="canRtoInsDetails" -->
           <v-list-item 
+            v-if="canRtoInsDetails"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'RTODetails')"
@@ -555,8 +554,8 @@
         </v-list-group>
 
         <!-- Invoices -->
-          <!-- v-if="canAllCustomerInvoices || canQuickInvoice || canBikeBooking" -->
         <v-list-group
+          v-if="canAllCustomerInvoices || canQuickInvoice || canBikeBooking"
           value="true"
           sub-group
           class="submenu"
@@ -567,8 +566,8 @@
             </v-list-item-content>
           </template>
           
-            <!-- v-if="canAllCustomerInvoices" -->
           <v-list-item 
+            v-if="canAllCustomerInvoices"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'AllCustomerInvoices')"
@@ -584,7 +583,7 @@
           </v-list-item>
           
             <!-- v-if="canQuickInvoice" -->
-          <v-list-item 
+          <!-- <v-list-item 
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'QUICKINVOICE')"
@@ -597,10 +596,10 @@
             <v-list-item-content>
               <v-list-item-title class="item-title">Quick Invoice</v-list-item-title>
             </v-list-item-content>
-          </v-list-item>
+          </v-list-item> -->
 
-            <!-- v-if="canBikeBooking" -->
           <v-list-item 
+            v-if="canBikeBooking"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'BIKEBOOKING')"
@@ -617,8 +616,8 @@
         </v-list-group>
 
         <!-- Payments -->
-          <!-- v-if="canPaymentReceipt" -->
         <v-list-group
+          v-if="canPaymentReceipt"
           value="true"
           sub-group
         >
@@ -628,8 +627,8 @@
             </v-list-item-content>
           </template>
           
-            <!-- v-if="canPaymentReceipt" -->
           <v-list-item 
+            v-if="canPaymentReceipt"
             link 
             :href="currentUrl"
             @click.prevent="$emit('tab-selected', 'PaymentReceipt')"

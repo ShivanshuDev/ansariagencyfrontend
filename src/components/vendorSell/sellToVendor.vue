@@ -1,5 +1,5 @@
 <template>
-  <v-card class="pa-6" style="margin:12px;" elevation="6">
+  <v-card class="pa-6" elevation="6">
     <!-- Action Bar -->
     <v-col cols="12">
       <span style="font-size:20px;">Sell to vendor & invoice process</span> &nbsp; &nbsp;

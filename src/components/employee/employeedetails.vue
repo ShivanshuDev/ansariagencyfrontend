@@ -1,8 +1,8 @@
 <template>
   <v-card
     outlined
-    max-width="1200"
-    class="mx-auto my-0 pa-0 employee-detail-card"
+    max-width="1860px"
+    class="mx-auto my-0 mt-0 pa-4 employee-detail-card"
     elevation="10"
   >
     <!-- Header / Identity -->
@@ -10,9 +10,13 @@
       <div class="hero-overlay"></div>
       <div class="hero-content">
         <div class="hero-left">
-          <v-avatar size="72" class="mr-4 hero-avatar" :class="!employee.avatarUrl && 'avatar-fallback'">
+          <v-avatar
+            size="72"
+            class="mr-4 hero-avatar"
+            :class="!employee.avatarUrl && 'avatar-fallback'"
+          >
             <template v-if="employee.avatarUrl">
-              <v-img :src="employee.avatarUrl" :alt="employee.employeeName || 'Employee'"></v-img>
+              <v-img :src="employee.avatarUrl" />
             </template>
             <template v-else>
               <span class="initials">{{ initials }}</span>
@@ -25,11 +29,7 @@
               <v-chip v-if="employee?.userId" small class="ml-2 chip-id" label>
                 {{ employee.userId }}
               </v-chip>
-              <v-chip v-else-if="employee?.venderId" small class="ml-2 chip-id" label>
-                {{ employee.venderId }}
-              </v-chip>
             </div>
-
             <div class="hero-sub grey--text text--lighten-3">
               {{ subtitle }}
             </div>
@@ -37,11 +37,11 @@
         </div>
 
         <div class="hero-right">
-          <v-chip class="ma-1" small label color="#ffffff10" text-color="white">
+          <v-chip small label color="#ffffff10" text-color="white">
             <v-icon left small>mdi-shield-account</v-icon>
             {{ employee.employeeRole || 'Role —' }}
           </v-chip>
-          <v-chip class="ma-1" small label color="#ffffff10" text-color="white">
+          <v-chip small label color="#ffffff10" text-color="white">
             <v-icon left small>mdi-domain</v-icon>
             {{ employee.department || 'Department —' }}
           </v-chip>
@@ -52,279 +52,207 @@
     <!-- Body -->
     <v-card-text class="pa-6">
       <v-row>
-        <!-- Contact -->
-        <v-col cols="12" md="6">
+        <!-- ================= CONTACT (ROW) ================= -->
+        <v-col cols="12" md="12">
           <div class="section-card">
             <div class="section-title">
-              <v-icon class="mr-2" small>mdi-card-account-phone</v-icon>
+              <v-icon small class="mr-2">mdi-card-account-phone</v-icon>
               Contact
             </div>
 
-            <v-list dense two-line class="transparent-list">
-              <v-list-item>
-                <v-list-item-avatar tile class="li-icon">
-                  <v-icon color="primary">mdi-email</v-icon>
-                </v-list-item-avatar>
-                <v-list-item-content>
-                  <v-list-item-title>Email</v-list-item-title>
-                  <v-list-item-subtitle>
-                    <a
-                      v-if="employee.email"
-                      class="link"
-                      :href="`mailto:${employee.email}`"
-                    >{{ employee.email }}</a>
-                    <span v-else>—</span>
-                  </v-list-item-subtitle>
-                </v-list-item-content>
-                <v-list-item-action v-if="employee.email">
-                  <v-tooltip bottom>
-                    <template v-slot:activator="{ on }">
-                      <v-btn icon v-on="on" @click="copy(employee.email)">
-                        <v-icon small>mdi-content-copy</v-icon>
-                      </v-btn>
-                    </template>
-                    <span>Copy email</span>
-                  </v-tooltip>
-                </v-list-item-action>
-              </v-list-item>
+            <v-row dense>
+              <v-col cols="12" md="4">
+                <div class="contact-box">
+                  <v-icon small color="primary">mdi-email</v-icon>
+                  <div>
+                    <div class="label">Email</div>
+                    <div class="value">
+                      <a v-if="employee.email" class="link" :href="`mailto:${employee.email}`">
+                        {{ employee.email }}
+                      </a>
+                      <span v-else>—</span>
+                    </div>
+                  </div>
+                  <v-spacer />
+                  <v-btn icon small v-if="employee.email" @click="copy(employee.email)">
+                    <v-icon small>mdi-content-copy</v-icon>
+                  </v-btn>
+                </div>
+              </v-col>
 
-              <v-list-item>
-                <v-list-item-avatar tile class="li-icon">
-                  <v-icon color="primary">mdi-phone</v-icon>
-                </v-list-item-avatar>
-                <v-list-item-content>
-                  <v-list-item-title>Phone</v-list-item-title>
-                  <v-list-item-subtitle>
-                    <a
-                      v-if="employee.phone"
-                      class="link"
-                      :href="`tel:${employee.phone}`"
-                    >{{ employee.phone }}</a>
-                    <span v-else>—</span>
-                  </v-list-item-subtitle>
-                </v-list-item-content>
-                <v-list-item-action v-if="employee.phone">
-                  <v-tooltip bottom>
-                    <template v-slot:activator="{ on }">
-                      <v-btn icon v-on="on" @click="copy(employee.phone)">
-                        <v-icon small>mdi-content-copy</v-icon>
-                      </v-btn>
-                    </template>
-                    <span>Copy phone</span>
-                  </v-tooltip>
-                </v-list-item-action>
-              </v-list-item>
+              <v-col cols="12" md="4">
+                <div class="contact-box">
+                  <v-icon small color="primary">mdi-phone</v-icon>
+                  <div>
+                    <div class="label">Phone</div>
+                    <div class="value">
+                      <a v-if="employee.phone" class="link" :href="`tel:${employee.phone}`">
+                        {{ employee.phone }}
+                      </a>
+                      <span v-else>—</span>
+                    </div>
+                  </div>
+                  <v-spacer />
+                  <v-btn icon small v-if="employee.phone" @click="copy(employee.phone)">
+                    <v-icon small>mdi-content-copy</v-icon>
+                  </v-btn>
+                </div>
+              </v-col>
 
-              <v-list-item>
-                <v-list-item-avatar tile class="li-icon">
-                  <v-icon color="primary">mdi-identifier</v-icon>
-                </v-list-item-avatar>
-                <v-list-item-content>
-                  <v-list-item-title>Password</v-list-item-title>
-                  <v-list-item-subtitle>{{ employee.password || '—' }}</v-list-item-subtitle>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list>
+              <v-col cols="12" md="4">
+                <div class="contact-box">
+                  <v-icon small color="primary">mdi-lock</v-icon>
+                  <div>
+                    <div class="label">Password</div>
+                    <div class="value mono">{{ employee.password || '—' }}</div>
+                  </div>
+                </div>
+              </v-col>
+            </v-row>
           </div>
         </v-col>
 
-        <!-- Permissions -->
-        <v-col cols="12" md="6">
+        <!-- ================= PERMISSIONS (IMAGE STYLE) ================= -->
+        <v-col cols="12" md="12">
           <div class="section-card">
             <div class="section-title">
-              <v-icon class="mr-2" small>mdi-lock-check</v-icon>
+              <v-icon small class="mr-2">mdi-lock-check</v-icon>
               Permissions
             </div>
 
-            <div class="chip-wrap">
-              <template v-if="Object.keys(permissionEntries).length">
-                <v-chip
-                  v-for="(val, key) in permissionEntries"
-                  :key="key"
-                  class="ma-1 perm-chip"
-                  small
-                  :color="chipColor(val)"
-                  :text-color="chipText(val)"
-                  label
-                >
-                  <v-icon left small>{{ chipIcon(val) }}</v-icon>
-                  {{ prettifyKey(key) }}: {{ labelFor(val) }}
-                </v-chip>
-              </template>
-              <div v-else class="empty-hint grey--text text--darken-1">
-                No permissions configured.
-              </div>
-            </div>
+            <v-row dense>
+              <v-col
+                v-for="(permissions, module) in permissionEntries"
+                :key="module"
+                cols="12"
+                md="3"
+              >
+                <div class="permission-box">
+                  <div class="permission-header">
+                    <v-icon left small>mdi-shield</v-icon>
+                    {{ prettifyKey(module) }}
+                  </div>
+
+                  <div class="permission-body">
+                    <v-checkbox
+                      v-for="(value, key) in permissions"
+                      :key="key"
+                      dense
+                      hide-details
+                      disabled
+                      :input-value="value"
+                      :label="prettifyKey(key)"
+                    />
+                  </div>
+                </div>
+              </v-col>
+            </v-row>
           </div>
         </v-col>
       </v-row>
 
-      <!-- Addresses -->
+      <!-- Address -->
       <div class="section-split-title">
         <span>Addresses</span>
       </div>
-      <v-row>
-        <v-col cols="12" md="12">
-          <div class="section-card subtle">
-            <div class="section-title">
-              <v-icon class="mr-2" small>mdi-home-map-marker</v-icon>
-              Current Address
-            </div>
-            <div v-if="employee.currentAddress" class="kv-grid">
-              <div class="kv"><b>{{ employee.currentAddress.name || employee.currentAddress.employeeName || '—' }}, {{ employee.currentAddress.line1 || '—' }}, {{ employee.currentAddress.line2 || '—' }}, {{ employee.currentAddress.city || '—' }}, {{ employee.currentAddress.tahsil || '—' }}, {{ employee.currentAddress.state || '—' }}, {{ employee.currentAddress.pincode || '—' }}, {{ employee.currentAddress.country || '—' }}</b></div>
-             
-            </div>
-            <div v-else class="empty-hint">No current address available.</div>
-          </div>
-        </v-col>
-      </v-row>
+
+      <div class="section-card subtle">
+        <div class="section-title">
+          <v-icon small class="mr-2">mdi-home-map-marker</v-icon>
+          Current Address
+        </div>
+        <div v-if="employee.currentAddress" class="kv">
+          <b>
+            {{ employee.currentAddress.houseStreet }},
+            {{ employee.currentAddress.villageTownCity }},
+            {{ employee.currentAddress.district }},
+            {{ employee.currentAddress.state }} -
+            {{ employee.currentAddress.pincode }}
+          </b>
+        </div>
+      </div>
 
       <!-- Bank -->
       <div class="section-split-title">
         <span>Bank Details</span>
       </div>
+
       <div class="section-card glass">
         <v-row v-if="employee.bank">
           <v-col cols="12" sm="4" class="kv-line">
-            <v-icon small class="mr-2">mdi-bank</v-icon>
-            <span class="kv-label">Bank Name</span>
-            <span class="kv-value">{{ employee.bank.bankName || '—' }}</span>
+            <span class="kv-label">Bank</span>
+            <span class="kv-value">{{ employee.bank.bankName }}</span>
           </v-col>
           <v-col cols="12" sm="4" class="kv-line">
-            <v-icon small class="mr-2">mdi-source-branch</v-icon>
             <span class="kv-label">Branch</span>
-            <span class="kv-value">{{ employee.bank.branch || '—' }}</span>
+            <span class="kv-value">{{ employee.bank.branch }}</span>
           </v-col>
           <v-col cols="12" sm="4" class="kv-line">
-            <v-icon small class="mr-2">mdi-form-textbox-password</v-icon>
             <span class="kv-label">IFSC</span>
-            <span class="kv-value mono">{{ employee.bank.ifsc || '—' }}</span>
-            <v-spacer></v-spacer>
-            <v-btn v-if="employee.bank.ifsc" small text @click="copy(employee.bank.ifsc)">Copy</v-btn>
-          </v-col>
-
-          <v-col cols="12" sm="6" class="kv-line">
-            <v-icon small class="mr-2">mdi-account</v-icon>
-            <span class="kv-label">Account Holder</span>
-            <span class="kv-value">{{ employee.bank.accountHolder || '—' }}</span>
-          </v-col>
-          <v-col cols="12" sm="6" class="kv-line">
-            <v-icon small class="mr-2">mdi-credit-card-chip</v-icon>
-            <span class="kv-label">Account Number</span>
-            <span class="kv-value mono">{{ maskedAccount }}</span>
-            <v-spacer></v-spacer>
-            <v-btn
-              v-if="employee.bank.accountNumber"
-              small
-              text
-              @click="copy(employee.bank.accountNumber)"
-            >
-              Copy
-            </v-btn>
+            <span class="kv-value mono">{{ employee.bank.ifsc }}</span>
           </v-col>
         </v-row>
-        <div v-else class="empty-hint">No bank details available.</div>
       </div>
     </v-card-text>
   </v-card>
 </template>
 
 <script>
-  export default {
-    name: 'EmployeeDetailPro',
-    props: {
-      employee: {
-        type: Object,
-        required: true
-      }
+export default {
+  name: 'EmployeeDetailPro',
+  props: { employee: { type: Object, required: true } },
+  computed: {
+    permissionEntries() {
+      return this.employee?.userPermissions || {}
     },
-    computed: {
-      permissionEntries() {
-        const up = this.employee?.userPermissions || {};
-        // keep original key order if possible
-        return Object.keys(up).reduce((acc, k) => {
-          acc[k] = up[k];
-          return acc;
-        }, {});
-      },
-      initials() {
-        const name = (this.employee?.employeeName || '').trim();
-        if (!name) return '—';
-        const parts = name.split(/\s+/).slice(0, 2);
-        return parts.map(p => p[0]?.toUpperCase()).join('');
-      },
-      subtitle() {
-        const email = this.employee?.email;
-        const phone = this.employee?.phone;
-        if (email && phone) return `${email} • ${phone}`;
-        return email || phone || '—';
-      },
-      maskedAccount() {
-        const acct = this.employee?.bank?.accountNumber;
-        if (!acct) return '—';
-        const s = String(acct);
-        if (s.length <= 4) return s;
-        return '•••• ' + s.slice(-4);
-      },
-      lastUpdated() {
-        // if your object contains updatedAt, prefer that
-        const updated = this.employee?.updatedAt || this.employee?.lastModified;
-        if (!updated) return '—';
-        try {
-          const d = new Date(updated);
-          return isNaN(d.getTime()) ? String(updated) : d.toLocaleString();
-        } catch {
-          return String(updated);
-        }
-      }
+    initials() {
+      return (this.employee?.employeeName || '—')
+        .split(' ')
+        .map(w => w[0])
+        .join('')
+        .toUpperCase()
     },
-    methods: {
-      prettifyKey(k) {
-        return k
-          .replace(/[_-]/g, ' ')
-          .replace(/\b\w/g, m => m.toUpperCase());
-      },
-      labelFor(v) {
-        if (v === true) return 'Yes';
-        if (v === false) return 'No';
-        return String(v);
-      },
-      chipIcon(v) {
-        if (v === true) return 'mdi-check-circle';
-        if (v === false) return 'mdi-cancel';
-        return 'mdi-help-circle';
-        // could add mdi-timer-sand for pending states if needed
-      },
-      chipColor(v) {
-        if (v === true) return 'green lighten-4';
-        if (v === false) return 'red lighten-4';
-        return 'grey lighten-3';
-      },
-      chipText(v) {
-        if (v === true) return 'green darken-2';
-        if (v === false) return 'red darken-2';
-        return 'grey darken-2';
-      },
-      async copy(text) {
-        try {
-          await navigator.clipboard.writeText(text);
-          this.$emit('copied', text);
-        } catch (e) {
-          // Fallback for older browsers
-          const ta = document.createElement('textarea');
-          ta.value = text;
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          document.body.removeChild(ta);
-          this.$emit('copied', text);
-        }
-      }
+    subtitle() {
+      return [this.employee?.email, this.employee?.phone].filter(Boolean).join(' • ') || '—'
     }
-  };
+  },
+  methods: {
+    prettifyKey(k) {
+      return k.replace(/[_-]/g, ' ').replace(/\b\w/g, m => m.toUpperCase())
+    },
+    async copy(text) {
+      await navigator.clipboard.writeText(text)
+    }
+  }
+}
 </script>
 
 <style scoped>
+.contact-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: 12px;
+  padding: 10px;
+}
+.label { font-size: 12px; color: #6b6f93 }
+.value { font-weight: 600 }
+.mono { font-family: monospace }
+
+.permission-box {
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.permission-header {
+  background: linear-gradient(135deg,#3a3ee0,#24264f);
+  color: white;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+.permission-body { padding: 10px }
+
 /* ===== Card Shell ===== */
 .employee-detail-card {
   font-family: 'Inter', 'Roboto', system-ui, -apple-system, Segoe UI, Arial, sans-serif;

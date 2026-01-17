@@ -544,6 +544,8 @@
 import axios from "axios";
 
 export default {
+  name: 'CreateNewVendor',
+  emits: ['vendor-created'],
   data() {
     return {
       employee: this.emptyEmployee(),
@@ -768,6 +770,7 @@ export default {
         this.employee = this.emptyEmployee();
         this.bank = this.emptyBank();
         this.isPermanentSameAsCurrent = false;
+        this.$emit('vendor-created', true);
       } catch (error) {
         const msg =
           error?.response?.data?.message ||
@@ -874,7 +877,7 @@ export default {
   font-family: "Inter", Arial, sans-serif;
   background: #ffffff;
   border-radius: 10px;
-  padding: 20px;
+  padding: 2px;
   box-shadow: 0 6px 24px rgba(18, 18, 18, 0.06);
 }
 

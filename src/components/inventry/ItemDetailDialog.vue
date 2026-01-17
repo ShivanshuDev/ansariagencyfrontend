@@ -1,7 +1,8 @@
 <template>
   <v-dialog persistent v-model="open" max-width="920px" transition="dialog-bottom-transition">
     <v-card class="fancy-card">
-      <!-- Header -->
+
+      <!-- ================= HEADER ================= -->
       <div class="header-wrap">
         <div class="header-left">
           <v-avatar size="64" class="avatar" tile>
@@ -22,12 +23,20 @@
 
             <div class="header-stats">
               <v-chip class="status-chip" :color="statusColor" text-color="white" small>
-                <v-icon left small>mdi-information-outline</v-icon>{{ item?.status || 'UNKNOWN' }}
+                <v-icon left small>mdi-information-outline</v-icon>
+                {{ item?.status || 'UNKNOWN' }}
               </v-chip>
 
               <v-tooltip top>
                 <template #activator="{ on, attrs }">
-                  <v-btn v-bind="attrs" v-on="on" icon small @click="copyInvoice" class="copy-btn" :title="'Copy invoice'">
+                  <v-btn
+                    v-bind="attrs"
+                    v-on="on"
+                    icon
+                    small
+                    @click="copyInvoice"
+                    class="copy-btn"
+                  >
                     <v-icon small>mdi-content-copy</v-icon>
                   </v-btn>
                 </template>
@@ -43,6 +52,7 @@
             :chassisNumber="item?.chassisNumber"
             :baseUrl="base"
           />
+
           <div class="kpi-row">
             <div class="kpi">
               <div class="kpi-label">Invoice Date</div>
@@ -61,60 +71,60 @@
           </div>
 
           <div class="header-actions">
-            <v-btn icon small @click="$emit('close')"><v-icon>mdi-close</v-icon></v-btn>
+            <v-btn icon small @click="$emit('close')">
+              <v-icon>mdi-close</v-icon>
+            </v-btn>
           </div>
         </div>
       </div>
 
-      <v-divider></v-divider>
+      <v-divider />
 
-      <!-- Content -->
+      <!-- ================= CONTENT ================= -->
       <v-card-text class="content-area">
         <v-row>
-          <!-- Left: Details (now two-per-row) -->
+          <!-- LEFT -->
           <v-col cols="12" md="7">
             <v-card flat class="detail-panel pa-4">
               <div class="panel-title mb-2">Details</div>
 
               <v-row dense class="detail-grid">
-                <v-col cols="12" sm="6" class="mb-2">
+                <v-col cols="12" sm="6">
                   <div class="field-label">Chassis Number</div>
                   <div class="field-value">{{ item?.chassisNumber || '-' }}</div>
                 </v-col>
 
-                <v-col cols="12" sm="6" class="mb-2">
+                <v-col cols="12" sm="6">
                   <div class="field-label">Engine Number</div>
                   <div class="field-value">{{ item?.engineNumber || '-' }}</div>
                 </v-col>
 
-                <v-col cols="12" sm="6" class="mb-2">
+                <v-col cols="12" sm="6">
                   <div class="field-label">Model</div>
                   <div class="field-value">{{ item?.modelName || '-' }}</div>
                 </v-col>
 
-                <v-col cols="12" sm="6" class="mb-2">
+                <v-col cols="12" sm="6">
                   <div class="field-label">Color</div>
-                  <div class="field-value">
-                    <v-chip small outlined>{{ item?.color || '-' }}</v-chip>
-                  </div>
+                  <v-chip small outlined>{{ item?.color || '-' }}</v-chip>
                 </v-col>
 
-                <v-col cols="12" sm="6" class="mb-2">
+                <v-col cols="12" sm="6">
                   <div class="field-label">Status</div>
                   <div class="field-value">{{ item?.status || '-' }}</div>
                 </v-col>
 
-                <v-col cols="12" sm="6" class="mb-2">
+                <v-col cols="12" sm="6">
                   <div class="field-label">Hold Days</div>
                   <div class="field-value">{{ item?.inventoryHoldDays ?? '-' }}</div>
                 </v-col>
 
-                <v-col cols="12" sm="6" class="mb-2">
+                <v-col cols="12" sm="6">
                   <div class="field-label">Added</div>
                   <div class="field-value">{{ formatDate(item?.createdAt) }}</div>
                 </v-col>
 
-                <v-col cols="12" sm="6" class="mb-2">
+                <v-col cols="12" sm="6">
                   <div class="field-label">Last Modified</div>
                   <div class="field-value">{{ formatDate(item?.lastModified || item?.updatedAt) }}</div>
                 </v-col>
@@ -122,171 +132,140 @@
             </v-card>
           </v-col>
 
-          <!-- Right: Documents -->
+          <!-- RIGHT -->
           <v-col cols="12" md="5">
             <v-card flat class="meta-panel pa-4">
               <div class="panel-title">Documents</div>
-
               <div v-if="hasDocuments" class="docs-grid">
                 <v-row dense>
                   <v-col cols="12" v-for="(doc, i) in item.documents" :key="i">
-                    <v-hover v-slot="{ hover }">
-                      <v-card :elevation="hover ? 6 : 1" class="doc-card" @click="$emit('open-document', doc)" role="button">
-                        <v-row no-gutters align="center">
-                          <v-col cols="auto" class="px-3">
-                            <div class="thumb-wrap">
-                              <v-img v-if="doc.url" :src="doc.url" class="doc-thumb" contain />
-                              <div v-else class="thumb-fallback">
-                                <v-icon large>mdi-file-document-outline</v-icon>
-                              </div>
-                            </div>
-                          </v-col>
-
-                          <v-col class="pl-3">
-                            <div class="doc-title">{{ doc.name || ('Document ' + (i + 1)) }}</div>
-                            <div class="doc-sub small-muted">{{ doc.type || '' }}</div>
-                          </v-col>
-
-                          <v-col cols="auto" class="pr-3">
-                            <v-btn icon small @click.stop="$emit('open-document', doc)" :title="'Open ' + (doc.name || 'document')">
-                              <v-icon>mdi-open-in-new</v-icon>
-                            </v-btn>
-                          </v-col>
-                        </v-row>
-                      </v-card>
-                    </v-hover>
+                    <v-card class="doc-card" @click="$emit('open-document', doc)">
+                      <v-row no-gutters align="center">
+                        <v-col cols="auto" class="px-3">
+                          <v-img v-if="doc.url" :src="doc.url" class="doc-thumb" contain />
+                          <v-icon v-else large>mdi-file-document-outline</v-icon>
+                        </v-col>
+                        <v-col class="pl-3">
+                          <div class="doc-title">{{ doc.name || `Document ${i + 1}` }}</div>
+                        </v-col>
+                      </v-row>
+                    </v-card>
                   </v-col>
                 </v-row>
               </div>
-
-              <div v-else class="no-docs small-muted">No documents uploaded</div>
-            </v-card>
-          </v-col>
-        </v-row>
-
-        <!-- Notes -->
-        <v-row class="mt-4">
-          <v-col cols="12">
-            <v-card flat class="notes-card pa-3">
-              <div class="notes-title">Notes & Remarks</div>
-              <div v-if="item?.notes" class="notes-body">{{ item.notes }}</div>
-              <div v-else class="small-muted">No remarks available</div>
+              <div v-else class="small-muted">No documents uploaded</div>
             </v-card>
           </v-col>
         </v-row>
       </v-card-text>
 
-      <!-- Footer: Edit button moved here -->
-      <v-divider></v-divider>
+      <!-- ================= FOOTER ================= -->
+      <v-divider />
       <v-card-actions class="dialog-footer">
-        <div class="footer-left">
-          <v-btn variant="text" @click="downloadSummary">
-            <v-icon left small>mdi-download</v-icon>
-            Download Summary
-          </v-btn>
-        </div>
         <v-spacer />
-        <div class="footer-right">
-          <v-btn class="mr-2" variant="outlined" @click="$emit('close')">
-            Close
-          </v-btn>
-          <v-btn color="primary" @click="$emit('edit')">
-            <v-icon left small>mdi-pencil</v-icon>
-            Edit Inventory
-          </v-btn>
-        </div>
+
+        <!-- 🔴 DELETE BUTTON -->
+        <v-btn
+          class="mr-2"
+          color="red darken-1"
+          outlined
+          @click="onDelete"
+        >
+          <v-icon left small>mdi-delete</v-icon>
+          Delete
+        </v-btn>
+
+        <v-btn class="mr-2" outlined @click="$emit('close')">
+          Close
+        </v-btn>
+
+        <v-btn color="primary" @click="$emit('edit')">
+          <v-icon left small>mdi-pencil</v-icon>
+          Edit Inventory
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script>
+import axios from 'axios'
 import InventoryHistoryDialog from './InventoryHistoryDialog.vue'
+
 export default {
   name: 'ItemDetailDialog',
-  components:{InventoryHistoryDialog},
-  data(){
-    return{
-      base:''
-    }
-  },
+  components: { InventoryHistoryDialog },
+
   props: {
-    open: { type: Boolean, default: false },
-    item: { type: Object, default: null }
+    open: Boolean,
+    item: Object
   },
+
   computed: {
     avatarText() {
-      const name = this.item?.modelName || this.item?.categoryName || this.item?.chassisNumber || '';
-      return name ? String(name).trim().charAt(0).toUpperCase() : 'I';
+      const v = this.item?.modelName || this.item?.categoryName || this.item?.chassisNumber || ''
+      return v ? v[0].toUpperCase() : 'I'
     },
     statusColor() {
-      const s = (this.item?.status || '').toString().toUpperCase();
-      if (s === 'ACTIVE') return 'green darken-1';
-      if (s === 'DRAFT') return 'orange darken-1';
-      if (s === 'SOLD') return 'red darken-1';
-      return 'grey darken-1';
+      const s = (this.item?.status || '').toUpperCase()
+      if (s === 'ACTIVE') return 'green'
+      if (s === 'SOLD') return 'red'
+      if (s === 'DRAFT') return 'orange'
+      return 'grey'
     },
     hasDocuments() {
-      return Array.isArray(this.item?.documents) && this.item.documents.length > 0;
+      return Array.isArray(this.item?.documents) && this.item.documents.length
     }
   },
+
   methods: {
-    _toMs(v) {
-      if (v == null) return null;
-      const n = Number(v);
-      if (Number.isNaN(n)) return null;
-      return n < 1e12 ? n * 1000 : n;
-    },
     formatDate(v) {
-      if (!v) return '-';
-      const ms = this._toMs(v);
-      if (ms == null) return '-';
-      const d = new Date(ms);
-      const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const year = d.getFullYear();
-      return `${day}/${month}/${year}`;
+      if (!v) return '-'
+      const d = new Date(Number(v))
+      return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
     },
+
     copyInvoice() {
-      const val = this.item?.invoiceNumber || '';
-      if (!val) return;
-      try {
-        navigator.clipboard.writeText(val);
-        this.$root?.$emit?.('show-snackbar', { text: 'Invoice copied', color: 'success' });
-      } catch {
-        const ta = document.createElement('textarea');
-        ta.value = val;
-        document.body.appendChild(ta);
-        ta.select();
-        try { document.execCommand('copy'); } catch (_) {}
-        document.body.removeChild(ta);
-        this.$root?.$emit?.('show-snackbar', { text: 'Invoice copied', color: 'success' });
-      }
+      if (!this.item?.invoiceNumber) return
+      navigator.clipboard.writeText(this.item.invoiceNumber)
+      this.$root.$emit('show-snackbar', { text: 'Invoice copied', color: 'success' })
     },
-    downloadSummary() {
-      const row = this.item || {};
-      const cols = [
-        ['Invoice Number', row.invoiceNumber || ''],
-        ['Chassis Number', row.chassisNumber || ''],
-        ['Engine Number', row.engineNumber || ''],
-        ['Model', row.modelName || ''],
-        ['Color', row.color || ''],
-        ['Warehouse', row.warehouse || ''],
-        ['Status', row.status || '']
-      ];
-      const csv = cols.map(c => `"${c[0]}","${(c[1] || '').toString().replace(/"/g, '""')}"`).join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${row.invoiceNumber || 'item'}_summary.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+
+    async onDelete() {
+      if (!this.item) return
+
+      const ok = confirm(
+        `Delete this inventory item?\n\nInvoice: ${this.item.invoiceNumber}\nChassis: ${this.item.chassisNumber}`
+      )
+      if (!ok) return
+
+      try {
+        await axios.post(
+          process.env.VUE_APP_AGENCY_BACKEND_URL + 'deleteInventoryItem',
+          {
+            pk: this.item.pk,
+            sk: this.item.sk,
+            chassisNumber: this.item.chassisNumber,
+            actor: this.item.addedBy || null
+          },
+          { timeout: 15000 }
+        )
+
+        this.$root.$emit('show-snackbar', {
+          text: 'Inventory item deleted',
+          color: 'success'
+        })
+
+        this.$emit('deleted', this.item)
+        this.$emit('close')
+
+      } catch (err) {
+        const msg = err?.response?.data?.message || err.message || 'Delete failed'
+        this.$root.$emit('show-snackbar', { text: msg, color: 'error' })
+      }
     }
   }
-};
+}
 </script>
 
 <style scoped>

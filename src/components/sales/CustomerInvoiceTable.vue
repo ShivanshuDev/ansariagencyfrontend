@@ -1,9 +1,12 @@
 <template>
-  <v-card class="rounded invoice-card">
+  <v-card style="margin:10px;" class="rounded invoice-card">
     <v-toolbar flat class="elevate-0 toolbar-glass">
-      <v-toolbar-title class="subtitle-1 font-weight-bold">
+      <v-toolbar-title v-if="!showAddCustomer" class="subtitle-1 font-weight-bold">
         Customer Invoice — Bills
       </v-toolbar-title>
+      <div v-if="showAddCustomer">
+          <v-icon left style="width:40px; height:40px; border:1px solid black; border-radius:50%;"  @click="backToTable()">mdi-arrow-left</v-icon>
+      </div>
 
       <v-spacer/>
 
@@ -26,20 +29,23 @@
       />
 
       <!-- Columns Picker button (before Refresh) -->
-      <v-btn small class="ml-2 btn-soft" @click="columnsDialog = true" :title="'Choose columns'">
+      <v-btn v-if="!showAddCustomer" small class="ml-2 btn-soft" @click="columnsDialog = true" :title="'Choose columns'">
         <v-icon left small>mdi-view-column</v-icon> Columns
       </v-btn>
 
-      <v-btn small class="ml-2 btn-soft" :loading="loading" @click="fetchRows(true)">
+      <v-btn v-if="!showAddCustomer" small class="ml-2 btn-soft" :loading="loading" @click="fetchRows(true)">
         <v-icon left small>mdi-refresh</v-icon>Refresh
       </v-btn>
-      <v-btn small class="ml-2 btn-outline" @click="resetFilters">
+      <v-btn v-if="!showAddCustomer" small class="ml-2 btn-outline" @click="resetFilters">
         <v-icon left small>mdi-filter-remove</v-icon>Clear
+      </v-btn>
+      <v-btn v-if="!showAddCustomer"  @click="showAddCustomerFunction()" small class="ml-2 btn-outline">
+        <v-icon left small>mdi-library-plus</v-icon>New Sell
       </v-btn>
     </v-toolbar>
 
     <!-- Columns dialog -->
-    <v-dialog v-model="columnsDialog" max-width="520px" persistent>
+    <v-dialog v-if="!showAddCustomer" v-model="columnsDialog" max-width="520px" persistent>
       <v-card>
         <v-toolbar flat dense>
           <v-toolbar-title>Show / Hide Columns</v-toolbar-title>
@@ -91,7 +97,7 @@
       </v-card>
     </v-dialog>
 
-    <v-data-table
+    <v-data-table v-if="!showAddCustomer" 
       :headers="visibleHeaders"
       :items="rows"
       :items-per-page="options.itemsPerPage"
@@ -251,7 +257,7 @@
     </v-data-table>
 
     <!-- ============== DETAILS DIALOG ============== -->
-    <v-dialog v-model="detailsOpen" persistent max-width="1040px" scrollable>
+    <v-dialog v-if="!showAddCustomer" v-model="detailsOpen" persistent max-width="1040px" scrollable>
       <v-card class="rounded-xl details-card">
         <v-toolbar flat class="details-toolbar">
           <div class="d-flex align-center">
@@ -437,14 +443,23 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <div v-if="showAddCustomer">
+      <AddSellToCustomer />
+    </div>
   </v-card>
 </template>
 
 <script>
+import AddSellToCustomer from './QuickInvoice.vue'
 export default {
   name: 'CustomerInvoiceTable',
+  components:{
+    AddSellToCustomer
+  },
   data () {
     return {
+      showAddCustomer: false,
       BASE: process.env.VUE_APP_AGENCY_BACKEND_URL,
       headers: [
         { text: '#', value: 'sn', class: 'min-w-70' },
@@ -532,6 +547,13 @@ export default {
     this.fetchRows(true);
   },
   methods: {
+    showAddCustomerFunction(){
+      this.showAddCustomer = true;
+    },
+    backToTable(){
+      this.showAddCustomer = false;
+      this.fetchRows(true);
+    },
     // Initialize columnVisibility & defaultVisibility from headers
     initColumnVisibility () {
       const map = {};
