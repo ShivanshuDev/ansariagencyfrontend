@@ -1,7 +1,5 @@
 <template>
   <div class="edit-inventory-form">
-    <h2>Edit Inventory Item</h2>
-
     <v-form ref="form" v-model="valid" lazy-validation>
       <section class="section">
         <div class="row">
@@ -21,15 +19,18 @@
 
               <div class="field-detail">
                 <label>Model Name *</label>
-                <v-select
+                <v-autocomplete
                   v-model="local.modelName"
                   :items="models"
                   :item-text="modelLabel"
                   :item-value="modelValue"
+                  :filter="modelFilter"
                   outlined
                   dense
                   hide-details
+                  clearable
                   @change="onModelChange"
+                  :menu-props="{ maxHeight: 300 }"
                 />
               </div>
             </div>
@@ -48,15 +49,17 @@
 
               <div class="field-detail">
                 <label>Color *</label>
-                <v-select
+                <v-autocomplete
                   v-model="local.color"
                   :items="colors"
+                  :item-text="colorLabel"
+                  :item-value="colorValue"
+                  :filter="simpleFilter"
                   outlined
                   dense
                   hide-details
-                  :item-text="colorLabel"
-                  :item-value="colorValue"
-                  return-object="false"
+                  clearable
+                  :menu-props="{ maxHeight: 300 }"
                 />
               </div>
             </div>
@@ -66,24 +69,31 @@
 
               <div class="field-detail">
                 <label>Status</label>
-                <v-select
+                <v-autocomplete
                   v-model="local.status"
                   :items="actionStatus"
+                  :filter="simpleFilter"
                   outlined
                   dense
                   hide-details
-                  clearable="false"
+                  clearable
+                  :menu-props="{ maxHeight: 300 }"
                 />
               </div>
               <div class="field-detail">
                 <label>Warehouse</label>
-                <v-select
+                <!-- Warehouse -->
+                <v-autocomplete
                   v-model="local.warehouse"
                   :items="warehouses"
+                  :filter="simpleFilter"
                   outlined
                   dense
                   hide-details
+                  clearable
+                  :menu-props="{ maxHeight: 300 }"
                 />
+
               </div>
 
               <div class="field-detail">
@@ -145,7 +155,13 @@ export default {
       },
       models: [],
       colors: [],
-      warehouses: ['Warehouse 1', 'Warehouse 2', 'Warehouse 3'],
+       warehouses: [
+        { text: "BADI KAMHARIYA", value: "BADI KAMHARIYA" },
+        { text: "OLD-JAHNGIRABAD", value: "OLD-JAHNGIRABAD" },
+        { text: "NEW-JAHNGIRABAD", value: "NEW-JAHNGIRABAD" },
+        { text: "SHOWROOM", value: "SHOWROOM" },
+        { text: "Other", value: "Other" },
+      ],
       // cleaned, no duplicates, common statuses
       actionStatus: ['DRAFT', 'ACTIVE', 'INACTIVE', 'REVIEW', 'SOLD'],
       saving: false,
@@ -278,7 +294,36 @@ export default {
       } finally {
         this.saving = false;
       }
-    }
+    },
+
+    modelFilter (item, queryText, itemText) {
+      const q = (queryText || '').toString().toLowerCase().trim();
+      if (!q) return true;
+
+      // Build a combined searchable string
+      const parts = [];
+      try {
+        parts.push(this.modelLabel(item));
+        // Add other possible fields you'd like to search on:
+        if (item.code) parts.push(item.code);
+        if (item.variant) parts.push(item.variant);
+        if (item.id) parts.push(String(item.id));
+      } catch (e) {}
+
+      return parts
+        .filter(Boolean)
+        .some(p => p.toString().toLowerCase().includes(q));
+    },
+
+    // Simple case-insensitive contains for string/label lists
+    simpleFilter (item, queryText, itemText) {
+      const q = (queryText || '').toString().toLowerCase().trim();
+      if (!q) return true;
+      const label = (typeof item === 'string')
+        ? item
+        : (itemText || '');
+      return label.toString().toLowerCase().includes(q);
+    },
   },
 
   async mounted() {

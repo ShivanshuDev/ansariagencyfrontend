@@ -1,6 +1,6 @@
 <template>
   <div class="add-customer-form">
-    <h2>Add Client</h2>
+    <h2>Add Vendor</h2>
 
     <section class="section">
       <h3>Basic Details</h3>
@@ -8,7 +8,7 @@
         <div class="form-fields">
           <div class="fields-row">
             <label>
-              Client Id *
+              Vendor Id *
               <input type="text" v-model="customer.clientId" required />
             </label>
             <label>
@@ -27,11 +27,27 @@
             </label>
             <label>
               Phone Number *
-              <input type="text" v-model="customer.phone" required />
+              <input
+                type="text"
+                v-model="customer.phone"
+                required
+                inputmode="numeric"
+                maxlength="10"
+                @input="customer.phone = onlyDigits(customer.phone, 10)"
+                placeholder="Phone number"
+              />
             </label>
             <label>
               Alternate Phone Number *
-              <input type="text" v-model="customer.altphone" required />
+              <input
+                type="text"
+                v-model="customer.altphone"
+                required
+                inputmode="numeric"
+                maxlength="10"
+                @input="customer.altphone = onlyDigits(customer.altphone, 10)"
+                placeholder="Phone number"
+              />
             </label>
           </div>
         </div>
@@ -78,7 +94,14 @@
           </label>
           <label>
             Pincode
-            <input type="text" v-model="customer.billing.pincode" />
+            <input
+              type="text"
+              v-model="customer.billing.pincode"
+              inputmode="numeric"
+              maxlength="6"
+              @input="customer.billing.pincode = onlyDigits(customer.billing.pincode, 6)"
+              placeholder="Pin code"
+            />
           </label>
         </div>
       </div>
@@ -125,7 +148,14 @@
           </label>
           <label>
             Pincode
-            <input type="text" v-model="customer.shipping.pincode" />
+            <input
+              type="text"
+              v-model="customer.shipping.pincode"
+              inputmode="numeric"
+              maxlength="6"
+              @input="customer.shipping.pincode = onlyDigits(customer.shipping.pincode, 6)"
+              placeholder="Pincode"
+            />
           </label>
         </div>
       </div>
@@ -133,18 +163,16 @@
 
     <section class="banking-details-section">
       <div>
-        <!-- Banking Details Header -->
         <div
           style="display: flex; align-items: center; cursor: pointer;"
           @click="showBankDetails = !showBankDetails"
         >
-          <h3 style="margin: 0;">Banking Details</h3> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          <h3 style="margin: 0;">Banking Details</h3>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           <v-icon style="width:30px; height:30px; border:1px solid green; border-radius:50%; background-color:green; color:white;">
             {{ showBankDetails ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
           </v-icon>
         </div>
 
-        <!-- Banking Details Fields (collapsible section) -->
         <div v-show="showBankDetails" style="margin-top: 10px;">
           <div class="banking-fields-row">
             <label>
@@ -181,51 +209,39 @@
     </section>
 
     <div style="display:flex; flex-direction:row; justify-content:right; align-items:right; width:100%;" class="banking-actions">
-      <button type="button" class="cancel-btn" @click="onCancel">Cancel</button> &nbsp; &nbsp; &nbsp; &nbsp;
-      <!-- openDialog will validate then open the confirm dialog -->
-      <button type="button" class="create-btn" @click="openDialog" :disabled="loading">
-        <span v-if="loading">Processing…</span>
+      <button type="button" class="cancel-btn" @click="onCancel">Cancel</button>&nbsp;&nbsp;&nbsp;&nbsp;
+      <button type="button" class="create-btn" @click="onCreateClick" :disabled="loading || confirmLoading">
+        <span v-if="loading || confirmLoading">Processing…</span>
         <span v-else>Create New</span>
       </button>
     </div>
 
-    <!-- Confirmation dialog -->
-    <v-dialog v-model="dialog" max-width="520">
-      <v-card>
-        <v-card-title class="headline">Add Client Confirmation</v-card-title>
-        <v-card-text>
-          <div>
-            Are you sure you want to create this client?
-          </div>
-
-          <!-- show form summary (optional helpful) -->
-          <div class="mt-3">
-            <strong>{{ customer.name || customer.clientId }}</strong>
-            <div class="caption">{{ customer.email }}</div>
-          </div>
-
-          <div v-if="dialogError" style="color: red; margin-top: 12px;">
-            {{ dialogError }}
-          </div>
-        </v-card-text>
-
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn text @click="onCancel" :disabled="confirmLoading">Cancel</v-btn>
-          <v-btn color="primary" @click="onCreate" :loading="confirmLoading" :disabled="confirmLoading">
-            Confirm
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Top-right snackbar -->
-    <v-snackbar v-model="snackbar.visible" :timeout="3500" top right multi-line :color="snackbar.color">
-      {{ snackbar.message }}
-      <template v-slot:action>
-        <v-btn text @click="snackbar.visible = false">Close</v-btn>
-      </template>
-    </v-snackbar>
+    <!-- Custom Dialog (success / error / confirm / info) -->
+    <div v-if="dlg.visible" class="dlg-overlay" role="dialog" aria-modal="true">
+      <div class="dlg">
+        <div class="dlg-header" :class="'dlg-' + dlg.type">
+          <strong>{{ dlg.title }}</strong>
+          <button class="dlg-close" @click="closeDlg">×</button>
+        </div>
+        <div class="dlg-body">
+          <template v-if="Array.isArray(dlg.message)">
+            <ul class="dlg-list">
+              <li v-for="(m,i) in dlg.message" :key="i">{{ m }}</li>
+            </ul>
+          </template>
+          <template v-else>
+            {{ dlg.message }}
+          </template>
+          <div v-if="dialogError" style="color:#c62828; margin-top:10px;">{{ dialogError }}</div>
+        </div>
+        <div class="dlg-actions">
+          <button v-if="dlg.type==='confirm'" class="btn" @click="onDlgCancel">Cancel</button>
+          <button class="btn primary" @click="onDlgOk">
+            {{ dlg.type==='confirm' ? 'Yes, Continue' : 'OK' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -236,18 +252,32 @@ export default {
   data() {
     return {
       showBankDetails: false,
-      loading: false,         // general page-level loading (create button)
-      confirmLoading: false,  // confirm button loading in dialog
+      loading: false,
+      confirmLoading: false,
+
+      // old Vuetify confirm + snackbar are no longer used
       dialog: false,
       dialogError: '',
       snackbar: { visible: false, message: '', color: 'success' },
+
+      // Custom dialog state
+      dlg: {
+        visible: false,
+        type: 'info', // 'success' | 'error' | 'confirm' | 'info'
+        title: '',
+        message: '',
+        onConfirm: null
+      },
 
       customer: this.emptyCustomer()
     };
   },
 
   methods: {
-    // return a fresh customer object (keeps reset centralized)
+    onlyDigits(val, maxLen) {
+      return (val || '').replace(/\D/g, '').slice(0, maxLen);
+    },
+
     emptyCustomer() {
       return {
         clientId: '',
@@ -287,19 +317,37 @@ export default {
       };
     },
 
-    // copy billing to shipping
     copyBilling() {
       this.customer.shipping = { ...this.customer.billing };
     },
 
-    // cancel / close dialog
     onCancel() {
-      this.dialog = false;
+      // just closes any open dialogs / clears inline error
       this.dialogError = '';
-      // if in confirm step, leave form as-is; Cancel should not clear
+      this.closeDlg();
     },
 
-    // validations (kept your original logic, slightly tightened)
+    // Open our custom dialog
+    openDlg(type, title, message, onConfirm = null) {
+      this.dlg.visible = true;
+      this.dlg.type = type;
+      this.dlg.title = title;
+      this.dlg.message = message;
+      this.dlg.onConfirm = typeof onConfirm === 'function' ? onConfirm : null;
+    },
+    closeDlg() {
+      this.dlg.visible = false;
+      this.dlg.onConfirm = null;
+    },
+    onDlgCancel() {
+      this.closeDlg();
+    },
+    onDlgOk() {
+      const fn = this.dlg.onConfirm;
+      this.closeDlg();
+      if (fn) fn();
+    },
+
     validateAccountNumbers() {
       const bank = this.customer.bank;
       if (bank.accountNumber !== '') {
@@ -324,15 +372,16 @@ export default {
 
     validateForm() {
       const c = this.customer;
-      if (!c.clientId || !c.clientId.toString().trim()) {
-        this.dialogError = 'Client Id is required.';
+      // required basics
+      if (!c.clientId?.toString().trim()) {
+        this.dialogError = 'Vendor Id is required.';
         return false;
       }
-      if (!c.name || !c.name.toString().trim()) {
+      if (!c.name?.toString().trim()) {
         this.dialogError = 'Name is required.';
         return false;
       }
-      if (!c.email || !c.email.toString().trim()) {
+      if (!c.email?.toString().trim()) {
         this.dialogError = 'Email is required.';
         return false;
       }
@@ -341,134 +390,140 @@ export default {
         this.dialogError = 'Please enter a valid email address.';
         return false;
       }
-      if (!c.phone || !c.phone.toString().trim()) {
+
+      if (!c.phone?.toString().trim()) {
         this.dialogError = 'Phone Number is required.';
         return false;
       }
-      if (!c.altphone || !c.altphone.toString().trim()) {
+      if (!c.altphone?.toString().trim()) {
         this.dialogError = 'Alternate Phone Number is required.';
         return false;
       }
 
-      // billing
-      if (!c.billing.name || !c.billing.name.toString().trim()) {
+      const tenDigit = /^\d{10}$/;
+      if (!tenDigit.test(c.phone)) {
+        this.dialogError = 'Phone Number must be exactly 10 digits.';
+        return false;
+      }
+      if (!tenDigit.test(c.altphone)) {
+        this.dialogError = 'Alternate Phone Number must be exactly 10 digits.';
+        return false;
+      }
+
+      // billing required
+      if (!c.billing.name?.toString().trim()) {
         this.dialogError = 'Billing Address Name is required.';
         return false;
       }
-      if (!c.billing.line1 || !c.billing.line1.toString().trim()) {
+      if (!c.billing.line1?.toString().trim()) {
         this.dialogError = 'Billing Address Line 1 is required.';
         return false;
       }
-      if (!c.billing.tahsil || !c.billing.tahsil.toString().trim()) {
+      if (!c.billing.tahsil?.toString().trim()) {
         this.dialogError = 'Billing Tahsil is required.';
         return false;
       }
-      if (!c.billing.country || !c.billing.country.toString().trim()) {
+      if (!c.billing.country?.toString().trim()) {
         this.dialogError = 'Billing Country is required.';
         return false;
       }
-      if (!c.billing.state || !c.billing.state.toString().trim()) {
+      if (!c.billing.state?.toString().trim()) {
         this.dialogError = 'Billing State is required.';
         return false;
       }
-      if (!c.billing.city || !c.billing.city.toString().trim()) {
+      if (!c.billing.city?.toString().trim()) {
         this.dialogError = 'Billing City is required.';
         return false;
       }
-      if (!c.billing.pincode || !c.billing.pincode.toString().trim()) {
+      if (!c.billing.pincode?.toString().trim()) {
         this.dialogError = 'Billing Pincode is required.';
         return false;
       }
 
-      // shipping
-      if (!c.shipping.name || !c.shipping.name.toString().trim()) {
-        this.dialogError = 'Shipping Address Name is required.';
-        return false;
-      }
-      if (!c.shipping.line1 || !c.shipping.line1.toString().trim()) {
-        this.dialogError = 'Shipping Address Line 1 is required.';
-        return false;
-      }
-      if (!c.shipping.tahsil || !c.shipping.tahsil.toString().trim()) {
-        this.dialogError = 'Shipping Tahsil is required.';
-        return false;
-      }
-      if (!c.shipping.country || !c.shipping.country.toString().trim()) {
-        this.dialogError = 'Shipping Country is required.';
-        return false;
-      }
-      if (!c.shipping.state || !c.shipping.state.toString().trim()) {
-        this.dialogError = 'Shipping State is required.';
-        return false;
-      }
-      if (!c.shipping.city || !c.shipping.city.toString().trim()) {
-        this.dialogError = 'Shipping City is required.';
-        return false;
-      }
-      if (!c.shipping.pincode || !c.shipping.pincode.toString().trim()) {
-        this.dialogError = 'Shipping Pincode is required.';
+      const sixDigit = /^\d{6}$/;
+      if (!sixDigit.test(c.billing.pincode)) {
+        this.dialogError = 'Billing Pincode must be exactly 6 digits.';
         return false;
       }
 
-      // bank validations
-      if (!this.validateAccountNumbers()) {
+      // shipping required
+      if (!c.shipping.name?.toString().trim()) {
+        this.dialogError = 'Shipping Address Name is required.';
         return false;
       }
+      if (!c.shipping.line1?.toString().trim()) {
+        this.dialogError = 'Shipping Address Line 1 is required.';
+        return false;
+      }
+      if (!c.shipping.tahsil?.toString().trim()) {
+        this.dialogError = 'Shipping Tahsil is required.';
+        return false;
+      }
+      if (!c.shipping.country?.toString().trim()) {
+        this.dialogError = 'Shipping Country is required.';
+        return false;
+      }
+      if (!c.shipping.state?.toString().trim()) {
+        this.dialogError = 'Shipping State is required.';
+        return false;
+      }
+      if (!c.shipping.city?.toString().trim()) {
+        this.dialogError = 'Shipping City is required.';
+        return false;
+      }
+      if (!c.shipping.pincode?.toString().trim()) {
+        this.dialogError = 'Shipping Pincode is required.';
+        return false;
+      }
+      if (!sixDigit.test(c.shipping.pincode)) {
+        this.dialogError = 'Shipping Pincode must be exactly 6 digits.';
+        return false;
+      }
+
+      // bank conditional checks
+      if (!this.validateAccountNumbers()) return false;
 
       this.dialogError = '';
       return true;
     },
 
-    // invoked when Create New button clicked
-    openDialog() {
-      // validate and open
-      if (this.validateForm()) {
-        this.dialogError = '';
-        this.dialog = true;
+    // Click of Create New → confirm popup
+    onCreateClick() {
+      if (!this.validateForm()) {
+        // show error dialog with the current dialogError message
+        this.openDlg('error', 'Validation Failed', this.dialogError || 'Please check your inputs.');
+        return;
       }
+      this.openDlg(
+        'confirm',
+        'Add Vendor?',
+        'Are you sure you want to create this client record?',
+        this.onCreate // run actual submit on confirm
+      );
     },
 
-    // clear the form to fresh state
     clearForm() {
       this.customer = this.emptyCustomer();
     },
 
-    // show success snackbar top-right
-    showSuccess(message = 'Client added successfully') {
-      this.snackbar.message = message;
-      this.snackbar.color = 'success';
-      this.snackbar.visible = true;
-    },
-
-    // the Confirm action — create client
+    // Submit to API
     async onCreate() {
-      // double-check validate before submitting
-      if (!this.validateForm()) return;
-
       this.dialogError = '';
       this.confirmLoading = true;
 
       try {
-        // construct payload exactly how backend expects; here we send the customer object directly
         const payload = { customer: this.customer };
-
-        // adjust URL to your backend route; using env variable as before
         const url = (process.env.VUE_APP_AGENCY_BACKEND_URL || '') + 'addClient';
-
         const res = await axios.post(url, payload);
 
-        // success: close dialog, clear form, show top-right snackbar
-        this.dialog = false;
+        // Success popup + clear form
+        this.openDlg('success', 'Success', res?.data?.message || 'Vendor added successfully');
         this.clearForm();
-        this.showSuccess(res?.data?.message || 'Client added successfully');
-
       } catch (err) {
         console.error('add client failed', err);
-
-        // show a helpful message inside dialog (not the snackbar)
         const serverMsg = err?.response?.data?.message || err?.message || 'Failed to create client. Please try again.';
-        this.dialogError = serverMsg;
-
+        // Error popup
+        this.openDlg('error', 'Submission Failed', serverMsg);
       } finally {
         this.confirmLoading = false;
       }
@@ -477,7 +532,46 @@ export default {
 };
 </script>
 
+
 <style scoped>
+/* Custom dialog styles (same as your other form for consistency) */
+.dlg-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.dlg {
+  width: min(520px, 92vw);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+  overflow: hidden;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+}
+.dlg-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  color: #fff;
+}
+.dlg-success { background: #2e7d32; }
+.dlg-error   { background: #c62828; }
+.dlg-confirm { background: #1565c0; }
+.dlg-info    { background: #6d4c41; }
+.dlg-close {
+  background: transparent; border: 0; color: #fff; font-size: 22px; line-height: 1; cursor: pointer;
+}
+.dlg-body { padding: 16px; color: #333; }
+.dlg-actions {
+  display: flex; justify-content: flex-end; gap: 10px; padding: 12px 16px; background: #fafafa;
+}
+.dlg-list { margin: 0; padding-left: 18px; }
+.btn {
+  border: 1px solid #ddd; background: #fff; padding: 8px 14px; border-radius: 8px; cursor: pointer;
+}
+.btn.primary {
+  background: #001f3f; border-color: #001f3f; color: #fff;
+}
 .add-customer-form {
   max-width: 99%;
   margin: 0 auto;
@@ -512,7 +606,7 @@ export default {
   overflow: hidden;
   margin: 0 auto 10px;
   font-size: 28px;
-  color: #aa53cb;
+  color: #283593;
 }
 .form-image-upload img {
   width: 100%;
@@ -521,7 +615,7 @@ export default {
 }
 .form-image-upload button {
   margin-top: 8px;
-  background: #aa53cb;
+  background: #283593;
   color: #fff;
   border: none;
   padding: 4px 16px;
@@ -582,7 +676,7 @@ select {
 }
 .address-header a {
   font-size: 13px;
-  color: #aa53cb;
+  color: #283593;
   cursor: pointer;
   text-decoration: none;
 }
@@ -599,7 +693,7 @@ select {
   background: #555;
 }
 .create-btn {
-  background: #aa53cb;
+  background: #283593;
   color: #fff;
   border: none;
   padding: 8px 18px;

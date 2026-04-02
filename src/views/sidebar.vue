@@ -1,334 +1,902 @@
 <template>
-  <v-navigation-drawer app permanent class="app-drawer" style="width:350px;" clipped>
-    <v-list dense class="drawer-list pa-3">
-      <v-list-item class="brand-row">
-        <v-list-item-title class="brand-title" style="font-size:1.2rem; color:white;">
-          ANSARI AUTOMOBILES
-        </v-list-item-title>
-      </v-list-item>
+  <v-navigation-drawer 
+    app 
+    permanent 
+    class="app-drawer" 
+    style="width: 300px;"
+    clipped
+  >
+    <!-- Brand Header -->
+    <div class="brand-container">
+      <div class="brand-logo">
+        <v-icon class="logo-icon" color="white">mdi-car</v-icon>
+      </div>
+      <div class="brand-text">
+        <div class="brand-title">ANSARI AUTOMOBILES</div>
+        <div class="brand-subtitle">Vehicle Solutions</div>
+      </div>
+    </div>
 
-      <v-divider style="color:white;" class="my-2"></v-divider>
+    <v-divider class="divider-primary"></v-divider>
 
-      <!-- Super Admin (always visible) -->
-      <v-expansion-panels v-model="activePanel" accordion class="exp-panels">
-        <v-expansion-panel>
-          <v-expansion-panel-header class="panel-header">
-            <v-icon left class="header-icon">mdi-view-dashboard</v-icon>
-            <span class="header-text">Super Admin</span>
-          </v-expansion-panel-header>
+    <!-- Navigation Sections -->
+    <v-list dense class="drawer-list">
+      <!-- Super Admin Section (permission based) -->
+        <!-- v-if="hasSuperAdmin" -->
+      <v-list-group
+        v-model="superAdminOpen"
+        prepend-icon="mdi-shield-account"
+        color="white"
+        class="nav-section"
+      >
+        <template v-slot:activator>
+          <v-list-item-content>
+            <v-list-item-title class="section-title">Super Admin</v-list-item-title>
+          </v-list-item-content>
+        </template>
 
-          <v-expansion-panel-content>
-            <v-list dense>
-              <!-- Inventory submenu -->
-              <v-list-group prepend-icon="mdi-warehouse" no-action>
-                <template v-slot:activator>
-                  <v-list-item-title>Vendor Sell</v-list-item-title>
-                </template>
-
-                <v-list-item @click="$emit('tab-selected', 'SellToVendor')">
-                  <v-list-item-content>
-                    <v-list-item-title>Sell To Vendor</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <!-- <v-list-item @click="$emit('tab-selected', 'InventryTable')">
-                  <v-list-item-content>
-                    <v-list-item-title>Sales Details</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item> -->
-              </v-list-group>
-
-              <!-- Inventory submenu -->
-              <v-list-group prepend-icon="mdi-warehouse" no-action>
-                <template v-slot:activator>
-                  <v-list-item-title>Inventory</v-list-item-title>
-                </template>
-
-                <v-list-item @click="$emit('tab-selected', 'AddInventryVue')">
-                  <v-list-item-content>
-                    <v-list-item-title>Add Inventory</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <v-list-item @click="$emit('tab-selected', 'InventryTable')">
-                  <v-list-item-content>
-                    <v-list-item-title>Inventory Table</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <v-list-item @click="$emit('tab-selected', 'MODELNAME')">
-                  <v-list-item-content>
-                    <v-list-item-title>Model Name</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                  <!-- <v-list-item @click="$emit('tab-selected', 'BILL')">
-                    <v-list-item-title>Bills</v-list-item-title>
-                  </v-list-item> -->
-              </v-list-group>
-
-              <!-- spares parts submenu -->
-              <v-list-group prepend-icon="mdi-account" no-action>
-                <template v-slot:activator>
-                  <v-list-item-title>Spares</v-list-item-title>
-                </template>
-
-                <v-list-item @click="$emit('tab-selected', 'ADDSPARES')">
-                  <v-list-item-content>
-                    <v-list-item-title>Add Spares</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-
-                <v-list-item @click="$emit('tab-selected', 'sparesTable')">
-                  <v-list-item-content>
-                    <v-list-item-title>Spares Table</v-list-item-title>
-                  </v-list-item-content>
-                </v-list-item>
-              </v-list-group>
-
-            </v-list>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
-
-      <v-divider class="my-2"></v-divider>
-
-      <div  v-if="permission && permission.admin">
-        <!-- Admin: show only if permission.admin is true -->
-        <v-expansion-panels
-          v-model="panels.admin"
-          accordion
-          class="exp-panels"
+        <!-- Vendor Submenu -->
+          <!-- v-if="canAddVendor || canViewVendorDetails" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
         >
-          <v-expansion-panel>
-            <v-expansion-panel-header class="panel-header">
-              <v-icon left class="header-icon">mdi-cube</v-icon>
-              <span class="header-text">Admin</span>
-            </v-expansion-panel-header>
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Vendor</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canAddVendor" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'Addclient')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'Addclient' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-account-plus</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Add Vendor</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          
+            <!-- v-if="canViewVendorDetails" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'ClientTable')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'ClientTable' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Vendor Details</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
 
-            <v-expansion-panel-content>
-              <v-list dense>
-                <!-- Client submenu -->
-                <v-list-group prepend-icon="mdi-account" no-action>
-                  <template v-slot:activator>
-                    <v-list-item-title>Client</v-list-item-title>
-                  </template>
+          <!-- v-if="canAddEmployee || canViewEmployeeTable" -->
+        <!-- Employee Submenu -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Employee</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canAddEmployee" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'Addemployee')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'Addemployee' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-account-plus</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Add Employee</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          
+            <!-- v-if="canViewEmployeeTable" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'EmployeeTable')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'EmployeeTable' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Employee Table</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+      </v-list-group>
 
-                  <v-list-item @click="$emit('tab-selected', 'Addclient')">
-                    <v-list-item-content>
-                      <v-list-item-title>Add Client</v-list-item-title>
-                    </v-list-item-content>
-                  </v-list-item>
-
-                  <v-list-item @click="$emit('tab-selected', 'ClientTable')">
-                    <v-list-item-content>
-                      <v-list-item-title>Client Table</v-list-item-title>
-                    </v-list-item-content>
-                  </v-list-item>
-                </v-list-group>
-
-                <!-- Employee submenu -->
-                <v-list-group prepend-icon="mdi-account-group" no-action>
-                  <template v-slot:activator>
-                    <v-list-item-title>Employee</v-list-item-title>
-                  </template>
-
-                  <v-list-item @click="$emit('tab-selected', 'Addemployee')">
-                    <v-list-item-content>
-                      <v-list-item-title>Add Employee</v-list-item-title>
-                    </v-list-item-content>
-                  </v-list-item>
-
-                  <v-list-item @click="$emit('tab-selected', 'EmployeeTable')">
-                    <v-list-item-content>
-                      <v-list-item-title>Employee Table</v-list-item-title>
-                    </v-list-item-content>
-                  </v-list-item>
-                </v-list-group>
-
-                <!-- <v-list-group prepend-icon="mdi-warehouse" no-action>
-                  <template v-slot:activator>
-                    <v-list-item-title>Inventory</v-list-item-title>
-                  </template>
-
-                  <v-list-item @click="$emit('tab-selected', 'AddInventryVue')">
-                    <v-list-item-content>
-                      <v-list-item-title>Add Inventory</v-list-item-title>
-                    </v-list-item-content>
-                  </v-list-item>
-
-                  <v-list-item @click="$emit('tab-selected', 'InventryTable')">
-                    <v-list-item-content>
-                      <v-list-item-title>Inventory Table</v-list-item-title>
-                    </v-list-item-content>
-                  </v-list-item>
-
-                  <v-list-item @click="$emit('tab-selected', 'MODELNAME')">
-                    <v-list-item-content>
-                      <v-list-item-title>Model Name</v-list-item-title>
-                    </v-list-item-content>
-                  </v-list-item>
-
-                </v-list-group> -->
-              </v-list>
-            </v-expansion-panel-content>
-          </v-expansion-panel>
-        </v-expansion-panels>
-        <v-divider class="my-2"></v-divider>
-      </div>
-
-      <div  v-if="permission && permission.sales">
-      <!-- Sales: show only if permission.sales -->
-      <v-expansion-panels
-       
-        v-model="panels.sales"
-        accordion
-        class="exp-panels"
+      <!-- Admin Section (permission based) -->
+        <!-- v-if="hasAdmin" -->
+      <v-list-group
+        v-model="adminOpen"
+        prepend-icon="mdi-cog"
+        color="white"
+        class="nav-section"
       >
-        <v-expansion-panel>
-          <v-expansion-panel-header class="panel-header">
-            <v-icon left class="header-icon">mdi-cart</v-icon>
-            <span class="header-text">Sales</span>
-          </v-expansion-panel-header>
+        <template v-slot:activator>
+          <v-list-item-content>
+            <v-list-item-title class="section-title">Admin</v-list-item-title>
+          </v-list-item-content>
+        </template>
 
-          <v-expansion-panel-content>
-            <v-list dense>
-              <v-list-item>
-                <v-list-item-title>Sales</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Sales Orders</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Delivery Notes</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Sales Returns</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
+        <!-- SEARCHBYCHASSIS Process -->
+          <!-- v-if="canSearchByChassis" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Search By Chassis</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canSearchByChassis" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'SEARCHBYCHASSIS')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'SEARCHBYCHASSIS' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Vehical Detail</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
 
-      <v-divider class="my-2"></v-divider>
-      </div>
+        <!-- Invoice Process -->
+          <!-- v-if="canViewVendorBillDetail || canVendorBilling" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Invoice Process</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canViewVendorBillDetail" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'SellToVendorDetails')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'SellToVendorDetails' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Vendor Bill Detail</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-      <div v-if="permission && permission.rto">
-      <!-- RTO -->
-      <v-expansion-panels
-        v-if="permission && permission.rto"
-        v-model="panels.rto"
-        accordion
-        class="exp-panels"
+            <!-- v-if="canVendorBilling" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'SellToVendor')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'SellToVendor' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-cash-register</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Vendor Billing</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+
+        <!-- Stock Process -->
+          <!-- v-if="canViewStock" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Stock Process</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canViewStock" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'STOCK')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'STOCK' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Stock</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+
+        <!-- Inventory -->
+          <!-- v-if="canViewInventoryDetails || canAddInventory || canBikeModel" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Inventory</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canViewInventoryDetails" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'InventryTable')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'InventryTable' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Inventory Details</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          
+            <!-- v-if="canAddInventory" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'AddInventryVue')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'AddInventryVue' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-plus-box</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Add Inventory</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          
+            <!-- v-if="canBikeModel" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'MODELNAME')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'MODELNAME' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-motorbike</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Bike Model</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+      </v-list-group>
+
+      <!-- Workshop Section (permission based) -->
+        <!-- v-if="hasWorkshop" -->
+      <v-list-group
+        v-model="workshopOpen"
+        prepend-icon="mdi-wrench"
+        color="white"
+        class="nav-section"
       >
-        <v-expansion-panel>
-          <v-expansion-panel-header class="panel-header">
-            <v-icon left class="header-icon">mdi-truck</v-icon>
-            <span class="header-text">RTO</span>
-          </v-expansion-panel-header>
+        <template v-slot:activator>
+          <v-list-item-content>
+            <v-list-item-title class="section-title">Workshop</v-list-item-title>
+          </v-list-item-content>
+        </template>
 
-          <v-expansion-panel-content>
-            <v-list dense>
-              <v-list-item>
-                <v-list-item-title>Dashboard</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Detail</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
+        <!-- Spares -->
+          <!-- v-if="canAddSpares || canViewSparesTable" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Spares</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canAddSpares" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'ADDSPARES')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'ADDSPARES' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-plus-box</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Add Spares</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          
+            <!-- v-if="canViewSparesTable" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'sparesTable')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'sparesTable' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Spares Table</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
 
-      <v-divider class="my-2"></v-divider>
+        <!-- Services -->
+          <!-- v-if="canServiceRequests || canServiceHistory" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Services</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canServiceRequests" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'ServiceRequests')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'ServiceRequests' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-clipboard-list</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Service Requests</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          
+            <!-- v-if="canServiceHistory" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'ServiceHistory')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'ServiceHistory' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-history</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Service History</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+      </v-list-group>
 
-      </div>
-
-      <div  v-if="false">
-      <!-- Insurance -->
-      <v-expansion-panels
-       
-        v-model="panels.insurance"
-        accordion
-        class="exp-panels"
+      <!-- Accounts Section (permission based) -->
+        <!-- v-if="hasAccounts" -->
+      <v-list-group
+        v-model="accountsOpen"
+        prepend-icon="mdi-calculator"
+        color="white"
+        class="nav-section"
       >
-        <v-expansion-panel>
-          <v-expansion-panel-header class="panel-header">
-            <v-icon left class="header-icon">mdi-settings-box</v-icon>
-            <span class="header-text">Insurance</span>
-          </v-expansion-panel-header>
+        <template v-slot:activator>
+          <v-list-item-content>
+            <v-list-item-title class="section-title">Accounts</v-list-item-title>
+          </v-list-item-content>
+        </template>
 
-          <v-expansion-panel-content>
-            <v-list dense>
-              <v-list-item>
-                <v-list-item-title>Dashboard</v-list-item-title>
-              </v-list-item>
-              <v-list-item>
-                <v-list-item-title>Detail</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
-      </div>
+        <!-- LEDGER -->
+          <!-- v-if="canVendorAccounts || canDayBook || accounts_vendorLedger" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Vendor Ledger</v-list-item-title>
+            </v-list-item-content>
+          </template>
 
+            <!-- v-if="canVendorAccounts" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'VENDORACCOUNTDetail')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'VENDORACCOUNTDetail' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-eye</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Vendor Accounts</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          
+            <!-- v-if="canDayBook" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'DAYBOOK')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'DAYBOOK' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-book-open-page-variant</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">DAY Book</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+
+        <!-- Customer Ledger -->
+          <!-- v-if="canCustomerAccounts || accounts_customerLedger" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Customer Ledger</v-list-item-title>
+            </v-list-item-content>
+          </template>
+
+            <!-- v-if="canCustomerAccounts" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'CUSTOMERACCOUNTDetail')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'CUSTOMERACCOUNTDetail' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-eye</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Customer Accounts</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+
+      </v-list-group>
+
+      <!-- SALES (RTO etc.) Section (permission based) -->
+        <!-- v-if="hasSales" -->
+      <v-list-group
+        v-model="rtoOpen"
+        prepend-icon="mdi-file-document-multiple"
+        color="white"
+        class="nav-section"
+      >
+        <template v-slot:activator>
+          <v-list-item-content>
+            <v-list-item-title class="section-title">Sales</v-list-item-title>
+          </v-list-item-content>
+        </template>
+
+        <!-- RTO & INS Details -->
+          <!-- v-if="canRtoInsDetails" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">RTO & INS Details</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canRtoInsDetails" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'RTODetails')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'RTODetails' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-card-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">RTO & INS Detail Updation</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+
+        <!-- Invoices -->
+          <!-- v-if="canAllCustomerInvoices || canQuickInvoice || canBikeBooking" -->
+        <v-list-group
+          value="true"
+          sub-group
+          class="submenu"
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Invoices</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canAllCustomerInvoices" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'AllCustomerInvoices')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'AllCustomerInvoices' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-format-list-bulleted</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">All Customer Invoices Details</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          
+            <!-- v-if="canQuickInvoice" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'QUICKINVOICE')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'QUICKINVOICE' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-receipt</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Quick Invoice</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
+            <!-- v-if="canBikeBooking" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'BIKEBOOKING')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'BIKEBOOKING' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-receipt</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Bike Booking</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+
+        <!-- Payments -->
+          <!-- v-if="canPaymentReceipt" -->
+        <v-list-group
+          value="true"
+          sub-group
+        >
+          <template v-slot:activator>
+            <v-list-item-content>
+              <v-list-item-title class="submenu-title">Payments</v-list-item-title>
+            </v-list-item-content>
+          </template>
+          
+            <!-- v-if="canPaymentReceipt" -->
+          <v-list-item 
+            link 
+            :href="currentUrl"
+            @click.prevent="$emit('tab-selected', 'PaymentReceipt')"
+            class="nav-item"
+            :class="{ 'selected-item': selectedTab === 'PaymentReceipt' }"
+          >
+            <v-list-item-icon class="nav-icon">
+              <v-icon small>mdi-receipt</v-icon>
+            </v-list-item-icon>
+            <v-list-item-content>
+              <v-list-item-title class="item-title">Payment Receipt</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </v-list-group>
+      </v-list-group>
     </v-list>
   </v-navigation-drawer>
 </template>
 
 <script>
+import axios from "axios";
 export default {
   name: "SidebarDrawer",
   data() {
     return {
-      activePanel: null,
-      panels: {
-        admin: null,
-        sales: null,
-        rto: null,
-        insurance: null
-      },
-      // put these at root so template can access them directly
+      // Track open/closed state for each section
+      superAdminOpen: false,
+      adminOpen: false,
+      workshopOpen: false,
+      salesOpen: false,
+      accountsOpen: false,
+      rtoOpen: false,
+      // permissions
       userPermissions: null,
-      permission: null
+      permission: null,
+      selectedTab: null,
+
+      // used so items become real links (for "open in new tab")
+      currentUrl: window.location.href
     };
   },
+
   computed: {
-    // helper to show permission JSON in template for debugging
-    permissionDisplay() {
-      return this.permission ? JSON.stringify(this.permission) : "null";
+    // --- SECTION LEVEL FLAGS ---
+    hasSuperAdmin() {
+      const s = this.permission && this.permission.superAdmin;
+      return !!(s && Object.values(s).some(Boolean));
+    },
+    hasAdmin() {
+      const a = this.permission && this.permission.admin;
+      return !!(a && Object.values(a).some(Boolean));
+    },
+    hasWorkshop() {
+      const w = this.permission && this.permission.workshop;
+      return !!(w && Object.values(w).some(Boolean));
+    },
+    hasAccounts() {
+      const a = this.permission && this.permission.accounts;
+      return !!(a && Object.values(a).some(Boolean));
+    },
+    hasSales() {
+      const s = this.permission && this.permission.sales;
+      return !!(s && Object.values(s).some(Boolean));
+    },
+
+    // --- SUPER ADMIN ITEMS ---
+    canAddVendor() {
+      return !!(this.permission &&
+        this.permission.superAdmin &&
+        this.permission.superAdmin.addVendor);
+    },
+    canViewVendorDetails() {
+      return !!(this.permission &&
+        this.permission.superAdmin &&
+        this.permission.superAdmin.vendorDetails);
+    },
+    canAddEmployee() {
+      return !!(this.permission &&
+        this.permission.superAdmin &&
+        this.permission.superAdmin.addEmployee);
+    },
+    canViewEmployeeTable() {
+      return !!(this.permission &&
+        this.permission.superAdmin &&
+        this.permission.superAdmin.employeeTable);
+    },
+
+    // --- ADMIN ITEMS ---
+    canSearchByChassis() {
+      return !!(this.permission &&
+        this.permission.admin &&
+        this.permission.admin.searchByChassis);
+    },
+    canViewVendorBillDetail() {
+      return !!(this.permission &&
+        this.permission.admin &&
+        this.permission.admin.vendorBillDetail);
+    },
+    canVendorBilling() {
+      return !!(this.permission &&
+        this.permission.admin &&
+        this.permission.admin.vendorBilling);
+    },
+    canViewStock() {
+      return !!(this.permission &&
+        this.permission.admin &&
+        this.permission.admin.stock);
+    },
+    canViewInventoryDetails() {
+      return !!(this.permission &&
+        this.permission.admin &&
+        this.permission.admin.inventoryDetails);
+    },
+    canAddInventory() {
+      return !!(this.permission &&
+        this.permission.admin &&
+        this.permission.admin.addInventory);
+    },
+    canBikeModel() {
+      return !!(this.permission &&
+        this.permission.admin &&
+        this.permission.admin.bikeModel);
+    },
+
+    // --- WORKSHOP ITEMS ---
+    canAddSpares() {
+      return !!(this.permission &&
+        this.permission.workshop &&
+        this.permission.workshop.addSpares);
+    },
+    canViewSparesTable() {
+      return !!(this.permission &&
+        this.permission.workshop &&
+        this.permission.workshop.sparesTable);
+    },
+    canServiceRequests() {
+      return !!(this.permission &&
+        this.permission.workshop &&
+        this.permission.workshop.serviceRequests);
+    },
+    canServiceHistory() {
+      return !!(this.permission &&
+        this.permission.workshop &&
+        this.permission.workshop.serviceHistory);
+    },
+
+    // --- ACCOUNTS ITEMS ---
+    canDayBook() {
+      return !!(this.permission &&
+        this.permission.accounts &&
+        this.permission.accounts.dayBook);
+    },
+    canVendorAccounts() {
+      return !!(this.permission &&
+        this.permission.accounts &&
+        this.permission.accounts.vendorAccounts);
+    },
+    canCustomerAccounts() {
+      return !!(this.permission &&
+        this.permission.accounts &&
+        this.permission.accounts.customerAccounts);
+    },
+    accounts_vendorLedger() {
+      return !!(this.permission &&
+        this.permission.accounts &&
+        this.permission.accounts.vendorLedger);
+    },
+    accounts_customerLedger() {
+      return !!(this.permission &&
+        this.permission.accounts &&
+        this.permission.accounts.customerLedger);
+    },
+
+    // --- SALES ITEMS ---
+    canQuickInvoice() {
+      return !!(this.permission &&
+        this.permission.sales &&
+        this.permission.sales.quickInvoice);
+    },
+    canRtoInsDetails() {
+      // allow if either rtoInsDetails or rtoInsDetailUpdation is true
+      return !!(this.permission &&
+        this.permission.sales &&
+        (this.permission.sales.rtoInsDetails ||
+         this.permission.sales.rtoInsDetailUpdation));
+    },
+    canAllCustomerInvoices() {
+      return !!(this.permission &&
+        this.permission.sales &&
+        this.permission.sales.allCustomerInvoices);
+    },
+    canBikeBooking() {
+      return !!(this.permission &&
+        this.permission.sales &&
+        this.permission.sales.bikeBooking);
+    },
+    canPaymentReceipt() {
+      // allow if payments or paymentReceipt is true
+      return !!(this.permission &&
+        this.permission.sales &&
+        (this.permission.sales.payments ||
+         this.permission.sales.paymentReceipt));
     }
   },
+
   methods: {
     getLocalStorage() {
       try {
         const raw = localStorage.getItem("auth_user");
-        if (!raw) {
-          this.userPermissions = null;
-          this.permission = null;
-          return;
+        if (!raw) { 
+          this.userPermissions = null; 
+          this.permission = null; 
+          return; 
         }
 
         const parsed = JSON.parse(raw);
+        console.log('parsed', JSON.stringify(parsed, null, 2));
+        // keep old behavior: read userPermissions directly from localStorage
         this.userPermissions = parsed || null;
-
-        // nested permission object often lives at parsed.userPermissions
         this.permission = (parsed && parsed.userPermissions) ? parsed.userPermissions : null;
 
-        // log for debugging
-        console.log("userPermissions", this.userPermissions);
-        console.log("permission", this.permission);
+        // NEW: try to fetch fresh permissions from backend using pk
+        if (parsed && parsed.pk) {
+          this.fetchUserByPk(parsed.pk);
+        }
       } catch (err) {
         console.error("Failed to parse auth_user from localStorage", err);
         this.userPermissions = null;
         this.permission = null;
       }
+    },
+
+    async fetchUserByPk(pk) {
+      try {
+        // assumes endpoint:  GET <BASE_URL>getEmployeeByPk/:pk
+        const base = process.env.VUE_APP_AGENCY_BACKEND_URL || "";
+        const url = base.replace(/\/?$/, "/") + "getEmployeeByPk/" + encodeURIComponent(pk);
+
+        const res = await axios.get(url);
+        console.log('res', JSON.stringify(res, null, 2));
+        // try to be flexible with response shape
+        const data = res && res.data ? res.data : null;
+        const employee =
+          data && data.employee
+            ? data.employee
+            : data; // if API directly returns employee object
+
+        if (employee && employee.userPermissions) {
+          this.userPermissions = employee;
+          this.permission = employee.userPermissions;
+        }
+      } catch (err) {
+        // do not break existing behavior; just log and keep localStorage permissions
+        console.error("Failed to fetch employee by pk", err);
+      }
+    },
+
+    selectTab(name) {
+      this.selectedTab = name;
+      this.$emit("tab-selected", name);
     }
   },
+
   mounted() {
     this.getLocalStorage();
 
-    // optional: if auth_user may change during app lifecycle, listen to storage events
+    // If auth changes elsewhere (new tab), sync
     window.addEventListener("storage", (e) => {
       if (e.key === "auth_user") this.getLocalStorage();
     });
@@ -336,87 +904,200 @@ export default {
 };
 </script>
 
-
 <style scoped>
-/* Drawer styling */
+/* Main Container */
 .app-drawer {
-  width: 100%; /* fixed width */
-  background: linear-gradient(to bottom, #040891 0%, #02356f 100%);
-  border-right: 1px solid rgba(0,0,0,0.06);
-  color: #1f2d3d;
+  background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #303f9f 100%);
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
 }
 
-/* Brand */
-.brand-row {
-  align-items: center;  
-  padding: 8px 0;
-  border-bottom:1px solid white;
-}
-.brand-title {
-  font-weight: 700;
-  font-size: 2rem;
-  color: #0d47a1;
-}
-
-/* Expansion panels wrapper */
-.exp-panels {
-  background: transparent;
-  box-shadow: none;
-}
-
-/* Panel header */
-.panel-header {
+/* Brand Section */
+.brand-container {
   display: flex;
   align-items: center;
-  padding: 10px 14px !important;
+  padding: 20px 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-right: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.logo-icon {
+  font-size: 28px;
+}
+
+.brand-text {
+  flex: 1;
+}
+
+.brand-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1.2;
+}
+
+.brand-subtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+}
+
+/* Dividers */
+.divider-primary {
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  margin: 0;
+}
+
+/* Navigation List */
+.drawer-list {
+  background: transparent;
+  padding: 8px 0;
+}
+
+/* Section Headers */
+.nav-section {
+  margin: 4px 8px;
   border-radius: 8px;
-  transition: background 0.18s ease, border-left 0.18s ease;
+  overflow: hidden;
 }
 
-/* Icon in header */
-.header-icon {
-  color: #040891;
-  margin-right: 8px;
+.nav-section::v-deep .v-list-group__header {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin: 2px 0;
+  padding: 0 12px;
+  min-height: 44px;
+  transition: all 0.3s ease;
 }
 
-/* Header text */
-.header-text {
+.nav-section::v-deep .v-list-group__header:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-section::v-deep .v-list-group__header.v-list-item--active {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.section-title {
   font-weight: 600;
-  color: #123a66;
+  font-size: 0.9rem;
+  color: white;
+  letter-spacing: 0.3px;
 }
 
-/* Active expansion panel header highlight
-   Vuetify adds .v-expansion-panel--active to the panel element; we style the header inside it.
-*/
-.v-expansion-panel--active > .v-expansion-panel__header {
-  background: linear-gradient(90deg, rgba(6, 124, 241, 0.06), rgba(34, 141, 199, 0.03));
-  border-left: 3px solid rgba(25,118,210,0.28);
+/* Submenus */
+.submenu {
+  margin-left: 8px;
 }
 
-/* List item titles */
-.v-list-item-title {
-  font-size: 15px;
-  color: #123a66;
+.submenu::v-deep .v-list-group__header {
+  background: transparent !important;
+  min-height: 36px;
+  padding: 0 8px;
 }
 
-/* Submenu spacing and card-like feel */
+.submenu-title {
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Navigation Items */
+.nav-item {
+  min-height: 36px;
+  padding: 0 16px 0 32px !important;
+  margin: 1px 0;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-icon {
+  margin-right: 12px;
+  min-width: 24px !important;
+}
+
+.nav-icon .v-icon {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.item-title {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
+}
+
+/* Active States */
+.nav-item.v-list-item--active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.nav-item.v-list-item--active .item-title {
+  color: white;
+  font-weight: 500;
+}
+
+.nav-item.v-list-item--active .nav-icon .v-icon {
+  color: #ffd54f;
+}
+
+/* Scrollbar Styling */
+.app-drawer ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.app-drawer ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.app-drawer ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.app-drawer ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Animation for expanding/collapsing */
 .v-list-group__items {
-  padding-left: 8px;
-  margin-top: 6px;
-  margin-bottom: 8px;
+  transition: all 0.3s ease;
 }
 
-/* Make icons inside list-group slightly darker */
-.v-list-item .v-icon {
-  color: rgba(18,58,102,0.85);
+/* Focus states for accessibility */
+.nav-item:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.15);
 }
 
-/* small responsive tweak */
-/* @media (max-width: 960px) {
-  .app-drawer {
-    width: 260px;
-  }
-} */
+/* Slightly darker when selected via selectedTab */
+.selected-item {
+  background: rgba(0, 0, 0, 0.20) !important;
+  transition: background 0.15s ease;
+}
 
+.selected-item .item-title {
+  color: white;
+  font-weight: 500;
+}
+
+.selected-item .nav-icon .v-icon {
+  color: #ffd54f;
+}
 </style>
-

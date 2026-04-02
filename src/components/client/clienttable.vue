@@ -6,6 +6,7 @@
         <v-spacer />
         <!-- Search input -->
         <v-text-field
+          outlined
           v-model="search"
           append-icon="mdi-magnify"
           placeholder="Search clientId, name, email, phone or status"
@@ -14,20 +15,22 @@
           clearable
           style="max-width:360px"
         />
-        <v-btn icon :loading="loading" @click="fetchClients" title="Refresh list">
-          <v-icon>mdi-refresh</v-icon>
-        </v-btn>
+
       </v-card-title>
 
       <v-data-table
         :headers="headers"
         :items="filteredRows"
         class="elevation-1"
-        disable-pagination
-        hide-default-footer
         :loading="loading"
-        @click:row="goToClientDetails"
+        :items-per-page="itemsPerPage"
+        :page.sync="page"
       >
+        <!-- Serial Number column -->
+        <template v-slot:item.sn="{ index }">
+          {{ (page - 1) * itemsPerPage + index + 1 }}
+        </template>
+
         <template v-slot:item.clientId="{ item }">
           {{ item.clientId || '-' }}
         </template>
@@ -44,8 +47,22 @@
           {{ item.phone || '-' }}
         </template>
 
-        <template v-slot:item.status="{ item }">
+        <!-- <template v-slot:item.status="{ item }">
           {{ item.status || '-' }}
+        </template> -->
+
+        <!-- Actions column: Show button -->
+        <template v-slot:item.actions="{ item }">
+          <v-btn
+            small
+            outlined
+            color="primary"
+            @click.stop="showDetails(item)"
+            title="Show details"
+          >
+            <v-icon left small>mdi-eye</v-icon>
+            Show
+          </v-btn>
         </template>
       </v-data-table>
     </v-card>
@@ -54,7 +71,7 @@
     <v-dialog v-model="dialog" max-width="920px" persistent>
       <v-card>
         <v-card-title>
-          Client Information
+          Vendor Information
           <v-spacer></v-spacer>
           <v-btn icon @click="closeDialog">
             <v-icon>mdi-close</v-icon>
@@ -75,10 +92,10 @@
     </v-dialog>
 
     <!-- Edit dialog -->
-    <v-dialog v-model="editDialog" max-width="920px">
+    <v-dialog v-model="editDialog" max-width="1420px">
       <v-card>
         <v-card-title>
-          Edit Client
+          Edit Vendor
           <v-spacer></v-spacer>
           <v-btn icon @click="closeEdit">
             <v-icon>mdi-close</v-icon>
@@ -115,13 +132,15 @@ export default {
       selectedPk: null,   // encoded pk used for viewing
       editDialog: false,
       editPk: null,        // decoded/UUID pk used for editing
-      search: ''
+      search: '',
+      // NEW: pagination state
+      page: 1,
+      itemsPerPage: 10
     };
   },
   computed: {
     clientRows() {
       if (!Array.isArray(this.clients) || this.clients.length === 0) return [];
-
       return this.clients.map(item => {
         const source = item.customer || item;
         return {
@@ -149,7 +168,6 @@ export default {
           row.phone,
           row.status
         ];
-
         return fields.some(f => {
           if (f === undefined || f === null) return false;
           return f.toString().toLowerCase().includes(q);
@@ -159,19 +177,30 @@ export default {
 
     headers() {
       return [
+        { text: '#', value: 'sn', sortable: false, width: 70, align: 'start' }, // Serial No.
+        { text: 'Vendor Id', value: 'clientId', sortable: false },
         { text: 'Name', value: 'name', sortable: false },
         { text: 'Email', value: 'email', sortable: false },
         { text: 'Phone', value: 'phone', sortable: false },
         { text: 'GSTIN', value: 'gstin', sortable: false },
-        { text: 'Status', value: 'status', sortable: false }
+        // { text: 'Status', value: 'status', sortable: false },
+        { text: 'Actions', value: 'actions', sortable: false, align: 'end' }
       ];
     }
   },
   methods: {
+    showDetails(item) {
+      // reuse your existing view flow
+      const rawPk = item && item.pk;
+      if (!rawPk) return;
+      this.selectedPk = encodeURIComponent(String(rawPk));
+      this.dialog = true;
+    },
+
     async fetchClients() {
       this.loading = true;
       try {
-        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL+'getAllClient', { timeout: 10000 });
+        const res = await axios.get(process.env.VUE_APP_AGENCY_BACKEND_URL + 'getAllClient', { timeout: 10000 });
         const d = res && res.data ? res.data : null;
 
         if (Array.isArray(d)) this.clients = d;
@@ -189,8 +218,8 @@ export default {
       }
     },
 
-    // open the view dialog
-    goToClientDetails(item/*, event */) {
+    // open the view dialog (kept for row click compatibility if you use it)
+    goToClientDetails(item /*, event */) {
       const rawPk = item && (item.pk);
       console.log('click row ->', rawPk, item);
 
@@ -199,14 +228,12 @@ export default {
         return;
       }
 
-      // keep encoded pk for passing to ClientDetail (which decodes)
       this.selectedPk = encodeURIComponent(String(rawPk));
       this.dialog = true;
     },
 
     closeDialog() {
       this.dialog = false;
-      // clear selectedPk after tick
       this.$nextTick(() => { this.selectedPk = null; });
     },
 
@@ -216,7 +243,6 @@ export default {
         console.warn('No selectedPk to edit');
         return;
       }
-      // decode and extract UUID (strip "client#..." if present)
       const decoded = decodeURIComponent(this.selectedPk);
       const id = decoded.includes('#') ? decoded.split('#')[1] : decoded;
       this.editPk = id;
@@ -225,15 +251,12 @@ export default {
 
     closeEdit() {
       this.editDialog = false;
-      // clear after a tick
       this.$nextTick(() => { this.editPk = null; });
     },
 
     // Called when EditClient emits `saved`
     onClientSaved(payload) {
-      // payload may contain updated client or message
       console.log('client saved:', payload);
-      // close both dialogs and refresh the list
       this.closeEdit();
       this.closeDialog();
       this.fetchClients();
@@ -255,4 +278,49 @@ export default {
   color: #222;
 }
 .v-data-table tbody tr { cursor: pointer; }
+
+/* ---- Table header background: BLUE ---- */
+/* Vuetify v2 */
+::v-deep .v-data-table-header th {
+  background-color: #dff3f79c !important; /* primary blue */
+  color: black !important;
+  font-weight: 600;
+}
+
+/* Vuetify v3 */
+::v-deep th.v-data-table__th {
+  background-color: #dff3f79c !important;
+  color: black !important;
+  font-weight: 600;
+}
+
+/* Make sort icons / buttons white too */
+::v-deep .v-data-table-header th .v-icon,
+::v-deep th.v-data-table__th .v-icon,
+::v-deep th.v-data-table__th .v-btn {
+  color: #fff !important;
+}
+
+/* Optional: subtle bottom border for header */
+::v-deep .v-data-table-header,
+::v-deep thead {
+  border-bottom: 1px solid #1565c0;
+}
+
+/* Increase table header font size */
+::v-deep .v-data-table-header th,
+::v-deep th.v-data-table__th {
+  font-size: 12px !important;
+  font-weight: 600;
+  color: black !important;
+  background-color: #dff3f79c !important;
+  text-transform: capitalize;
+}
+
+/* Optional: tighten the SN column */
+::v-deep td:nth-child(1) {
+  width: 70px;
+  white-space: nowrap;
+  text-align: left;
+}
 </style>

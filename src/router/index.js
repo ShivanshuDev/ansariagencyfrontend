@@ -1,28 +1,32 @@
+// src/router/index.js
 import Vue from 'vue'
-import VueRouter from 'vue-router'
-import HomeView from '../components/body.vue'
-import Loginpage from '../components/loginpage.vue'
+import Router from 'vue-router'
 
-Vue.use(VueRouter)
+// Lazy-load views (adjust paths to your files)
+const TabdetailsVue = () => import('../views/tabdetails.vue')
+const SellToVendorTablePage = () => import('../components/vendorSell/SellToVendorTable.vue') // optional: a page that shows the table
+const SellToVendorAdd = () => import('../components/vendorSell/sellToVendor.vue')               // your big Add form
 
-const routes = [
+Vue.use(Router)
+
+export default new Router({
+  mode: 'history', // or 'hash' if you prefer
+  routes: [
+    { path: '/', name: 'Home', component: TabdetailsVue },
     {
-      path: '/',
-      name: 'home',
-      component: HomeView
+      path: '/sell-to-vendor',
+      name: 'SellToVendorList',
+      component: SellToVendorTablePage, // or point to your table component page
+      meta: { title: 'Sell To Vendor — List' }
     },
     {
-      path: '/login',
-      name: 'login',
-      component: Loginpage
-    }
-
-]
-
-const router = new VueRouter({
-    mode: 'history',
-    base: process.env.BASE_URL,
-    routes
+      path: '/sell-to-vendor/add',
+      name: 'SellToVendorAdd',
+      component: SellToVendorAdd,
+      meta: { title: 'Sell To Vendor — Add / Edit' }
+      // We will pass ?invoiceNumber=... as a query param when editing
+    },
+    { path: '*', redirect: '/sell-to-vendor' }
+  ],
+  scrollBehavior () { return { x: 0, y: 0 } }
 })
-
-export default router

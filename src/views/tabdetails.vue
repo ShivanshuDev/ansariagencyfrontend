@@ -5,25 +5,17 @@
         <!-- Top Navbar -->
         <nav class="navbar">
           <div class="navbar-left">
-            <!-- Breadcrumb navigation -->
-            <ul class="breadcrumb">
-              <li><a href="#">Home</a></li>
-              <li>Dashboard</li>
-            </ul>
+            <!-- Sidebar toggle button -->
+            <v-btn
+              icon
+              class="toggle-btn"
+              @click="$emit('toggle-sidebar')"
+            >
+              <v-icon>mdi-menu</v-icon>
+            </v-btn>
           </div>
 
           <div class="navbar-right" ref="navbarRight">
-            <!-- <input
-              type="text"
-              class="search-bar"
-              placeholder="Search"
-            /> -->
-
-            <!-- Language, Notifications, Theme Icons -->
-            <!-- <i class="fas fa-flag-usa navbar-icon"></i>
-            <i class="fas fa-cog navbar-icon"></i>
-            <i class="fas fa-moon navbar-icon"></i> -->
-
             <!-- Profile Avatar (click opens small dropdown) -->
             <div class="profile-wrapper" ref="profileWrapper">
               <img
@@ -67,11 +59,26 @@ import AddInventryVue from '@/components/inventry/addInventry.vue';
 import ClientTable from '@/components/client/clienttable.vue';
 import EmployeeTable from '@/components/employee/employeetable.vue';
 import InventryTable from '@/components/inventry/inventryTable.vue';
+import SEARCHBYCHASSIS from '@/components/inventry/SearchByChassisNumber.vue';
 import MODELNAME from '@/components/modelName/addModelName.vue';
 import BILL from '@/components/bill/addbill.vue';
 import ADDSPARES from '@/components/spares/addSpares.vue';
 import SPARESTABLE from '@/components/spares/sparesTable.vue';
 import SellToVendor from '@/components/vendorSell/sellToVendor.vue';
+import SellToVendorDetails from '@/components/vendorSell/SellToVendorTable.vue';
+import LEDGER from '@/components/ledger/ledgerComponent.vue'
+import LEDGERENTRY from '@/components/ledger/AllEntriesTable.vue'
+import VENDORACCOUNT from '@/components/ledger/CreateVendorAccount.vue'
+import VENDORACCOUNTDetail from '@/components/ledger/AccountsTable.vue'
+// import ADDENTRY from '@/components/ledger/AddEntryForm.vue'
+import CLIENTSUMMERY from '@/components/ledger/ClientSummaryCard.vue'
+import DAYBOOK from '@/components/ledger/DayBook.vue'
+import QUICKINVOICE from '@/components/sales/QuickInvoice.vue'
+import AllCustomerInvoices from '@/components/sales/CustomerInvoiceTable.vue'
+import BIKEBOOKING from '@/components/sales/BookingPage.vue'
+import RTODetails from '@/components/sales/FinanceAndRto.vue'
+import CUSTOMERACCOUNTDetail from '@/components/ledger/CustomerAccount.vue'
+import STOCK from '@/components/stock/AllStock.vue'
 
 export default {
   components:{
@@ -86,6 +93,21 @@ export default {
     ADDSPARES,
     SPARESTABLE,
     SellToVendor,
+    SellToVendorDetails,
+    LEDGER,
+    LEDGERENTRY,
+    VENDORACCOUNT,
+    VENDORACCOUNTDetail,
+    // ADDENTRY,
+    CLIENTSUMMERY,
+    DAYBOOK,
+    QUICKINVOICE,
+    AllCustomerInvoices,
+    RTODetails,
+    CUSTOMERACCOUNTDetail,
+    STOCK,
+    SEARCHBYCHASSIS,
+    BIKEBOOKING
   },
   props: {
     selectedTab: {
@@ -113,6 +135,21 @@ export default {
       if(this.selectedTab === 'ADDSPARES') return 'ADDSPARES';
       if(this.selectedTab === 'sparesTable') return 'SPARESTABLE';
       if(this.selectedTab === 'SellToVendor') return 'SellToVendor';
+      if(this.selectedTab === 'SellToVendorDetails') return 'SellToVendorDetails';
+      if(this.selectedTab === 'LEDGER') return 'LEDGER';
+      if(this.selectedTab === 'LEDGERENTRY') return 'LEDGERENTRY';
+      if(this.selectedTab === 'VENDORACCOUNT') return 'VENDORACCOUNT';
+      if(this.selectedTab === 'VENDORACCOUNTDetail') return 'VENDORACCOUNTDetail';
+      // if(this.selectedTab === 'ADDENTRY') return 'ADDENTRY';
+      if(this.selectedTab === 'CLIENTSUMMERY') return 'CLIENTSUMMERY';
+      if(this.selectedTab === 'DAYBOOK') return 'DAYBOOK';
+      if(this.selectedTab === 'QUICKINVOICE') return 'QUICKINVOICE';
+      if(this.selectedTab === 'AllCustomerInvoices') return 'AllCustomerInvoices';
+      if(this.selectedTab === 'RTODetails') return 'RTODetails';
+      if(this.selectedTab === 'CUSTOMERACCOUNTDetail') return 'CUSTOMERACCOUNTDetail';
+      if(this.selectedTab === 'STOCK') return 'STOCK';
+      if(this.selectedTab === 'SEARCHBYCHASSIS') return 'SEARCHBYCHASSIS';
+      if(this.selectedTab === 'BIKEBOOKING') return 'BIKEBOOKING';
       return null;
     },
     displayName() {
@@ -174,13 +211,13 @@ export default {
 
 <style scoped>
 .topBar{
-  height: 7vh;
-  padding: 2px;
+  height: 6vh;
+  /* padding: 2px; */
   width: 100%;
   background-color: #f3efef;
 }
 .bodyDetails{
-  height: 93vh;
+  height: 94vh;
   padding: 2px;
   width: 100%;
   background-color: #d6e9e9;
@@ -215,12 +252,12 @@ export default {
 }
 .breadcrumb li {
   font-size: 16px;
-  color: #393e46;
+  color: #fff;
 }
 .breadcrumb li + li:before {
   content: ">";
   margin: 0 8px;
-  color: #a0a0a0;
+  color: #fff;
 }
 .breadcrumb a {
   color: #2e49fa;
@@ -313,5 +350,70 @@ export default {
 }
 .btn-logout:hover {
   transform: translateY(-2px);
+}
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #1a237e;
+  color: white;
+  padding: 10px 20px;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-btn {
+  color: white !important;
+  margin-right: 15px;
+}
+
+.breadcrumb {
+  list-style: none;
+  display: flex;
+  gap: 5px;
+  color: white;
+  margin: 0;
+  padding: 0;
+}
+
+.breadcrumb li a {
+  color: white;
+  text-decoration: none;
+}
+
+.profile-wrapper {
+  position: relative;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.profile-menu {
+  position: absolute;
+  right: 0;
+  background-color: white;
+  color: black;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  width: 200px;
+  padding: 10px;
+  z-index: 1000;
+}
+
+.btn-logout {
+  width: 100%;
+  padding: 6px;
+  background-color: #001f3f;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 </style>
